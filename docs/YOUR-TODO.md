@@ -1,40 +1,53 @@
-# Your to-do list (League of Stocks, BNB Hack)
+# Your to-do list (Kickoff Stocks, Colosseum Crypto World's Fair)
 
-Deadline: **Sun 11 Oct 2026, 12:00 UTC**. Submit form: https://forms.gle/yToDUzaDMwWnq6R6A · DX report form: https://forms.gle/EUQ39xf54GHjC2ys5
+Deadline: **Mon 12 Oct 2026, 11:59pm PT = Tue 13 Oct, 06:59 UTC**. Track: **Robinhood Chain** ($25k across 5 teams), plus the general prizes.
+One submission per team: submit this as a **new mode of Kickoff**, inside your Kickoff project on colosseum.com (both repos linked, one video showing both).
 
-## Now (Mon–Wed)
-- [ ] **Look at the app** in Cloud Shell (commands below). Pages: `/` `/league` `/create` `/me` `/leaderboard` `/rules` `/agents` `/round/1` `/ui`. Tell Claude what to change.
-- [ ] **Make the GitHub repo public** (needed for the agent skill install `npx skills add NECOKIZZ/ETF/skills/league-of-stocks`, and for judging).
-- [x] (1 min) Live check of "Buy the ETF" in Cloud Shell (done 5 Oct: approval found in `tx.signatureData`):
-  ```
-  cd ~/ETF && npx pnpm buy-plan 20 --raw
-  ```
-- [ ] **Try the Binance Agentic Wallet** (prize track): on your phone, Binance App → Web3 Wallet → Agentic Wallet; turn on **Developer Mode** there. On a computer outside the US: `npm i -g @binance/agentic-wallet`, then `baw auth signin --json`. Note anything confusing for the DX report.
-- [x] Free space in your Cloud Shell home.
+## 1. Check (5 min)
+- [ ] On colosseum.com, confirm Kickoff is your registered project and every team member is registered.
+- [ ] Check the BNB Hack rules allow the same idea in another hackathon.
 
-## Cloud Shell setup (home folder, now that it has space)
+## 2. Testnet deploy (Cloud Shell or any computer, 15 min)
 ```
-cd ~ && git clone https://github.com/NECOKIZZ/ETF.git     # first time only; later: cd ~/ETF && git pull
-cd ~/ETF && npx pnpm install
-cp .env.example .env.local && nano .env.local               # first time only: paste your Binance keys
-npx pnpm dev:8080                                           # then Web Preview → Preview on port 8080
+git clone https://github.com/NECOKIZZ/kickoffstocks.git && cd kickoffstocks
+npx pnpm install
+cp .env.example .env.local && nano .env.local
 ```
-Without a deployed contract the pages show "not reachable" for the league. To see everything with
-demo data, run the local demo (docs/LOCAL.md: needs Foundry; ask Claude for the Cloud Shell
-install commands). Your own browser wallet can't easily reach Cloud Shell's test chain, so test
-real clicks on mainnet Thursday with small amounts, or ask Claude for a BSC testnet demo.
+In `.env.local` (never in chat or git):
+- `DEPLOYER_PRIVATE_KEY` = **Kickoff's deployer key** (`0x4799…28aE`), so both projects show the same deployer.
+- `KEEPER_PRIVATE_KEY` = a **new** wallet's key, and `KEEPER_ADDRESS` = its address.
+- Get testnet ETH for **both** wallets: https://faucet.testnet.chain.robinhood.com
 
-## Before Thursday (mainnet deploy)
-- [ ] Make a **new wallet** just for the app (deployer + keeper). Fund on BNB Smart Chain: ~0.02 BNB (gas) + ~$40 USDT (BEP-20) for demo rounds.
-- [ ] Put its private key in `.env.local` as `DEPLOYER_PRIVATE_KEY` and `KEEPER_PRIVATE_KEY` (never in chat or git). Tell Claude the **public** address.
-- [ ] Hosting: the app and the keeper must share the `data/` folder (price samples, settlement inputs). Simplest: one small server in an allowed region (e.g. a Singapore VM) running `pnpm start` and the keeper. Vercel works for the pages but can't keep `data/`.
-- [ ] (Optional) WalletConnect project ID from cloud.reown.com, for phone wallets.
+Then (needs Foundry: `curl -L https://foundry.paradigm.xyz | bash && foundryup`):
+```
+cd contracts && forge build && cd ..
+LEAGUE_CHAIN=testnet npx pnpm deploy:league              # dry run: check the addresses
+LEAGUE_CHAIN=testnet npx pnpm deploy:league --broadcast  # prints ESCROW_ADDRESS, writes deployments.json
+```
+Put `ESCROW_ADDRESS` in `.env.local`, commit `deployments.json` (no secrets in it), and tell Claude the address.
 
-## Thu–Fri (demo)
-- [ ] Run demo rounds during US market hours (13:30–20:00 UTC) with 4+ ETFs (a round needs at least 4); record the video (≤ 4 min): landing → create → back → league → agent → results + verify.
+## 3. Host it on stocks.kickoff.cash
+- One small server with a disk for the app **and** the keeper (they share `data/`): Railway or Render (Kickoff already has configs for both) with a volume, or a VM.
+- Env vars: everything in `.env.local` except the deployer key.
+- Start: `npx pnpm build && npx pnpm start`, and in a second process the keeper (step 4).
+- DNS: a CNAME `stocks` → the host, wherever kickoff.cash's DNS is managed.
+- In Kickoff, add a "Stocks" link to the nav (Claude can do this if you give push access to `NECOKIZZ/kickoff`).
 
-## Sat (DX report: 25% of the score)
-- [ ] Rewrite `docs/dx-notes.md` **in your own words** into the DX form. AI-written reports are rejected, so use the notes as facts only.
+## 4. Demo rounds (Sat–Mon)
+A round needs **4+ ETFs** with different baskets. Each wallet can take 5 TSLA, AMZN, PLTR, AMD (and NFLX) a day from Robinhood's faucet, so use 4+ wallets, or ask Claude for a script that splits one wallet's faucet tokens across demo wallets.
+```
+npx pnpm keeper open --entry-min 30 --run-min 60
+LEAGUE_PRICE_SOURCE=robinhood npx pnpm keeper auto <roundId> --samples 3 --every-min 5
+```
+Use `robinhood` prices for short demo rounds (Chainlink feeds only move on 0.5% changes). Run during US market hours (Mon–Fri) so prices move. Tickets: the wallet chip's **Get test USDG**.
+Try an agent too: add `https://stocks.kickoff.cash/api/mcp` as a connector in Claude and ask it to back the top ETF.
 
-## Sun before 12:00 UTC
-- [ ] README final, demo link works, submit both forms.
+## 5. Optional: mainnet
+- `ZEROEX_API_KEY` from https://dashboard.0x.org (free) for "Buy the ETF".
+- `YIELD_VAULT`: the Robinhood Earn (Steakhouse / Morpho) USDG vault address on Robinhood Chain. Claude couldn't confirm it: copy it from the Morpho app, never from memory.
+- A little ETH + USDG on Robinhood Chain. `LEAGUE_CHAIN=mainnet npx pnpm deploy:league --broadcast`.
+
+## 6. Submit (by Mon night PT)
+- [ ] Video: landing → create an ETF → back a team → an agent backing a team via MCP → results with AVERAGE and a draw → verify a round.
+- [ ] Colosseum project: description says Kickoff now has a Stocks mode; links to both repos, the live site, the video.
+- [ ] Make `NECOKIZZ/kickoffstocks` public (it is now) and keep `main` green.

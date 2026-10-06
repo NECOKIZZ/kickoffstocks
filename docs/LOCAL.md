@@ -1,8 +1,9 @@
 # Run the whole app locally (no real money)
 
-A local chain (anvil) with mock copies of 12 real bStocks, the league contract, one settled round
-(claims open) and one open round with named ETFs. Prices are the 5 Oct snapshot, moved by demo
-movements over time.
+A local chain (anvil) with test USDG, a test savings vault, mock copies of 14 real Robinhood Stock
+Tokens, the league contract, one settled round (tickets parked in the vault while it ran, claims
+open) and one open round with named ETFs. Prices are the 6 Oct snapshot, moved by demo movements
+over time.
 
 ## Start
 ```bash
@@ -22,19 +23,19 @@ script again and update `ESCROW_ADDRESS`.
 ## A wallet in the browser
 MetaMask → add a network: RPC `http://localhost:3000/api/rpc` (the app relays to anvil), chain id
 `31337`, symbol `ETH`. Use any fresh account. On /create, **Get test stocks** sends mock stocks,
-10 test USDT and gas to the connected wallet. Never use the anvil keys on a real network.
+10 test USDG and gas to the connected wallet. Never use the anvil keys on a real network.
 
 ## Agents
 ```bash
 AGENT_PRIVATE_KEY=<any anvil key> LEAGUE_API=http://localhost:3000 npx tsx scripts/agent.mts round
-AGENT_PRIVATE_KEY=… LEAGUE_API=… npx tsx scripts/agent.mts faucet '{"usdt":20,"stocks":{"NVDA":5,"TSLA":4,"SPY":3}}'
+AGENT_PRIVATE_KEY=… LEAGUE_API=… npx tsx scripts/agent.mts faucet '{"usdg":20,"stocks":{"NVDA":5,"TSLA":4,"SPY":3}}'
 AGENT_PRIVATE_KEY=… LEAGUE_API=… npx tsx scripts/agent.mts run '{"action":"lock","tickers":["NVDA","TSLA","SPY"],"weightsPct":[42,33,25],"name":"Agent Alpha"}'
 ```
 
 ## Finish a round early (keeper)
 ```bash
 set -a; . ./.env.local; set +a
-END=$(cast call $ESCROW_ADDRESS "rounds(uint256)(uint8,uint64,uint64,uint16,uint16,uint128,uint128,bytes32)" 2 | sed -n 3p | awk '{print $1}')
+END=$(cast call $ESCROW_ADDRESS "rounds(uint256)(uint8,uint64,uint64,uint16,uint16,uint128,uint128,bytes32,uint128,uint128)" 2 | sed -n 3p | awk '{print $1}')
 for i in 0 1 2; do cast rpc evm_setNextBlockTimestamp $((END+60+i*300)); cast rpc evm_mine; npx tsx scripts/keeper.mts sample 2 end; done
 npx tsx scripts/keeper.mts settle 2
 npx tsx scripts/verify.mts data/rounds/2/inputs.json 2
