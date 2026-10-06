@@ -33,7 +33,7 @@ export interface StockInfo {
   color: string;
   /** Pale tint of `color` for the bottom of the card. */
   colorLight: string;
-  /** Company logo (Robinhood's CDN, saved under public/logos). */
+  /** Company logo (saved under public/logos). */
   logo?: string;
 }
 

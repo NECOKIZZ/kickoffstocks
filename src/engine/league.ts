@@ -1,9 +1,9 @@
-// League of Stocks settlement engine.
+// Kickoff Stocks settlement engine.
 //
 // Weekly (or demo-length) rounds where on-chain stock baskets ("ETFs") are
-// ranked by the % growth of their stocks. The top half of teams win the bottom
-// half's ticket stakes, split by team stake × accuracy. Rules: see
-// docs/BNB.md (locked rules table).
+// ranked by the % growth of their stocks. Teams above AVERAGE (the median)
+// win the ticket stakes below it, split by team stake × accuracy. Rules: see
+// docs/KICKOFF-STOCKS.md.
 //
 //   - One ETF = one team. Captain = the creator; others are backers.
 //   - AVERAGE (from FPL head-to-head leagues): a ghost team whose return is

@@ -51,7 +51,7 @@ export async function loadRoundView(roundId?: bigint): Promise<RoundView | null>
   const saved = (phase: "start" | "end") => store.loadSamples(id, phase).map((s) => s.sample);
 
   // Start prices: the saved start samples, else (entries still open) current prices.
-  // Current prices: live Binance, else the latest saved end sample, else the start.
+  // Current prices: live quotes, else the latest saved end sample, else the start.
   const liveP = await livePrices();
   const live = liveP?.sample ?? null;
   const startSamples = saved("start");

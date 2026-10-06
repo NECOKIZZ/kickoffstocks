@@ -29,7 +29,7 @@ export function MePage() {
       <div className="rounded-[28px] bg-surface p-10 text-center">
         <p className="text-muted">No entries in recent rounds yet.</p>
         <div className="mt-5 flex justify-center gap-3">
-          <Link href="/create" className="inline-flex h-11 items-center rounded-full bg-ink px-5 font-medium text-bg">Build an ETF</Link>
+          <Link href="/create" className="btn-3d btn-accent inline-flex h-11 items-center px-5">Build an ETF</Link>
           <Link href="/league" className="inline-flex h-11 items-center rounded-full border border-line px-5 font-medium">Back a team</Link>
         </div>
       </div>
@@ -96,7 +96,7 @@ function EntryCard({ e }: { e: MeEntry }) {
               type="button"
               disabled={runner.busy}
               onClick={() => runner.run({ action: "claim", roundId: e.roundId }, { onDone: () => setDone(true) })}
-              className="h-11 rounded-full bg-ink px-6 text-[15px] font-medium text-bg disabled:opacity-40"
+              className="btn-3d btn-accent h-11 px-6 text-[15px]"
             >
               {runner.busy ? "Working…" : payout > 0n ? `Claim $${usdg(payout)}${e.basket.length ? " + your stocks" : ""}` : e.basket.length ? "Get your stocks back" : "Close entry"}
             </button>

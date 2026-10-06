@@ -1,7 +1,7 @@
 import { Shell, PageHead, Container } from "@/web/components/Shell";
 import { MePage } from "@/web/components/MePage";
 
-export const metadata = { title: "My entries · League of Stocks" };
+export const metadata = { title: "My entries · Kickoff Stocks" };
 
 export default function Me() {
   return (

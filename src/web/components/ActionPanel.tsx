@@ -62,7 +62,7 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
                 type="button"
                 disabled={!open || runner.busy}
                 onClick={() => runner.run({ action: "back", teamKey: t.teamKey, roundId: r.id })}
-                className="h-12 w-full rounded-full bg-ink text-[16px] font-medium text-bg transition hover:opacity-90 disabled:opacity-40"
+                className="h-12 w-full btn-3d btn-accent text-[16px] transition hover:opacity-90 disabled:opacity-40"
               >
                 {!open ? "Entries are closed" : runner.busy ? "Working…" : `Back ${teamName(t)} · $${usdg(r.stake, 0)}`}
               </button>
@@ -102,7 +102,7 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
                 type="button"
                 disabled={runner.busy || !(Number(amount) >= 1)}
                 onClick={() => runner.run({ action: "buy-etf", teamKey: t.teamKey, usdg: Number(amount), roundId: r.id })}
-                className="h-12 w-full rounded-full bg-ink text-[16px] font-medium text-bg transition hover:opacity-90 disabled:opacity-40"
+                className="h-12 w-full btn-3d btn-accent text-[16px] transition hover:opacity-90 disabled:opacity-40"
               >
                 {runner.busy ? "Working…" : `Buy ${teamName(t)}`}
               </button>

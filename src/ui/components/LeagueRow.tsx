@@ -1,30 +1,41 @@
-// One ETF in the league table: rank, hand, name, return, team, odds, Back.
+// One ETF in the league table: rank, hand, name + creator, return, team,
+// odds, Back. The table draws AVERAGE (the median return) as a ghost line:
+// above it wins, on it draws (ticket back), below it loses.
 
 import Link from "next/link";
 import { EtfChips, type Holding } from "./EtfHand";
 import { Change } from "./Pills";
+import { WalletAvatar, shortAddress } from "../brand/Avatar";
 
 export interface LeagueEntry {
   rank: number;
   name: string;
+  /** The creator's wallet: their identity (avatar + short address). */
   creator: string;
   holdings: Holding[];
   returnPct: number;
   team: number;
   /** Profit per $5 ticket if the round ended now (null: this ETF is losing now). */
   ifWins: number | null;
+  /** Right now: above AVERAGE, tied with it, or below. */
+  status?: "win" | "draw" | "lose";
   href?: string;
 }
 
 export function LeagueRow({ e, winning }: { e: LeagueEntry; winning: boolean }) {
   const Row = e.href ? Link : "div";
+  const status = e.status ?? (winning ? "win" : "lose");
+  const tint = status === "win" ? "bg-up-bg/60" : status === "draw" ? "bg-brand-purple/10" : "";
   return (
-    <Row href={e.href ?? ""} className={`grid transition hover:bg-surface grid-cols-[28px_auto_1fr_auto] items-center gap-4 rounded-[20px] px-4 py-3 md:grid-cols-[32px_auto_1fr_110px_90px_130px_auto] md:gap-6 ${winning ? "bg-up-bg/50" : ""}`}>
+    <Row href={e.href ?? ""} className={`card-diagonal-sm grid grid-cols-[28px_auto_1fr_auto] items-center gap-4 px-4 py-3 transition hover:bg-surface-2 md:grid-cols-[32px_auto_1fr_110px_90px_140px_auto] md:gap-6 ${tint}`}>
       <span className="t-num text-[15px] text-muted">{e.rank}</span>
       <EtfChips holdings={e.holdings} />
       <div className="min-w-0">
-        <div className="truncate font-medium">{e.name}</div>
-        <div className="truncate text-[13px] text-muted">by {e.creator}</div>
+        <div className="truncate font-clash font-semibold">{e.name}</div>
+        <div className="mt-0.5 flex items-center gap-1.5 truncate text-[12.5px] text-muted">
+          <WalletAvatar address={e.creator} size={16} />
+          <span className="t-num">{shortAddress(e.creator)}</span>
+        </div>
       </div>
       <Change pct={e.returnPct} className="text-[17px] font-medium md:justify-self-end" />
       <span className="hidden text-[13px] text-muted md:block">
@@ -35,17 +46,19 @@ export function LeagueRow({ e, winning }: { e: LeagueEntry; winning: boolean }) 
           <>
             ticket now <span className="t-num text-ink">+${e.ifWins.toFixed(2)}</span>
           </>
+        ) : status === "draw" ? (
+          <span className="text-brand-purple">on AVERAGE: ticket back</span>
         ) : (
-          "below the cut"
+          "below AVERAGE"
         )}
       </span>
-      <span className="hidden h-9 rounded-full border border-line px-4 text-[13px] font-medium md:inline-flex md:items-center">Back</span>
+      <span className="btn-3d btn-ghost hidden h-8 px-4 text-[13px] md:inline-flex md:items-center">Back</span>
     </Row>
   );
 }
 
-/** `cutAfter`: rows above the winners' line (default: half). */
-export function LeagueTable({ entries, cutAfter }: { entries: LeagueEntry[]; cutAfter?: number }) {
+/** `cutAfter`: rows above AVERAGE (default: half); `averagePct`: AVERAGE's return, when known. */
+export function LeagueTable({ entries, cutAfter, averagePct }: { entries: LeagueEntry[]; cutAfter?: number; averagePct?: number | null }) {
   const cut = cutAfter ?? Math.floor(entries.length / 2);
   return (
     <div className="flex flex-col gap-1">
@@ -53,10 +66,10 @@ export function LeagueTable({ entries, cutAfter }: { entries: LeagueEntry[]; cut
         <div key={e.rank}>
           <LeagueRow e={e} winning={i < cut} />
           {i === cut - 1 && (
-            <div className="my-2 flex items-center gap-3 px-4 text-[12px] text-muted">
-              <span className="h-px flex-1 border-t border-dashed border-line" />
-              Top half wins the bottom half&rsquo;s tickets
-              <span className="h-px flex-1 border-t border-dashed border-line" />
+            <div className="my-2 flex items-center gap-3 px-4 font-clash text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
+              <span className="h-px flex-1 border-t-2 border-dashed border-accent/60" />
+              AVERAGE{averagePct !== undefined && averagePct !== null ? ` ${averagePct >= 0 ? "+" : ""}${averagePct.toFixed(2)}%` : ""} · beat it to win
+              <span className="h-px flex-1 border-t-2 border-dashed border-accent/60" />
             </div>
           )}
         </div>

@@ -1,9 +1,9 @@
 "use client";
 
+import { Identity } from "../../ui/brand/Avatar";
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { short } from "./ConnectButton";
 import { useRound } from "../hooks";
 
 interface Board {
@@ -59,7 +59,7 @@ export function Leaderboard() {
                   <td className="t-num px-5 py-3 text-muted">{i + 1}</td>
                   <td className="px-5 py-3">
                     <div className="font-medium">{c.name || "Unnamed"}</div>
-                    <div className="t-num text-[12px] text-muted">{short(c.wallet)}</div>
+                    <Identity address={c.wallet} size={16} className="text-[12px] text-muted" />
                   </td>
                   <td className="t-num px-5 py-3">{c.rounds}</td>
                   <td className="t-num px-5 py-3">{c.wins}</td>
@@ -85,7 +85,7 @@ export function Leaderboard() {
               {data.backers.map((b, i) => (
                 <tr key={b.wallet} className="border-b border-line last:border-0">
                   <td className="t-num px-5 py-3 text-muted">{i + 1}</td>
-                  <td className="t-num px-5 py-3">{short(b.wallet)}</td>
+                  <td className="px-5 py-3"><Identity address={b.wallet} size={22} /></td>
                   <td className="t-num px-5 py-3">{b.tickets}</td>
                   <td className="t-num px-5 py-3">{b.wins}</td>
                   <td className="t-num px-5 py-3 text-right">{signed(b.net)}</td>
@@ -96,7 +96,7 @@ export function Leaderboard() {
         )}
         {((tab === "creators" && !data.creators.length) || (tab === "backers" && !data.backers.length)) && <p className="p-8 text-center text-muted">Nothing settled yet.</p>}
       </div>
-      <p className="mt-4 text-[12px] text-muted">Net from tickets: payouts minus the $5 ticket, including creator fees. Buy-fee earnings are paid by Binance&rsquo;s swap directly to creators and aren&rsquo;t counted here.</p>
+      <p className="mt-4 text-[12px] text-muted">Net from tickets: payouts minus the $5 ticket, including creator fees. Buy-fee earnings are paid by the 0x swap directly to creators and aren&rsquo;t counted here.</p>
     </div>
   );
 }
