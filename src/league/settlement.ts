@@ -86,7 +86,9 @@ export interface Settlement {
   seasonIn: bigint;
   seasonOut: bigint;
   statuses: EntryStatus[];
-  teams: { teamKey: Hex; captain: Hex; ret: bigint; members: number; isWinner: boolean }[];
+  teams: { teamKey: Hex; captain: Hex; ret: bigint; members: number; isWinner: boolean; isDraw: boolean }[];
+  /** AVERAGE's return (the median team return), when the round was scored. */
+  average: bigint | null;
   inputs: Record<string, unknown>;
   inputsHash: Hex;
 }
@@ -104,6 +106,7 @@ export function settleRound(
   const rules: EligibilityRules = crypto ? { ...baseRules, cryptoTokens: crypto.map((t) => t.toLowerCase()) } : baseRules;
   const n = input.entries.length;
   const statuses: EntryStatus[] = new Array(n);
+  let average: bigint | null = null;
   const refundAll = (reason: Settlement["void"]): Settlement => finish(reason, input.entries.map(() => input.stake), 0n, 0n, 0n, []);
 
   // 1. Validate creators.
@@ -185,6 +188,7 @@ export function settleRound(
     memberIndex.push(members.map((m) => m.index));
   }
   const r = settleLeague(engineTeams, params, input.seasonPot);
+  if (!r.void) average = r.average;
 
   const payouts = input.entries.map(() => input.stake); // refunds by default
   if (r.void) {
@@ -196,7 +200,7 @@ export function settleRound(
   function teamSummary(scored: boolean) {
     return teamOrder.map((key, i) => {
       const t = teams.get(key)!;
-      return { teamKey: key, captain: t.captain.wallet, ret: t.ret, members: memberIndex[i].length, isWinner: scored && r.teams[i].isWinner };
+      return { teamKey: key, captain: t.captain.wallet, ret: t.ret, members: memberIndex[i].length, isWinner: scored && r.teams[i].isWinner, isDraw: scored && r.teams[i].isDraw };
     });
   }
 
@@ -210,7 +214,7 @@ export function settleRound(
   ): Settlement {
     for (let i = 0; i < n; i++) if (!statuses[i]) statuses[i] = { kind: "refunded", reason: "missing-price" };
     const inputs = {
-      version: 1,
+      version: 2,
       roundId: input.roundId.toString(),
       stake: input.stake.toString(),
       capMultiple: input.capMultiple,
@@ -232,7 +236,7 @@ export function settleRound(
         payout: pays[e.index].toString(),
       })),
       teams: teamRows.map((t) => ({ ...t, ret: t.ret.toString() })),
-      result: { void: voidReason, platformCut: platformCut.toString(), seasonIn: seasonIn.toString(), seasonOut: seasonOut.toString() },
+      result: { void: voidReason, average: average === null ? null : average.toString(), platformCut: platformCut.toString(), seasonIn: seasonIn.toString(), seasonOut: seasonOut.toString() },
     };
     return {
       void: voidReason,
@@ -242,6 +246,7 @@ export function settleRound(
       seasonOut,
       statuses,
       teams: teamRows,
+      average,
       inputs,
       inputsHash: hashInputs(inputs),
     };

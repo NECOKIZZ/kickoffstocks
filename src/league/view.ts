@@ -30,6 +30,8 @@ export interface TeamView {
   returnPct: number;
   members: number;
   winningNow: boolean;
+  /** Tied with AVERAGE right now: the ticket would come back. */
+  drawingNow: boolean;
   /** Payout per $5 ticket if the round ended at these prices (stake included). */
   payoutPerTicketNow: string;
 }
@@ -44,6 +46,8 @@ export interface RoundView {
   pot: string; // total stakes
   phase: "entries-open" | "running" | "ended" | "settled" | "voided";
   teams: TeamView[];
+  /** AVERAGE's return right now (the median team return), percent; null before the round can be scored. */
+  averagePct: number | null;
   refunded: number;
   priceSource: string;
   /** Hash of the published settlement inputs (zero until settled). */
@@ -106,6 +110,7 @@ export function buildRoundView(opts: {
       returnPct: Number(t.ret) / 1e10,
       members: t.members,
       winningNow: s.void === null && t.isWinner,
+      drawingNow: s.void === null && t.isDraw,
       payoutPerTicketNow: s.payouts[ref.index].toString(),
     };
   });
@@ -122,6 +127,7 @@ export function buildRoundView(opts: {
     pot: info.totalStakes.toString(),
     phase,
     teams,
+    averagePct: s.average === null ? null : Number(s.average) / 1e10,
     refunded: s.statuses.filter((x) => x.kind === "refunded").length,
     priceSource: opts.priceSource,
     inputsHash: info.inputsHash,
