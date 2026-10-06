@@ -6,9 +6,14 @@
 // docs/BNB.md (locked rules table).
 //
 //   - One ETF = one team. Captain = the creator; others are backers.
-//   - Distance D = best return − return. k = n//2 + 1, m = k-th smallest D.
-//     Win if D < m (exactly the top half, rounded down; boundary ties lose).
-//     If at least half the teams tie at the top, those teams win (coalition).
+//   - AVERAGE (from FPL head-to-head leagues): a ghost team whose return is
+//     the median return of the round. Beat AVERAGE and you win, fall below it
+//     and you lose, tie it and you draw: your ticket comes back, no gain, no
+//     loss. In an odd round the middle team always draws; in an even round
+//     nobody draws unless the two middle teams tie.
+//     Equivalently: D = best return − return, k = n//2 + 1, m = k-th smallest
+//     D; win if D < m. If at least half the teams tie at the top, those teams
+//     win (coalition) and nobody draws.
 //   - Accuracy a = (1 / (1 + D/m))^gamma (gamma = 6).
 //   - Take = 10% of losing stakes: half platform, half season pot.
 //   - Thin pot: if the pot is below 5% of winning stakes, the season pot tops
@@ -69,6 +74,7 @@ export type LeagueVoidReason = "TooFewTeams" | "AllReturnsEqual";
 export interface TeamOutcome {
   d: bigint;          // best return − this return (RET_SCALE)
   isWinner: boolean;
+  isDraw: boolean;    // tied AVERAGE: ticket refunded
   a: bigint;          // accuracy, SCALE fixed point
   teamStake: bigint;
   weight: bigint;     // teamStake × a
@@ -82,7 +88,7 @@ export interface EntryOutcome {
   stake: bigint;
   gain: bigint;       // after the creator fee (captain: includes fees received)
   creatorFee: bigint; // paid by this backer to the captain
-  refund: bigint;     // losers only: share of an unmatched pot
+  refund: bigint;     // losers: share of an unmatched pot; draws: the stake
   payout: bigint;
 }
 
@@ -91,6 +97,8 @@ export interface LeagueResult {
   n: number;
   k: number;
   m: bigint;
+  /** AVERAGE's return: the median team return (RET_SCALE, rounded toward zero). */
+  average: bigint;
   coalitionMode: boolean;
   totalStakes: bigint;
   losingStakes: bigint;
@@ -134,6 +142,7 @@ export function settleLeague(
     n,
     k: 0,
     m: 0n,
+    average: 0n,
     coalitionMode: false,
     totalStakes,
     losingStakes: 0n,
@@ -144,7 +153,7 @@ export function settleLeague(
     seasonOut: 0n,
     platformCut: 0n,
     refundedToLosers: 0n,
-    teams: teams.map((_, i) => ({ d: ds[i], isWinner: false, a: 0n, teamStake: teamStakes[i], weight: 0n, gain: 0n, capped: false })),
+    teams: teams.map((_, i) => ({ d: ds[i], isWinner: false, isDraw: false, a: 0n, teamStake: teamStakes[i], weight: 0n, gain: 0n, capped: false })),
     entries: [],
   };
 
@@ -164,17 +173,24 @@ export function settleLeague(
   const k = Math.floor(n / 2) + 1;
   const m = sorted[k - 1]; // > 0 whenever not in coalition mode
 
+  // AVERAGE = the median return. In doubled units, so an even round's
+  // half-way median stays exact: 2·median = best·2 − (D_lo + D_hi).
+  const medianTwiceD = n % 2 === 1 ? 2n * m : sorted[k - 2] + m;
+  const average = (2n * best - medianTwiceD) / 2n;
+
   const out = base.teams;
   out.forEach((t, i) => {
     t.isWinner = coalitionMode ? ds[i] === 0n : ds[i] < m;
+    t.isDraw = !coalitionMode && 2n * ds[i] === medianTwiceD;
     if (!t.isWinner) return;
     t.a = coalitionMode ? SCALE : accuracyWeight((ds[i] * SCALE) / m, params.gamma);
     t.weight = (t.teamStake * t.a) / SCALE;
   });
 
-  // 3. Pot: take, season share, thin-pot top-up.
-  const losingStakes = sum(out.filter((t) => !t.isWinner).map((t) => t.teamStake));
-  const winningStakes = totalStakes - losingStakes;
+  // 3. Pot: take, season share, thin-pot top-up. Draws are neither.
+  const losingStakes = sum(out.filter((t) => !t.isWinner && !t.isDraw).map((t) => t.teamStake));
+  const drawStakes = sum(out.filter((t) => t.isDraw).map((t) => t.teamStake));
+  const winningStakes = totalStakes - losingStakes - drawStakes;
   const take = (losingStakes * BigInt(params.takeRateBps)) / 10_000n;
   const seasonIn = (take * BigInt(params.seasonShareBps)) / 10_000n;
   let pot = losingStakes - take;
@@ -221,7 +237,7 @@ export function settleLeague(
     remaining -= giveBack;
     if (remaining > 0n && losingStakes > 0n) {
       for (const e of entries) {
-        if (out[e.team].isWinner) continue;
+        if (out[e.team].isWinner || out[e.team].isDraw) continue;
         e.refund = (remaining * e.stake) / losingStakes;
         refundedToLosers += e.refund;
       }
@@ -248,6 +264,7 @@ export function settleLeague(
   }
 
   for (const e of entries) {
+    if (out[e.team].isDraw) e.refund = e.stake;
     e.payout = out[e.team].isWinner ? e.stake + e.gain : e.refund;
   }
 
@@ -258,6 +275,7 @@ export function settleLeague(
     ...base,
     k,
     m,
+    average,
     coalitionMode,
     losingStakes,
     winningStakes,

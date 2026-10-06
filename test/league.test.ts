@@ -55,13 +55,51 @@ describe("settleLeague — gate", () => {
     expect(r.k).toBe(3);
     checkInvariants(r);
   });
-  it("top half rounded down with 5 teams; boundary ties lose", () => {
-    const r = settleLeague([team(5), team(4), team(3), team(3), team(0)]);
-    expect(r.teams.filter((t) => t.isWinner).length).toBe(2);
+  it("odd round: the middle team draws with AVERAGE and gets its ticket back", () => {
+    const r = settleLeague([team(5), team(4), team(3), team(2), team(0)]);
+    expect(r.teams.map((t) => t.isWinner)).toEqual([true, true, false, false, false]);
+    expect(r.teams.map((t) => t.isDraw)).toEqual([false, false, true, false, false]);
+    expect(r.average).toBe(pct(3));
+    expect(payoutsOf(r, 2)).toEqual([STAKE]);
+    expect(r.losingStakes).toBe(2n * STAKE);
+    expect(r.winningStakes).toBe(2n * STAKE);
+    checkInvariants(r);
+  });
+  it("teams tied with AVERAGE all draw", () => {
     const tie = settleLeague([team(5), team(4), team(4), team(1), team(0)]);
-    // m = 3rd smallest D = D of the 4% teams, so both tied teams lose.
+    // AVERAGE = 4%: both 4% teams draw.
     expect(tie.teams.map((t) => t.isWinner)).toEqual([true, false, false, false, false]);
+    expect(tie.teams.map((t) => t.isDraw)).toEqual([false, true, true, false, false]);
+    expect([...payoutsOf(tie, 1), ...payoutsOf(tie, 2)]).toEqual([STAKE, STAKE]);
     checkInvariants(tie);
+  });
+  it("even round: AVERAGE sits between the middle two, nobody draws", () => {
+    const r = settleLeague([team(3), team(1), team(-1), team(2)]);
+    expect(r.teams.some((t) => t.isDraw)).toBe(false);
+    expect(r.average).toBe(pct(1.5));
+    checkInvariants(r);
+  });
+  it("even round: the middle two tied both draw", () => {
+    const r = settleLeague([team(3), team(1), team(1), team(-1)]);
+    expect(r.teams.map((t) => t.isWinner)).toEqual([true, false, false, false]);
+    expect(r.teams.map((t) => t.isDraw)).toEqual([false, true, true, false]);
+    checkInvariants(r);
+  });
+  it("a draw changes nothing for winners compared with losing the same stake elsewhere", () => {
+    // Same winners either way; the drawn ticket simply leaves the pot.
+    const odd = settleLeague([team(5), team(4), team(3), team(2), team(0)]);
+    expect(odd.pot).toBe(odd.losingStakes - odd.take + odd.seasonOut);
+    checkInvariants(odd);
+  });
+  it("conservation holds on many random rounds, and odd ones always have a draw", () => {
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
+    for (let i = 0; i < 300; i++) {
+      const n = 4 + Math.floor(rnd() * 9);
+      const r = settleLeague(Array.from({ length: n }, () => team(Math.round(rnd() * 8 - 4), Math.floor(rnd() * 4))), DEFAULT_LEAGUE_PARAMS, 3n * STAKE);
+      checkInvariants(r);
+      if (!r.void && !r.coalitionMode && n % 2 === 1) expect(r.teams.some((t) => t.isDraw)).toBe(true);
+    }
   });
   it("coalition: half or more tied at the top all win with a = 1", () => {
     const r = settleLeague([team(2), team(2), team(1), team(0)]);

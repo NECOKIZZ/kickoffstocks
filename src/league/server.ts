@@ -343,7 +343,7 @@ export async function loadLeaderboard() {
     const inp = store.loadInputs(BigInt(id)) as null | {
       stake: string;
       entries: { wallet: string; teamKey: string; isCreator: boolean; payout: string; status: { kind: string; captain?: boolean } }[];
-      teams: { teamKey: string; captain: string; ret: string; members: number; isWinner: boolean }[];
+      teams: { teamKey: string; captain: string; ret: string; members: number; isWinner: boolean; isDraw?: boolean }[];
       result: { void: string | null };
     };
     if (!inp || inp.result.void) continue;
