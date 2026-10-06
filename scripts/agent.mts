@@ -1,6 +1,6 @@
-// League of Stocks agent CLI: asks the League API for a plan and signs the
-// steps with a local key. The same plans drive the Binance Agentic Wallet
-// skill (skills/league-of-stocks/SKILL.md) through `baw contract-call`.
+// Kickoff Stocks agent CLI: asks the league API for a plan and signs the
+// steps with a local key (bots, testing). The same plans are what BYO agents
+// get from the MCP server (/api/mcp) for the user's wallet to sign.
 //
 //   AGENT_PRIVATE_KEY=0x… LEAGUE_API=http://localhost:3000 \
 //     npx tsx scripts/agent.mts <command> [json]
@@ -8,7 +8,7 @@
 //   round                          current round: ETFs, returns, odds
 //   stocks                         eligible stocks and prices
 //   me                             this wallet's entries
-//   faucet '{"usdt":20,"stocks":{"NVDA":5,"TSLA":4,"SPY":3}}'   (local chain only)
+//   faucet '{"usdg":20,"stocks":{"NVDA":5,"TSLA":4,"SPY":3}}'   (local chain only)
 //   plan   '{"action":"back","teamKey":"0x…"}'                   print the steps
 //   run    '{"action":"back","teamKey":"0x…"}'                   plan + sign + send
 //          actions: back · lock · buy-basket · buy-etf · claim · claim-basket
@@ -38,7 +38,7 @@ interface Step { kind: string; label: string; to: Hex; data: Hex; value: string 
 async function run(req: Record<string, unknown>) {
   const acct = need();
   const cfg = await api<{ chainId: number; rpcUrl: string; chain: string }>("/api/config");
-  const chain = defineChain({ id: cfg.chainId, name: cfg.chain, nativeCurrency: { name: "BNB", symbol: "BNB", decimals: 18 }, rpcUrls: { default: { http: [cfg.rpcUrl] } } });
+  const chain = defineChain({ id: cfg.chainId, name: cfg.chain, nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 }, rpcUrls: { default: { http: [cfg.rpcUrl] } } });
   const rpc = process.env.AGENT_RPC_URL ?? cfg.rpcUrl;
   const pub = createPublicClient({ chain, transport: http(rpc) });
   const wallet = createWalletClient({ chain, transport: http(rpc), account: acct });

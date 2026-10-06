@@ -20,7 +20,7 @@ export function AgentPrompt() {
           setCopied(true);
           setTimeout(() => setCopied(false), 2000);
         }}
-        className="mt-5 inline-flex h-11 items-center rounded-full bg-brand-mint px-5 text-[15px] font-medium text-brand-ink transition hover:opacity-90"
+        className="btn-3d btn-green mt-5 inline-flex h-11 items-center px-5 text-[15px]"
       >
         {copied ? "Copied ✓" : "Copy message"}
       </button>

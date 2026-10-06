@@ -12,7 +12,7 @@ import { useConnect, useConnection, useConnectors, useDisconnect, useReadContrac
 import { useQueryClient } from "@tanstack/react-query";
 import { Button3D } from "../../ui/brand/Button3D";
 import { WalletAvatar, shortAddress } from "../../ui/brand/Avatar";
-import { useConfig } from "../hooks";
+import { useAgentWallets, useConfig } from "../hooks";
 
 export const short = shortAddress;
 
@@ -38,6 +38,7 @@ export function ConnectButton({ size = "sm" }: { size?: "sm" | "md" }) {
   const { switchChain } = useSwitchChain();
   const { data: cfg } = useConfig();
   const qc = useQueryClient();
+  const agents = useAgentWallets();
   const { data: bal, refetch } = useTicketBalance(address);
   const { writeContractAsync, isPending: topping } = useWriteContract();
   const [note, setNote] = useState<string | null>(null);
@@ -135,7 +136,7 @@ export function ConnectButton({ size = "sm" }: { size?: "sm" | "md" }) {
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
-        <WalletAvatar address={address} size={26} />
+        <WalletAvatar address={address} size={26} agent={agents.has(address.toLowerCase())} />
         <span className="t-num">{short(address)}</span>
       </button>
       {open && (

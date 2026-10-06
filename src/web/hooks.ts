@@ -10,6 +10,16 @@ import { fetchConfig, fetchMe, fetchPlan, fetchRound, fetchStocks, type PlanResp
 import type { StockInfo } from "../ui/data/stocks";
 import { STOCKS } from "../ui/data/stocks";
 
+/** Wallets that played through an AI agent (lower case): their avatars get the badge. */
+export function useAgentWallets(): Set<string> {
+  const { data } = useQuery({
+    queryKey: ["agent-wallets"],
+    queryFn: async () => ((await (await fetch("/api/agent-wallets")).json()) as { wallets: string[] }).wallets,
+    staleTime: 60_000,
+  });
+  return new Set(data ?? []);
+}
+
 export const useConfig = () => useQuery({ queryKey: ["config"], queryFn: fetchConfig, staleTime: 60_000 });
 export const useStocks = () => useQuery({ queryKey: ["stocks"], queryFn: fetchStocks, refetchInterval: 30_000 });
 export const useRound = (id?: string) => useQuery({ queryKey: ["round", id ?? "current"], queryFn: () => fetchRound(id), refetchInterval: 20_000 });

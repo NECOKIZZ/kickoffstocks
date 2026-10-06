@@ -56,3 +56,15 @@ describe("buy plan → steps", () => {
     expect(buyPlanSteps({ legs: [leg] }, USDG, () => 5n, (t) => t).steps.map((s) => s.kind)).toEqual(["swap"]);
   });
 });
+
+describe("agent guide", () => {
+  it("fills in the site address everywhere, points at the MCP server, and says what the agent must never do", async () => {
+    const { agentGuide, agentPrompt } = await import("../src/agent/guide");
+    const g = agentGuide("https://stocks.example");
+    expect(g).toContain("https://stocks.example/api/mcp");
+    expect(g).toContain("https://stocks.example/api/plan");
+    expect(g).toMatch(/Never ask for or accept private keys/);
+    expect(g).not.toMatch(/\$\{|undefined|baw |Binance/);
+    expect(agentPrompt("https://stocks.example")).toBe("Read https://stocks.example/agent.md and follow it to help me play Kickoff Stocks. Guide me one step at a time, in plain words.");
+  });
+});
