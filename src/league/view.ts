@@ -52,6 +52,10 @@ export interface RoundView {
   priceSource: string;
   /** Hash of the published settlement inputs (zero until settled). */
   inputsHash: Hex;
+  /** Tickets are earning interest in the savings vault. */
+  ticketsParked: boolean;
+  /** Interest the tickets earned so far (USDG base units), added to the pot. */
+  ticketYield: string;
 }
 
 export function buildRoundView(opts: {
@@ -79,6 +83,7 @@ export function buildRoundView(opts: {
     start,
     end: now,
     priceProblems: [],
+    bonus: info.yield,
   });
 
   const teams: TeamView[] = s.teams.map((t) => {
@@ -129,5 +134,7 @@ export function buildRoundView(opts: {
     refunded: s.statuses.filter((x) => x.kind === "refunded").length,
     priceSource: opts.priceSource,
     inputsHash: info.inputsHash,
+    ticketsParked: info.parked,
+    ticketYield: info.yield.toString(),
   };
 }

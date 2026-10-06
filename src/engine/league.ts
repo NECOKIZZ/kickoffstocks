@@ -16,6 +16,8 @@
 //     win (coalition) and nobody draws.
 //   - Accuracy a = (1 / (1 + D/m))^gamma (gamma = 6).
 //   - Take = 10% of losing stakes: half platform, half season pot.
+//   - Ticket yield: the round's tickets earn interest in a savings vault
+//     while the round runs; that interest ("bonus") is added to the pot.
 //   - Thin pot: if the pot is below 5% of winning stakes, the season pot tops
 //     it up to that floor (as far as the season pot allows).
 //   - Pot split across winning teams by teamStake × a, water-filled under a
@@ -25,7 +27,7 @@
 //   - Inside a team: gain split by stake, then the captain takes
 //     creatorFeeBps of each backer's gain.
 //
-// Conservation, always: Σ payouts + platform + seasonIn == Σ stakes + seasonOut.
+// Conservation, always: Σ payouts + platform + seasonIn == Σ stakes + seasonOut + bonus.
 // The platform cut is derived, so it absorbs all rounding dust.
 //
 // BigInt only, no floats. Amounts are in stake-token base units (any decimals);
@@ -104,7 +106,8 @@ export interface LeagueResult {
   losingStakes: bigint;
   winningStakes: bigint;
   take: bigint;
-  pot: bigint;            // dividend pot after take and top-up
+  pot: bigint;            // dividend pot after take, top-up and bonus
+  bonus: bigint;          // ticket yield added to the pot (a void sends it to the season pot)
   seasonIn: bigint;       // season pot share of the take
   seasonOut: bigint;      // thin-pot top-up drawn from the season pot
   platformCut: bigint;    // derived: absorbs all dust
@@ -118,12 +121,14 @@ const sum = (xs: bigint[]): bigint => xs.reduce((s, x) => s + x, 0n);
 
 /**
  * Settle one round. `seasonBalance` is the season pot available before this
- * round, used only for the thin-pot top-up.
+ * round, used only for the thin-pot top-up. `bonus` is the interest the
+ * round's tickets earned (added to the pot; a void sends it to the season pot).
  */
 export function settleLeague(
   teams: LeagueTeam[],
   params: LeagueParams = DEFAULT_LEAGUE_PARAMS,
   seasonBalance = 0n,
+  bonus = 0n,
 ): LeagueResult {
   const n = teams.length;
   const teamStakes = teams.map((t) => sum(t.entries.map((e) => e.stake)));
@@ -149,6 +154,7 @@ export function settleLeague(
     winningStakes: 0n,
     take: 0n,
     pot: 0n,
+    bonus,
     seasonIn: 0n,
     seasonOut: 0n,
     platformCut: 0n,
@@ -157,10 +163,11 @@ export function settleLeague(
     entries: [],
   };
 
-  // 1. Void: refund everyone, no take.
+  // 1. Void: refund everyone, no take; any ticket yield goes to the season pot.
   const voidWith = (reason: LeagueVoidReason): LeagueResult => ({
     ...base,
     void: reason,
+    seasonIn: bonus,
     entries: entryList().map((e) => ({ ...e, payout: e.stake })),
   });
   if (n < params.minTeams) return voidWith("TooFewTeams");
@@ -193,7 +200,7 @@ export function settleLeague(
   const winningStakes = totalStakes - losingStakes - drawStakes;
   const take = (losingStakes * BigInt(params.takeRateBps)) / 10_000n;
   const seasonIn = (take * BigInt(params.seasonShareBps)) / 10_000n;
-  let pot = losingStakes - take;
+  let pot = losingStakes - take + bonus;
 
   let seasonOut = 0n;
   const floor = (winningStakes * BigInt(params.thinPotFloorBps)) / 10_000n;
@@ -269,7 +276,7 @@ export function settleLeague(
   }
 
   const paid = sum(entries.map((e) => e.payout));
-  const platformCut = totalStakes + seasonOut - paid - seasonIn;
+  const platformCut = totalStakes + seasonOut + bonus - paid - seasonIn;
 
   return {
     ...base,
@@ -289,10 +296,10 @@ export function settleLeague(
   };
 }
 
-/** Σ payouts + platform + seasonIn == Σ stakes + seasonOut. */
+/** Σ payouts + platform + seasonIn == Σ stakes + seasonOut + bonus. */
 export function leagueConserves(r: LeagueResult): boolean {
   const paid = sum(r.entries.map((e) => e.payout));
-  return paid + r.platformCut + r.seasonIn === r.totalStakes + r.seasonOut && r.platformCut >= 0n;
+  return paid + r.platformCut + r.seasonIn === r.totalStakes + r.seasonOut + r.bonus && r.platformCut >= 0n;
 }
 
 // ---------------------------------------------------------------------------

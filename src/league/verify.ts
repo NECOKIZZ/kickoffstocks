@@ -12,6 +12,7 @@ interface PublishedInputs {
   stake: string;
   capMultiple: number;
   seasonPot: string;
+  bonus?: string;
   params: Record<string, unknown> & { capMultiple: string };
   rules: { minTokens: number; maxWeightBps: number; minValue: string };
   prices: { start: SnapRow[]; end: SnapRow[]; problems: string[] };
@@ -58,6 +59,7 @@ export function verifyInputs(raw: unknown, onchainHash: Hex | null = null): Veri
     start: snaps(inp.prices.start),
     end: snaps(inp.prices.end),
     priceProblems: inp.prices.problems,
+    bonus: BigInt(inp.bonus ?? "0"),
   };
   const params = { ...inp.params, capMultiple: BigInt(inp.params.capMultiple) } as unknown as LeagueParams;
   const rules = { ...inp.rules, minValue: BigInt(inp.rules.minValue) };

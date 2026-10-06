@@ -240,3 +240,22 @@ describe("crypto slice rules", () => {
     expect(basketEligibility(["0xa", "0xb", "0xc"], [4n, 3n, 3n].map((x) => x * USD), { minTokens: 3, maxWeightBps: 5000, minValue: 10n * USD })).toBeNull();
   });
 });
+
+describe("settleLeague — ticket yield", () => {
+  it("adds the tickets' interest to the winners' pot", () => {
+    const teams = [team(3), team(1), team(-1), team(2)];
+    const plain = settleLeague(teams);
+    const withYield = settleLeague(teams, DEFAULT_LEAGUE_PARAMS, 0n, 1_000_000n);
+    expect(withYield.pot).toBe(plain.pot + 1_000_000n);
+    const gained = (r: LeagueResult) => r.entries.filter((e) => r.teams[e.team].isWinner).reduce((s, e) => s + e.payout, 0n);
+    expect(gained(withYield) - gained(plain)).toBeGreaterThan(999_000n);
+    checkInvariants(withYield);
+  });
+  it("sends the interest to the season pot when the round is void", () => {
+    const r = settleLeague([team(1), team(2), team(3)], DEFAULT_LEAGUE_PARAMS, 0n, 777n);
+    expect(r.void).toBe("TooFewTeams");
+    expect(r.seasonIn).toBe(777n);
+    checkInvariants(r);
+  });
+});
+
