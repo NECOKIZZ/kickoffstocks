@@ -8,7 +8,7 @@ import { useCallback, useState } from "react";
 import { useConnection, usePublicClient, useSendTransaction, useSwitchChain } from "wagmi";
 import { fetchConfig, fetchMe, fetchPlan, fetchRound, fetchStocks, type PlanResponse, type TxStep } from "./api";
 import type { StockInfo } from "../ui/data/stocks";
-import { BSTOCKS } from "../ui/data/stocks";
+import { STOCKS } from "../ui/data/stocks";
 
 export const useConfig = () => useQuery({ queryKey: ["config"], queryFn: fetchConfig, staleTime: 60_000 });
 export const useStocks = () => useQuery({ queryKey: ["stocks"], queryFn: fetchStocks, refetchInterval: 30_000 });
@@ -22,7 +22,7 @@ export function useMe() {
 export function useStockCards() {
   const { data } = useStocks();
   const byTicker = new Map<string, StockInfo & { live: number }>();
-  for (const s of BSTOCKS) {
+  for (const s of STOCKS) {
     const p = data?.stocks.find((x) => x.ticker === s.ticker);
     byTicker.set(s.ticker, { ...s, live: p?.price ?? s.price, address: (p?.address ?? s.address) as `0x${string}` });
   }

@@ -1,13 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { decodeFunctionData, type Address } from "viem";
-import { planLock, planBack, normaliseWeights, buyPlanSteps, bawCommand } from "../src/league/actions";
-import { findApproveTx, spenderOfApprove, approvalFromSignatureData } from "../src/bsc/buyBasket";
+import { planLock, planBack, normaliseWeights, buyPlanSteps } from "../src/league/actions";
 import { leagueEscrowAbi, erc20Abi } from "../src/league/escrow";
-import { teamKeyFromWeights } from "../src/bsc/basket";
+import { teamKeyFromWeights } from "../src/league/basket";
 
 const A = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as Address;
 const ESCROW = A(0xe5c);
-const USDT = A(0x05d);
+const USDG = A(0x05d);
 const [NVDA, TSLA, SPY] = [A(1), A(2), A(3)];
 
 describe("normaliseWeights", () => {
@@ -21,13 +20,13 @@ describe("normaliseWeights", () => {
 describe("planLock", () => {
   it("approves what is missing, then enters with the declared-weight team key", () => {
     const { teamKey, steps } = planLock({
-      escrow: ESCROW, usdt: USDT, roundId: 2n, stake: 5n * 10n ** 18n,
+      escrow: ESCROW, usdg: USDG, roundId: 2n, stake: 5n * 10n ** 6n,
       tokens: [NVDA, TSLA, SPY], amounts: [1n, 2n, 3n], weightsBps: [42, 33, 25], name: "Test", buyFeeBps: 100,
       allowances: { [TSLA.toLowerCase()]: 2n }, // TSLA already approved
     });
     expect(teamKey).toBe(teamKeyFromWeights([NVDA, TSLA, SPY], [4200, 3300, 2500]));
     expect(steps.map((s) => s.kind)).toEqual(["approve", "approve", "approve", "enter-creator"]);
-    expect(steps.slice(0, 3).map((s) => s.to)).toEqual([NVDA, SPY, USDT]);
+    expect(steps.slice(0, 3).map((s) => s.to)).toEqual([NVDA, SPY, USDG]);
     const enter = decodeFunctionData({ abi: leagueEscrowAbi, data: steps[3].data });
     expect(enter.functionName).toBe("enterCreatorNamed");
     expect(enter.args).toEqual([2n, teamKey, [NVDA, TSLA, SPY], [1n, 2n, 3n], [4200, 3300, 2500], "Test", 100]);
@@ -36,47 +35,24 @@ describe("planLock", () => {
 
 describe("planBack", () => {
   it("skips the approval when the ticket is already allowed", () => {
-    const steps = planBack({ escrow: ESCROW, usdt: USDT, roundId: 2n, stake: 5n, teamKey: `0x${"ab".repeat(32)}`, allowance: 5n });
+    const steps = planBack({ escrow: ESCROW, usdg: USDG, roundId: 2n, stake: 5n, teamKey: `0x${"ab".repeat(32)}`, allowance: 5n });
     expect(steps).toHaveLength(1);
     expect(decodeFunctionData({ abi: leagueEscrowAbi, data: steps[0].data }).functionName).toBe("enterBacker");
-  });
-  it("gives a Binance Agentic Wallet command for each step", () => {
-    const [s] = planBack({ escrow: ESCROW, usdt: USDT, roundId: 2n, stake: 5n, teamKey: `0x${"ab".repeat(32)}` });
-    expect(bawCommand(s, A(9))).toMatch(/^baw contract-call preview --binanceChainId 56 --from 0x0+9 --to 0x0+5d --value 0 --inputData 0x095ea7b3/);
   });
 });
 
 describe("buy plan → steps", () => {
-  const approveData = (spender: Address) => `0x095ea7b3${spender.slice(2).padStart(64, "0")}${"f".repeat(64)}`;
-  it("finds an approval Binance included, and its spender", () => {
-    const swap = { tx: { to: A(0xb0b) }, approveTransaction: { to: USDT, data: approveData(A(0xa11)) } };
-    expect(findApproveTx(swap)).toEqual({ to: USDT, data: approveData(A(0xa11)) });
-    expect(spenderOfApprove(approveData(A(0xa11)))).toBe(A(0xa11));
-  });
-  it("reads the spender from tx.signatureData (the live response shape)", () => {
-    const router = "0xB44446b0c8E56988c34f7Ff73Ae904982b5FdDA5";
-    const swap = { executionMode: "SWAP", tx: { to: router, data: "0xad43f73d", signatureData: [JSON.stringify({ approveContract: router })] } };
-    expect(approvalFromSignatureData(swap)).toEqual({ spender: router, data: null });
-    expect(approvalFromSignatureData({ tx: { signatureData: ["not json"] } })).toEqual({ spender: null, data: null });
-  });
-  it("approves each spender once for the sum of its legs, then swaps; RFQ legs are reported", () => {
-    const leg = (token: Address, amountIn: string, mode = "SWAP") => ({ token, amountIn, mode, tx: { to: A(0xb0b), data: "0x12", value: "0" }, spender: A(0xa11), error: null });
-    const { steps, skipped } = buyPlanSteps({ legs: [leg(NVDA, "4"), leg(TSLA, "3"), leg(SPY, "3", "RFQ")] }, USDT, () => 0n, (t) => t);
+  it("approves each spender once for the sum of its legs, then swaps; failed legs are reported", () => {
+    const leg = (token: Address, amountIn: string, error: string | null = null) => ({ token, amountIn, tx: error ? null : { to: A(0xb0b), data: "0x12", value: "0" }, spender: A(0xa11), error });
+    const { steps, skipped } = buyPlanSteps({ legs: [leg(NVDA, "4000000"), leg(TSLA, "3000000"), leg(SPY, "3000000", "no liquidity")] }, USDG, () => 0n, (t) => t);
     expect(steps.map((s) => s.kind)).toEqual(["approve", "swap", "swap"]);
     const ap = decodeFunctionData({ abi: erc20Abi, data: steps[0].data });
-    expect(ap.args).toEqual([A(0xa11), 7n]);
-    expect(skipped).toEqual([{ token: SPY, reason: expect.stringMatching(/RFQ/) }]);
+    expect(ap.args).toEqual([A(0xa11), 7_000_000n]);
+    expect(steps[1].label).toBe(`Buy ${NVDA} with 4.00 USDG`);
+    expect(skipped).toEqual([{ token: SPY, reason: "no liquidity" }]);
   });
-});
-
-describe("agent guide", () => {
-  it("fills in the site address everywhere and says what the agent must never do", async () => {
-    const { agentGuide, agentPrompt } = await import("../src/agent/guide");
-    const g = agentGuide("https://league.example");
-    expect(g).toContain("https://league.example/api/plan");
-    expect(g).toContain("baw contract-call preview");
-    expect(g).toMatch(/Never ask for or accept private keys/);
-    expect(g).not.toMatch(/\$\{|undefined/);
-    expect(agentPrompt("https://league.example")).toBe("Read https://league.example/agent.md and follow it to help me play League of Stocks. Guide me one step at a time, in plain words.");
+  it("skips the approval when the spender is already allowed", () => {
+    const leg = { token: NVDA, amountIn: "5", tx: { to: A(0xb0b), data: "0x12" }, spender: A(0xa11), error: null };
+    expect(buyPlanSteps({ legs: [leg] }, USDG, () => 5n, (t) => t).steps.map((s) => s.kind)).toEqual(["swap"]);
   });
 });

@@ -1,11 +1,12 @@
 // Every league transaction as plain calldata steps. One builder, three users:
-// the web app sends them from the browser wallet, the agent API turns them
-// into Binance Agentic Wallet `baw contract-call` commands, and the agent CLI
-// signs them with a local key.
+// the web app sends them from the browser wallet, BYO agents get them from
+// the MCP server and /api/plan and sign with their own wallet, and the agent
+// CLI signs them with a local key.
 
 import { encodeFunctionData, type Address, type Hex } from "viem";
 import { erc20Abi, leagueEscrowAbi } from "./escrow";
-import { teamKeyFromWeights } from "../bsc/basket";
+import { teamKeyFromWeights } from "./basket";
+import { USDG_DECIMALS } from "../rh/chains";
 
 export type StepKind = "approve" | "enter-creator" | "enter-backer" | "claim" | "claim-basket" | "swap";
 
@@ -26,7 +27,7 @@ export function approveStep(token: Address, spender: Address, amount: bigint, la
 
 export interface LockPlanInput {
   escrow: Address;
-  usdt: Address;
+  usdg: Address;
   roundId: bigint;
   stake: bigint;
   tokens: Address[];
@@ -58,7 +59,7 @@ export function planLock(p: LockPlanInput): { teamKey: Hex; steps: TxStep[] } {
   p.tokens.forEach((t, i) => {
     if (allow(t) < p.amounts[i]) steps.push(approveStep(t, p.escrow, p.amounts[i], `Allow the league to lock your ${sym(t)}`));
   });
-  if (allow(p.usdt) < p.stake) steps.push(approveStep(p.usdt, p.escrow, p.stake, "Allow the league to take the $5 ticket (USDT)"));
+  if (allow(p.usdg) < p.stake) steps.push(approveStep(p.usdg, p.escrow, p.stake, "Allow the league to take the $5 ticket (USDG)"));
   steps.push(
     step(
       "enter-creator",
@@ -75,9 +76,9 @@ export function planLock(p: LockPlanInput): { teamKey: Hex; steps: TxStep[] } {
 }
 
 /** Approve the ticket (if needed) + enterBacker. */
-export function planBack(p: { escrow: Address; usdt: Address; roundId: bigint; stake: bigint; teamKey: Hex; allowance?: bigint; teamName?: string }): TxStep[] {
+export function planBack(p: { escrow: Address; usdg: Address; roundId: bigint; stake: bigint; teamKey: Hex; allowance?: bigint; teamName?: string }): TxStep[] {
   const steps: TxStep[] = [];
-  if ((p.allowance ?? 0n) < p.stake) steps.push(approveStep(p.usdt, p.escrow, p.stake, "Allow the league to take the $5 ticket (USDT)"));
+  if ((p.allowance ?? 0n) < p.stake) steps.push(approveStep(p.usdg, p.escrow, p.stake, "Allow the league to take the $5 ticket (USDG)"));
   steps.push(
     step(
       "enter-backer",
@@ -97,25 +98,19 @@ export function planClaimBasket(escrow: Address, roundId: bigint): TxStep[] {
   return [step("claim-basket", `Retry returning your basket from round ${roundId}`, escrow, encodeFunctionData({ abi: leagueEscrowAbi, functionName: "claimBasket", args: [roundId] }))];
 }
 
-/** A Binance aggregator swap transaction as a step. */
+/** A 0x swap transaction as a step. */
 export function swapStep(tx: { to: string; data: string; value?: string }, label: string): TxStep {
   return step("swap", label, tx.to as Address, tx.data as Hex, BigInt(tx.value ?? "0"));
 }
 
-/** The Binance Agentic Wallet command for a step (two-step: preview, then execute). */
-export function bawCommand(s: TxStep, from: Address, binanceChainId = "56"): string {
-  return `baw contract-call preview --binanceChainId ${binanceChainId} --from ${from} --to ${s.to} --value ${s.value} --inputData ${s.data} --json`;
-}
-
 /**
- * Turn a Binance buy plan into steps: one USDT approval per spender (for the
- * sum of its legs, unless already allowed), then one swap per stock. RFQ legs
- * need an EIP-712 signature instead of a transaction and are reported, not
- * included.
+ * Turn a 0x buy plan into steps: one USDG approval per spender (for the sum
+ * of its legs, unless already allowed), then one swap per stock. Legs that
+ * couldn't be quoted are reported, not included.
  */
 export function buyPlanSteps(
-  plan: { legs: { token: string; amountIn: string; mode: string | null; tx: { to: string; data: string; value?: string } | null; spender: string | null; error: string | null }[] },
-  usdt: Address,
+  plan: { legs: { token: string; amountIn: string; tx: { to: string; data: string; value?: string } | null; spender: string | null; error: string | null }[] },
+  usdg: Address,
   allowanceOf: (spender: string) => bigint,
   symbolOf: (token: string) => string,
 ): { steps: TxStep[]; skipped: { token: string; reason: string }[] } {
@@ -127,14 +122,10 @@ export function buyPlanSteps(
       skipped.push({ token: l.token, reason: l.error ?? "no transaction" });
       continue;
     }
-    if (l.mode === "RFQ") {
-      skipped.push({ token: l.token, reason: "RFQ route: needs a signed order, not a transaction" });
-      continue;
-    }
     const sp = (l.spender ?? l.tx.to).toLowerCase();
     need.set(sp, (need.get(sp) ?? 0n) + BigInt(l.amountIn));
-    swaps.push(swapStep(l.tx, `Buy ${symbolOf(l.token)} with ${(Number(BigInt(l.amountIn) / 10n ** 14n) / 1e4).toFixed(2)} USDT`));
+    swaps.push(swapStep(l.tx, `Buy ${symbolOf(l.token)} with ${(Number(BigInt(l.amountIn)) / 10 ** USDG_DECIMALS).toFixed(2)} USDG`));
   }
-  const approvals = [...need].filter(([sp, amt]) => allowanceOf(sp) < amt).map(([sp, amt]) => approveStep(usdt, sp as Address, amt, "Allow Binance's router to spend your USDT"));
+  const approvals = [...need].filter(([sp, amt]) => allowanceOf(sp) < amt).map(([sp, amt]) => approveStep(usdg, sp as Address, amt, "Allow 0x to spend your USDG"));
   return { steps: [...approvals, ...swaps], skipped };
 }

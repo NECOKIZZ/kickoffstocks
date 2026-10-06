@@ -8,7 +8,7 @@ import { StockCard, fmtPrice } from "../../ui/components/StockCard";
 import { Change, Pill } from "../../ui/components/Pills";
 import { RoundPill } from "../../ui/components/RoundPill";
 import { ActionPanel } from "./ActionPanel";
-import { holdingsOf, teamName, usd } from "./league";
+import { holdingsOf, teamName, usd, usdg } from "./league";
 import { short } from "./ConnectButton";
 import { Container } from "./Shell";
 
@@ -88,7 +88,7 @@ export function EtfPage({ teamKey, roundId }: { teamKey: string; roundId?: strin
 
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             <Stat k="Team tickets" v={`${t.members + 1}`} />
-            <Stat k="Ticket now" v={t.winningNow ? `$${usd(t.payoutPerTicketNow)}` : "$0.00"} />
+            <Stat k="Ticket now" v={t.winningNow || t.drawingNow ? `$${usdg(t.payoutPerTicketNow)}` : "$0.00"} />
             <Stat k="Winners now" v={`${winners} of ${r.teams.length}`} />
           </div>
         </div>

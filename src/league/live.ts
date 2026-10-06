@@ -1,55 +1,36 @@
-// Server-side loaders for the API routes: live prices (Binance, or the latest
-// saved sample when Binance isn't reachable) and round views from the chain.
+// Server-side loaders for the API routes: live prices and round views from
+// the chain. Live prices come from Robinhood's quote API (one call, every
+// token), falling back to the Chainlink feeds; the local demo chain uses demo
+// prices.
 
-import { existsSync, readFileSync } from "node:fs";
-import { rwaTokens } from "../bsc/binanceWeb3";
-import { cryptoSamples } from "../bsc/cryptoPrices";
-import { BSTOCKS, demoChangePct } from "../ui/data/stocks";
-import { clientsFromEnv, escrowFromEnv } from "./chain";
+import { clientsFromEnv, escrowFromEnv, leagueChain } from "./chain";
 import { leagueEscrowAbi, readEntries, readRound, readTeamMeta, roundTokens } from "./escrow";
-import { buildSnapshot, sampleFromTokens, type PriceMode, type PriceSample, type Snapshot } from "./snapshot";
+import { buildSnapshot, type PriceSample, type Snapshot } from "./snapshot";
 import { FileStore } from "./store";
 import { buildRoundView, type RoundView } from "./view";
-import { cryptoTokensForChain, tickerOf } from "./registry";
+import { tickerOf } from "./registry";
+import { samplePrices } from "./prices";
 
-const MODE: PriceMode = (process.env.LEAGUE_PRICE_MODE as PriceMode) ?? "reference";
-let liveCache: { at: number; sample: Map<string, PriceSample> } | null = null;
+let liveCache: { at: number; source: string; sample: Map<string, PriceSample> } | null = null;
 
-/**
- * Local demo chain: the mock tokens' snapshot prices, moved by the showcase
- * movement (demoChangePct) with a slow wobble, so standings change over time.
- */
-function localDemoPrices(): Map<string, PriceSample> | null {
-  const f = process.env.LEAGUE_DATA_DIR ? `${process.env.LEAGUE_DATA_DIR}/local-demo.json` : "data/local-demo.json";
-  if (!existsSync(f)) return null;
-  const { tokens } = JSON.parse(readFileSync(f, "utf8")) as { tokens: Record<string, string> };
-  const at = Date.now();
-  const wobble = 0.75 + 0.25 * Math.sin(at / 600_000);
-  const m = new Map<string, PriceSample>();
-  for (const [ticker, addr] of Object.entries(tokens)) {
-    const s = BSTOCKS.find((x) => x.ticker === ticker);
-    if (!s) continue;
-    const price = s.price * (1 + (demoChangePct(ticker) / 100) * wobble);
-    const token = addr.toLowerCase();
-    m.set(token, { token, value: BigInt(Math.round(price * 1e6)) * 10n ** 12n, decimals: 18, trading: true, at });
+/** Live prices, cached for 15 s. Null when no source is reachable. */
+export async function livePrices(): Promise<{ source: string; sample: Map<string, PriceSample> } | null> {
+  if (leagueChain() === "local") {
+    const sample = await samplePrices("local-demo").catch(() => null);
+    return sample ? { source: "local demo prices", sample } : null;
   }
-  return m;
-}
-
-/** Live prices from Binance, cached for 20 s. Null when the API is unreachable. */
-export async function livePrices(): Promise<Map<string, PriceSample> | null> {
-  if (process.env.LEAGUE_CHAIN === "local") return localDemoPrices(); // mock tokens: demo prices
-  if (liveCache && Date.now() - liveCache.at < 20_000) return liveCache.sample;
-  try {
-    const at = Date.now();
-    const sample = sampleFromTokens(await rwaTokens(), MODE, at);
-    // Crypto slice: Binance spot prices (a failure leaves crypto out, not the stocks).
-    for (const [k, v] of await cryptoSamples(at).catch(() => new Map())) sample.set(k, v);
-    liveCache = { at, sample };
-    return sample;
-  } catch {
-    return null;
+  if (liveCache && Date.now() - liveCache.at < 15_000) return liveCache;
+  for (const source of ["robinhood", "chainlink"] as const) {
+    try {
+      const sample = await samplePrices(source);
+      if (sample.size === 0) continue;
+      liveCache = { at: Date.now(), source: source === "robinhood" ? "Robinhood quotes, live" : "Chainlink feeds, live", sample };
+      return liveCache;
+    } catch {
+      // try the next source
+    }
   }
+  return null;
 }
 
 const one = (sample: Map<string, PriceSample>, tokens: string[]) => buildSnapshot([sample], tokens, 1).prices;
@@ -71,7 +52,8 @@ export async function loadRoundView(roundId?: bigint): Promise<RoundView | null>
 
   // Start prices: the saved start samples, else (entries still open) current prices.
   // Current prices: live Binance, else the latest saved end sample, else the start.
-  const live = await livePrices();
+  const liveP = await livePrices();
+  const live = liveP?.sample ?? null;
   const startSamples = saved("start");
   const endSamples = saved("end");
   const start: Map<string, Snapshot> = startSamples.length
@@ -84,14 +66,8 @@ export async function loadRoundView(roundId?: bigint): Promise<RoundView | null>
     : live
       ? one(live, tokens)
       : start;
-  const priceSource = endSamples.length
-    ? "saved end samples"
-    : process.env.LEAGUE_CHAIN === "local"
-      ? "local demo prices"
-      : live
-        ? `Binance ${MODE} price, live`
-        : "saved start samples";
+  const priceSource = endSamples.length ? "saved end samples" : liveP ? liveP.source : "saved start samples";
 
   const meta = await readTeamMeta(pub, escrow, id, entries.filter((e) => e.isCreator).map((e) => e.teamKey));
-  return buildRoundView({ info, entries, start, now, nowSec: Number(block.timestamp), seasonPot, tickerOf, priceSource, meta, cryptoTokens: cryptoTokensForChain() });
+  return buildRoundView({ info, entries, start, now, nowSec: Number(block.timestamp), seasonPot, tickerOf, priceSource, meta });
 }

@@ -1,5 +1,5 @@
-// POST /api/faucet { wallet, usdt?, stocks?: { [ticker]: usd } }: LOCAL DEMO
-// CHAIN ONLY. Mints mock USDT and mock stock tokens and tops up gas, so the
+// POST /api/faucet { wallet, usdg?, stocks?: { [ticker]: usd } }: LOCAL DEMO
+// CHAIN ONLY. Mints mock USDG and mock stock tokens and tops up gas, so the
 // create / back / claim flows can be tried without real money.
 import { NextResponse } from "next/server";
 import { createTestClient, http, isAddress, parseAbi, parseEther, type Address } from "viem";
@@ -13,7 +13,7 @@ const mintAbi = parseAbi(["function mint(address to, uint256 amount)"]);
 
 export async function POST(req: Request) {
   if (!isLocal()) return NextResponse.json({ error: "the faucet only exists on the local demo chain" }, { status: 404 });
-  const b = (await req.json().catch(() => null)) as { wallet?: string; usdt?: number; stocks?: Record<string, number> } | null;
+  const b = (await req.json().catch(() => null)) as { wallet?: string; usdg?: number; stocks?: Record<string, number> } | null;
   if (!b?.wallet || !isAddress(b.wallet)) return NextResponse.json({ error: "wallet must be an address" }, { status: 400 });
   const wallet = b.wallet as Address;
   const { pub, wallet: signer, account, chain } = clientsFromEnv(true);
@@ -28,8 +28,8 @@ export async function POST(req: Request) {
     await pub.waitForTransactionReceipt({ hash });
     minted[label] = amount.toString();
   };
-  const usdt = Math.min(Math.max(b.usdt ?? 50, 0), 1000);
-  if (usdt > 0) await mint(cfg.usdt, BigInt(Math.round(usdt * 1e6)) * 10n ** 12n, "USDT");
+  const usdg = Math.min(Math.max(b.usdg ?? 50, 0), 1000);
+  if (usdg > 0) await mint(cfg.usdg, BigInt(Math.round(usdg * 10 ** cfg.usdgDecimals)), "USDG");
   for (const [ticker, usd] of Object.entries(b.stocks ?? {})) {
     const s = stocks.find((x) => x.ticker === ticker.toUpperCase());
     if (!s || !(usd > 0 && usd <= 1000)) continue;

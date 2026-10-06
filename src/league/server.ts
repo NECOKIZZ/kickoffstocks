@@ -1,26 +1,21 @@
 // Server-side helpers behind the API routes: the public config the browser
 // and agents need, the league's stocks on the current chain, a wallet's
-// entries, and transaction plans. Binance keys never leave the server.
+// entries, and transaction plans. API keys never leave the server.
 
-import { existsSync, readFileSync } from "node:fs";
 import { formatUnits, getAddress, isAddress, type Address, type Hex } from "viem";
-import { BSTOCKS, type AssetKind, type StockInfo } from "../ui/data/stocks";
-import { chainFromEnv, clientsFromEnv, escrowFromEnv, rpcFromEnv } from "./chain";
+import { type AssetKind } from "../ui/data/stocks";
+import { chainFromEnv, clientsFromEnv, escrowFromEnv, leagueChain, rpcFromEnv } from "./chain";
 import { erc20Abi, leagueEscrowAbi, readEntries, readRound, readTeamMeta, type RoundInfo } from "./escrow";
 import { livePrices, loadRoundView } from "./live";
 import { FileStore } from "./store";
 import { DEFAULT_RULES, DRIFT_BPS } from "./settlement";
 import { basketWeightsBps } from "../engine/league";
 import { planBack, planClaim, planClaimBasket, planLock, buyPlanSteps, normaliseWeights, type TxStep } from "./actions";
-import { planBasketBuy, BSC_USDT } from "../bsc/buyBasket";
-import { isLeveraged } from "../bsc/tokens";
+import { planBasketBuy } from "../rh/zeroEx";
+import { USDG_DECIMALS, USDG_MAINNET } from "../rh/chains";
+import { chainStockList } from "./registry";
 
-export const isLocal = () => process.env.LEAGUE_CHAIN === "local";
-
-function demoFile(): { usdt: Address; tokens: Record<string, Address> } | null {
-  const f = process.env.LEAGUE_DATA_DIR ? `${process.env.LEAGUE_DATA_DIR}/local-demo.json` : "data/local-demo.json";
-  return existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : null;
-}
+export const isLocal = () => leagueChain() === "local";
 
 export interface PublicStock {
   symbol: string;
@@ -29,6 +24,8 @@ export interface PublicStock {
   kind: AssetKind;
   address: Address;
   logo: string | null;
+  /** Mainnet Chainlink feed that scores this stock. */
+  feed: Address;
   color: string;
   colorLight: string;
   price: number;
@@ -51,15 +48,11 @@ async function roundStartPrices(): Promise<Map<string, number>> {
   }
 }
 
-/** League stocks with this chain's addresses (mock copies on the local demo chain). */
+/** League stocks with this chain's addresses (faucet tokens on testnet, mock copies on the local demo chain). */
 export async function chainStocks(): Promise<{ source: string; stocks: PublicStock[] }> {
   const [live, startPrices] = await Promise.all([livePrices(), roundStartPrices()]);
-  const demo = isLocal() ? demoFile() : null;
-  const list: { s: StockInfo; address: Address }[] = isLocal()
-    ? BSTOCKS.filter((s) => demo?.tokens[s.ticker]).map((s) => ({ s, address: getAddress(demo!.tokens[s.ticker]) }))
-    : BSTOCKS.map((s) => ({ s, address: getAddress(s.address) }));
-  const stocks = list.map(({ s, address }) => {
-    const p = live?.get(address.toLowerCase());
+  const stocks = chainStockList().map(({ stock: s, address }) => {
+    const p = live?.sample.get(address.toLowerCase());
     const price = p ? Number(p.value) / 1e18 : s.price;
     const start = startPrices.get(address.toLowerCase());
     return {
@@ -69,6 +62,7 @@ export async function chainStocks(): Promise<{ source: string; stocks: PublicSto
       kind: s.kind,
       address,
       logo: s.logo ?? null,
+      feed: s.feed,
       color: s.color,
       colorLight: s.colorLight,
       price,
@@ -76,13 +70,13 @@ export async function chainStocks(): Promise<{ source: string; stocks: PublicSto
       changePct: start ? Math.round(((price - start) / start) * 10_000) / 100 : null,
     };
   });
-  return { source: live ? "binance-live" : isLocal() ? "local-demo (snapshot prices)" : "snapshot-2026-10-05", stocks };
+  return { source: live ? live.source : "snapshot-2026-10-06", stocks };
 }
 
 export async function publicConfig() {
   const chain = chainFromEnv();
   let escrow: Address | null = null;
-  let usdt: Address = BSC_USDT as Address;
+  let usdg: Address = USDG_MAINNET;
   let currentRound: string | null = null;
   try {
     escrow = escrowFromEnv();
@@ -91,26 +85,31 @@ export async function publicConfig() {
       pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "stakeToken" }),
       pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "roundCount" }),
     ]);
-    usdt = stakeToken;
+    usdg = stakeToken;
     currentRound = count > 0n ? count.toString() : null;
   } catch {
     // No escrow yet: the app still renders, with entering disabled.
   }
+  const c = leagueChain();
   return {
-    chain: isLocal() ? "local" : "bsc",
+    chain: c,
     chainId: chain.id,
-    rpcUrl: isLocal() ? rpcFromEnv() : (process.env.NEXT_PUBLIC_BSC_RPC_URL ?? "https://bsc-dataseed.bnbchain.org"),
-    explorer: isLocal() ? null : "https://bscscan.com",
+    chainName: chain.name,
+    rpcUrl: c === "local" ? rpcFromEnv() : (process.env.NEXT_PUBLIC_RH_RPC_URL ?? chain.rpcUrls.default.http[0]),
+    explorer: chain.blockExplorers?.default.url ?? null,
     escrow,
-    usdt,
+    usdg,
+    usdgDecimals: USDG_DECIMALS,
     currentRound,
-    /** Buying through Binance only works on BSC mainnet. */
-    buyEnabled: !isLocal() && !!process.env.BINANCE_W3_API_KEY,
-    faucet: isLocal(),
+    /** Buying through 0x only works on Robinhood Chain mainnet. */
+    buyEnabled: c === "mainnet" && !!process.env.ZEROEX_API_KEY,
+    /** Test USDG from the league's faucet (testnet and the local demo). */
+    faucet: c !== "mainnet",
+    /** Robinhood's faucet for testnet ETH and stock tokens. */
+    stockFaucet: c === "testnet" ? "https://faucet.testnet.chain.robinhood.com" : null,
     rules: {
       minTokens: DEFAULT_RULES.minTokens,
       minStocks: DEFAULT_RULES.minTokens,
-      maxCryptoPct: DEFAULT_RULES.maxCryptoBps! / 100,
       maxTokens: 10,
       maxWeightPct: DEFAULT_RULES.maxWeightBps / 100,
       minBasketUsd: Number(DEFAULT_RULES.minValue / 10n ** 18n),
@@ -169,8 +168,8 @@ export async function loadMe(wallet: Address, lastRounds = 6) {
 export type PlanRequest =
   | { action: "back"; wallet: string; teamKey: string; roundId?: string }
   | { action: "lock"; wallet: string; tickers: string[]; weightsPct: number[]; name: string; buyFeePct?: number; roundId?: string; amounts?: string[] }
-  | { action: "buy-basket"; wallet: string; tickers: string[]; weightsPct: number[]; usdt: number; creator?: string; feePct?: number }
-  | { action: "buy-etf"; wallet: string; teamKey: string; usdt: number; roundId?: string }
+  | { action: "buy-basket"; wallet: string; tickers: string[]; weightsPct: number[]; usdg: number; creator?: string; feePct?: number }
+  | { action: "buy-etf"; wallet: string; teamKey: string; usdg: number; roundId?: string }
   | { action: "claim"; wallet: string; roundId: string }
   | { action: "claim-basket"; wallet: string; roundId: string };
 
@@ -185,7 +184,9 @@ export interface Plan {
 class PlanError extends Error {}
 export const isPlanError = (e: unknown): e is Error => e instanceof PlanError;
 
+/** USD values (basket values: 18 decimals) and USDG amounts (6 decimals). */
 const usd = (x: bigint) => Number(formatUnits(x, 18));
+const usdgAmt = (x: bigint) => Number(formatUnits(x, USDG_DECIMALS));
 
 async function openRound(roundId?: string): Promise<RoundInfo> {
   const { pub } = clientsFromEnv();
@@ -203,7 +204,7 @@ export async function makePlan(req: PlanRequest): Promise<Plan> {
   const wallet = getAddress(req.wallet);
   const { pub } = clientsFromEnv();
   const escrow = escrowFromEnv();
-  const usdt = await pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "stakeToken" });
+  const usdg = await pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "stakeToken" });
   const allowance = (token: Address, spender: Address) => pub.readContract({ address: token, abi: erc20Abi, functionName: "allowance", args: [wallet, spender] });
   const { stocks } = await chainStocks();
   const byTicker = (t: string) => {
@@ -225,27 +226,23 @@ export async function makePlan(req: PlanRequest): Promise<Plan> {
       const captain = await pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "captainOf", args: [info.id, teamKey] });
       if (/^0x0+$/.test(captain)) throw new PlanError("no team with that key in this round");
       const meta = await readTeamMeta(pub, escrow, info.id, [teamKey]);
-      const steps = planBack({ escrow, usdt, roundId: info.id, stake: info.stake, teamKey, allowance: await allowance(usdt, escrow), teamName: meta.get(teamKey.toLowerCase())?.name });
-      return { action: "back", steps, notes: [`Ticket: ${usd(info.stake)} USDT. Entries close ${new Date(info.entryClose * 1000).toISOString()}.`] };
+      const steps = planBack({ escrow, usdg, roundId: info.id, stake: info.stake, teamKey, allowance: await allowance(usdg, escrow), teamName: meta.get(teamKey.toLowerCase())?.name });
+      return { action: "back", steps, notes: [`Ticket: ${usdgAmt(info.stake)} USDG. Entries close ${new Date(info.entryClose * 1000).toISOString()}.`] };
     }
 
     case "lock": {
       const info = await openRound(req.roundId);
       await notEntered(info.id);
       const picks = req.tickers.map(byTicker);
-      const stockCount = picks.filter((p) => p.kind !== "crypto").length;
-      if (stockCount < DEFAULT_RULES.minTokens) throw new PlanError("a basket needs at least 3 stocks or funds (crypto doesn't count toward the 3)");
+      if (picks.length < DEFAULT_RULES.minTokens) throw new PlanError("a basket needs at least 3 stocks or funds");
       if (picks.length > 10) throw new PlanError("a basket has at most 10 assets");
       if (new Set(picks.map((p) => p.ticker)).size !== picks.length) throw new PlanError("each stock once");
-      if (picks.some((p) => isLeveraged({ underlyingTicker: p.ticker, underlyingName: p.name, tokenName: p.name }))) throw new PlanError("leveraged funds are banned");
       const name = (req.name ?? "").trim();
       if (!name || new TextEncoder().encode(name).length > 32) throw new PlanError("name: 1 to 32 bytes");
       const feeBps = Math.round((req.buyFeePct ?? 1) * 100);
       if (feeBps < 0 || feeBps > 200) throw new PlanError("buy fee: 0% to 2%");
       const weights = normaliseWeights(req.weightsPct);
       if (weights.some((w) => w > DEFAULT_RULES.maxWeightBps)) throw new PlanError("no stock above 50%");
-      const cryptoBps = weights.reduce((s, w, i) => s + (picks[i].kind === "crypto" ? w : 0), 0);
-      if (cryptoBps > DEFAULT_RULES.maxCryptoBps!) throw new PlanError(`crypto is ${cryptoBps / 100}% of the basket; the cap is ${DEFAULT_RULES.maxCryptoBps! / 100}%`);
       const tokens = picks.map((p) => p.address);
       // Lock what the wallet holds (or the amounts given).
       const amounts = req.amounts?.length
@@ -257,18 +254,15 @@ export async function makePlan(req: PlanRequest): Promise<Plan> {
       const notes: string[] = [];
       if (total < DEFAULT_RULES.minValue) throw new PlanError(`basket is worth $${usd(total).toFixed(2)}; the minimum is $10`);
       const measured = basketWeightsBps(values);
-      const measuredCrypto = measured.reduce((s, w, i) => s + (picks[i].kind === "crypto" ? w : 0), 0);
-      if (measuredCrypto > DEFAULT_RULES.maxCryptoBps! + DRIFT_BPS / 2)
-        notes.push(`Crypto is ${(measuredCrypto / 100).toFixed(1)}% of the basket at current prices. Above ${(DEFAULT_RULES.maxCryptoBps! + DRIFT_BPS) / 100}% at round start refunds the entry.`);
       measured.forEach((m, i) => {
         if (Math.abs(m - weights[i]) > DRIFT_BPS / 2)
           notes.push(`${picks[i].ticker} is ${(m / 100).toFixed(1)}% of the basket at current prices but you declared ${(weights[i] / 100).toFixed(1)}%. More than ${DRIFT_BPS / 100} points apart at round start refunds the entry.`);
       });
       const allowances: Record<string, bigint> = {};
-      for (const t of [...tokens, usdt]) allowances[t.toLowerCase()] = await allowance(t, escrow);
+      for (const t of [...tokens, usdg]) allowances[t.toLowerCase()] = await allowance(t, escrow);
       const { teamKey, steps } = planLock({
         escrow,
-        usdt,
+        usdg,
         roundId: info.id,
         stake: info.stake,
         tokens,
@@ -279,13 +273,13 @@ export async function makePlan(req: PlanRequest): Promise<Plan> {
         allowances,
         symbols: Object.fromEntries(picks.map((p) => [p.address.toLowerCase(), p.symbol])),
       });
-      notes.unshift(`Basket worth $${usd(total).toFixed(2)} at current prices, plus the ${usd(info.stake)} USDT ticket.`);
+      notes.unshift(`Basket worth $${usd(total).toFixed(2)} at current prices, plus the ${usdgAmt(info.stake)} USDG ticket.`);
       return { action: "lock", steps, notes, teamKey };
     }
 
     case "buy-basket":
     case "buy-etf": {
-      if (isLocal()) throw new PlanError("buying through Binance only works on BSC mainnet; on the local demo chain use the faucet");
+      if (leagueChain() !== "mainnet") throw new PlanError("buying through 0x only works on Robinhood Chain mainnet; on testnet get stock tokens from Robinhood's faucet");
       let tickers: PublicStock[];
       let weights: number[];
       let creator: Address;
@@ -304,15 +298,15 @@ export async function makePlan(req: PlanRequest): Promise<Plan> {
         creator = req.creator && isAddress(req.creator) ? getAddress(req.creator) : wallet;
         feePct = creator === wallet ? 0 : (req.feePct ?? 1);
       }
-      if (!(req.usdt >= 1 && req.usdt <= 10_000)) throw new PlanError("amount: 1 to 10,000 USDT");
-      const usdtIn = BigInt(Math.round(req.usdt * 1e6)) * 10n ** 12n;
-      const plan = await planBasketBuy({ tokens: tickers.map((t) => t.address), weightsBps: weights, usdtIn, wallet, creator, creatorFeePct: feePct });
+      if (!(req.usdg >= 1 && req.usdg <= 10_000)) throw new PlanError("amount: 1 to 10,000 USDG");
+      const usdgIn = BigInt(Math.round(req.usdg * 10 ** USDG_DECIMALS));
+      const plan = await planBasketBuy({ usdg, tokens: tickers.map((t) => t.address), weightsBps: weights, usdgIn, wallet, creator, creatorFeePct: feePct });
       const spenders = [...new Set(plan.legs.map((l) => (l.spender ?? l.tx?.to ?? "").toLowerCase()).filter(Boolean))];
       const allow = new Map<string, bigint>();
-      for (const sp of spenders) allow.set(sp, await allowance(usdt, sp as Address));
-      const { steps, skipped } = buyPlanSteps(plan, usdt, (sp) => allow.get(sp.toLowerCase()) ?? 0n, (t) => stocks.find((s) => s.address.toLowerCase() === t.toLowerCase())?.symbol ?? t);
-      const notes = [`${req.usdt} USDT split across ${tickers.length} stocks by weight.`];
-      if (feePct > 0) notes.push(`${feePct}% creator fee goes to ${creator}, taken from the USDT by Binance's swap.`);
+      for (const sp of spenders) allow.set(sp, await allowance(usdg, sp as Address));
+      const { steps, skipped } = buyPlanSteps(plan, usdg, (sp) => allow.get(sp.toLowerCase()) ?? 0n, (t) => stocks.find((s) => s.address.toLowerCase() === t.toLowerCase())?.symbol ?? t);
+      const notes = [`${req.usdg} USDG split across ${tickers.length} stocks by weight.`];
+      if (feePct > 0) notes.push(`${feePct}% creator fee goes to ${creator}, taken from the USDG by 0x's swap.`);
       if (skipped.length) notes.push(`Not included: ${skipped.map((s) => `${s.token} (${s.reason})`).join("; ")}.`);
       return { action: req.action, steps, notes, skipped };
     }
@@ -373,7 +367,7 @@ export async function loadLeaderboard() {
       backers.set(k, row);
     }
   }
-  const usd = (w: bigint) => (Number(w / 10n ** 14n) / 1e4).toFixed(2);
+  const usd = (w: bigint) => (Number(w) / 10 ** USDG_DECIMALS).toFixed(2);
   return {
     settledRounds: settled,
     creators: [...creators.values()]

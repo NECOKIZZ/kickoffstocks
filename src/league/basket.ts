@@ -60,7 +60,7 @@ export function splitBuy(tokens: string[], weightsBps: number[], total: bigint):
   return legs.filter((l) => l.amountIn > 0n);
 }
 
-/** Creator fee bounds for basket buys (the Binance API allows 0–5% on EVM). */
+/** Creator fee bounds for basket buys (0x swap fee, paid to the creator). */
 export const MAX_CREATOR_BUY_FEE_PCT = 2;
 export const DEFAULT_CREATOR_BUY_FEE_PCT = 1;
 

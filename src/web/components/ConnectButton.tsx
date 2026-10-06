@@ -1,6 +1,6 @@
 "use client";
 
-// Connect: injected wallets (Binance Wallet, MetaMask…). Shows the address
+// Connect: injected wallets (MetaMask, Rabby, Robinhood Wallet…). Shows the address
 // when connected, and a switch button when the wallet is on another chain.
 
 import { useEffect, useRef, useState } from "react";
@@ -53,7 +53,7 @@ export function ConnectButton({ size = "sm" }: { size?: "sm" | "md" }) {
   if (cfg && chainId !== cfg.chainId)
     return (
       <button type="button" className={`${base} bg-down-bg text-down`} onClick={() => switchChain({ chainId: cfg.chainId as never })}>
-        Switch to {cfg.chain === "local" ? "local chain" : "BNB Chain"}
+        Switch to {cfg.chain === "local" ? "local chain" : cfg.chainName}
       </button>
     );
 
@@ -91,7 +91,7 @@ export function ChainChip() {
   const { data: cfg } = useConfig();
   return (
     <span className="hidden items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[13px] text-muted lg:inline-flex">
-      <span className={`size-2 rounded-full ${cfg?.chain === "local" ? "bg-brand-coral" : "bg-brand-mint"}`} /> {cfg?.chain === "local" ? "Local demo chain" : "BNB Chain"}
+      <span className={`size-2 rounded-full ${cfg?.chain === "mainnet" ? "bg-brand-mint" : "bg-brand-coral"}`} /> {cfg?.chain === "local" ? "Local demo chain" : (cfg?.chainName ?? "Robinhood Chain")}
     </span>
   );
 }

@@ -6,7 +6,7 @@
 import Link from "next/link";
 import { StockDeck } from "../../ui/components/StockDeck";
 import { StockCard } from "../../ui/components/StockCard";
-import { BSTOCKS, byTicker } from "../../ui/data/stocks";
+import { STOCKS, byTicker } from "../../ui/data/stocks";
 import { useRound, useStocks } from "../hooks";
 import { RoundStats } from "./league";
 
@@ -50,7 +50,7 @@ export function StockField({ limit = 12 }: { limit?: number }) {
   const { prices, changes, ready } = useLive();
   const { data } = useStocks();
   const onChain = new Set(data?.stocks.map((s) => s.ticker));
-  const list = BSTOCKS.filter((s) => !ready || onChain.has(s.ticker)).slice(0, limit);
+  const list = STOCKS.filter((s) => !ready || onChain.has(s.ticker)).slice(0, limit);
   return (
     <div className="flex flex-wrap justify-center gap-4 md:justify-start">
       {list.map((s) => (

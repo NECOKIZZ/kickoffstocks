@@ -15,13 +15,13 @@ import { createPublicClient, createTestClient, createWalletClient, http, type Ad
 import { foundry } from "viem/chains";
 import { mnemonicToAccount } from "viem/accounts";
 import { leagueEscrowAbi, erc20Abi } from "../src/league/escrow";
-import { teamKeyFromWeights } from "../src/bsc/basket";
+import { teamKeyFromWeights } from "../src/league/basket";
 import { FileStore } from "../src/league/store";
 import { readEntries, readRound, readTeamMeta, submitSettlement } from "../src/league/escrow";
 import { settleRound } from "../src/league/settlement";
 import { buildSnapshot } from "../src/league/snapshot";
 import type { PriceSample } from "../src/league/snapshot";
-import { BSTOCKS } from "../src/ui/data/stocks";
+import { STOCKS } from "../src/ui/data/stocks";
 
 const RPC = process.env.BSC_RPC_URL ?? "http://127.0.0.1:8545";
 const MNEMONIC = "test test test test test test test test test test test junk"; // anvil's public dev mnemonic
@@ -50,7 +50,7 @@ async function send(i: number, address: Address, abi: readonly unknown[], fn: st
 
 // Mock copies of real bStocks and the crypto slice (WBNB, BTCB, ETH), at their snapshot prices.
 const PICKS = ["NVDA", "TSLA", "META", "MSFT", "GOOGL", "AMD", "AVGO", "TSM", "COIN", "HOOD", "SPY", "QQQ", "BNB", "BTC", "ETH"];
-const stocks = PICKS.map((t) => BSTOCKS.find((s) => s.ticker === t)!);
+const stocks = PICKS.map((t) => STOCKS.find((s) => s.ticker === t)!);
 
 // Anvil only funds wallets 0-9: give every wallet we use some gas money.
 for (let i = 0; i <= 17; i++) await test.setBalance({ address: acct(i).address, value: 100n * E18 });

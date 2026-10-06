@@ -6,10 +6,10 @@ import { useConnection } from "wagmi";
 import { useMe, usePlanRunner, useStocks } from "../hooks";
 import { ConnectButton } from "./ConnectButton";
 import { TxSteps } from "./TxSteps";
-import { usd } from "./league";
+import { usdg } from "./league";
 import { Pill } from "../../ui/components/Pills";
 import { StockCard } from "../../ui/components/StockCard";
-import { BSTOCKS } from "../../ui/data/stocks";
+import { STOCKS } from "../../ui/data/stocks";
 import type { MeEntry } from "../api";
 
 export function MePage() {
@@ -74,7 +74,7 @@ function EntryCard({ e }: { e: MeEntry }) {
         </div>
         <div className="text-right">
           <div className="text-[13px] text-muted">{settled ? "Payout" : "Ticket"}</div>
-          <div className="t-num text-[26px]">${usd(settled ? payout : stake)}</div>
+          <div className="t-num text-[26px]">${usdg(settled ? payout : stake)}</div>
         </div>
       </div>
       {e.basket.length > 0 && (
@@ -82,7 +82,7 @@ function EntryCard({ e }: { e: MeEntry }) {
           <span className="mr-1 text-[13px] text-muted">Locked:</span>
           {e.basket.map((b) => {
             const t = ticker(b.token);
-            const s = BSTOCKS.find((x) => x.ticker === t);
+            const s = STOCKS.find((x) => x.ticker === t);
             return s ? <StockCard key={b.token} stock={s} size="tiny34" /> : <span key={b.token} className="t-num text-[12px]">{b.token.slice(0, 8)}</span>;
           })}
         </div>
@@ -98,7 +98,7 @@ function EntryCard({ e }: { e: MeEntry }) {
               onClick={() => runner.run({ action: "claim", roundId: e.roundId }, { onDone: () => setDone(true) })}
               className="h-11 rounded-full bg-ink px-6 text-[15px] font-medium text-bg disabled:opacity-40"
             >
-              {runner.busy ? "Working…" : payout > 0n ? `Claim $${usd(payout)}${e.basket.length ? " + your stocks" : ""}` : e.basket.length ? "Get your stocks back" : "Close entry"}
+              {runner.busy ? "Working…" : payout > 0n ? `Claim $${usdg(payout)}${e.basket.length ? " + your stocks" : ""}` : e.basket.length ? "Get your stocks back" : "Close entry"}
             </button>
           )}
           <TxSteps plan={runner.plan} states={runner.states} hashes={runner.hashes} error={runner.error} />

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRound } from "../hooks";
-import { LeagueBoard, RoundStats, teamName, usd } from "./league";
+import { LeagueBoard, RoundStats, teamName, usdg } from "./league";
 import { Change } from "../../ui/components/Pills";
 
 export function LeaguePage() {
@@ -31,7 +31,7 @@ export function LeaguePage() {
         <div className="rounded-[24px] bg-surface p-6">
           <div className="t-label text-muted">How this round pays</div>
           <ul className="mt-4 space-y-2 text-[14px] text-ink/80">
-            <li>Ticket: ${r ? usd(r.stake, 0) : "5"} for creators and backers.</li>
+            <li>Ticket: ${r ? usdg(r.stake, 0) : "5"} for creators and backers.</li>
             <li>Top half of ETFs win the bottom half&rsquo;s tickets.</li>
             <li>Closer to the best return → bigger share.</li>
             <li>10% of winnings: 5% platform, 5% season pot.</li>

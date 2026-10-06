@@ -7,16 +7,19 @@ import type { TxStep } from "../league/actions";
 export type { RoundView, TeamView, PublicStock, TxStep };
 
 export interface LeagueConfig {
-  chain: "bsc" | "local";
+  chain: "mainnet" | "testnet" | "local";
   chainId: number;
+  chainName: string;
   rpcUrl: string;
   explorer: string | null;
   escrow: `0x${string}` | null;
-  usdt: `0x${string}`;
+  usdg: `0x${string}`;
+  usdgDecimals: number;
   currentRound: string | null;
   buyEnabled: boolean;
   faucet: boolean;
-  rules: { minTokens: number; minStocks: number; maxCryptoPct: number; maxTokens: number; maxWeightPct: number; minBasketUsd: number; ticketUsd: number; maxBuyFeePct: number; driftPct: number };
+  stockFaucet: string | null;
+  rules: { minTokens: number; minStocks: number; maxTokens: number; maxWeightPct: number; minBasketUsd: number; ticketUsd: number; maxBuyFeePct: number; driftPct: number };
 }
 
 export interface MeEntry {
