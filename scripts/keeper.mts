@@ -1,32 +1,33 @@
-// League of Stocks keeper. Runs rounds on LeagueEscrow.
+// Kickoff Stocks keeper. Runs rounds on LeagueEscrow.
 //
 //   npx tsx --env-file=.env.local scripts/keeper.mts <command> [options]
 //
 //   open   --entry-min 60 --run-min 60 [--stake 5] [--cap 100] [--max-backers 20]
 //          Opens a round: entries close in --entry-min minutes, the round ends
 //          --run-min minutes after that.
-//   sample <roundId> start|end
-//          Takes one price sample from Binance (/rwa/tokens) and saves it.
-//   settle <roundId> [--mode reference|onchain] [--window-min 30] [--min-samples 3] [--dry-run]
+//   sample <roundId> start|end [--source chainlink|robinhood]
+//          Takes one price sample of every league token and saves it.
+//   settle <roundId> [--window-min 30] [--min-samples 3] [--dry-run]
 //          Settles from the saved samples taken inside each window
 //          (start: entryClose … +window, end: end … +window).
-//   auto   <roundId> [--samples 3] [--every-min 5] [--mode …]
+//   auto   <roundId> [--samples 3] [--every-min 5] [--source …]
 //          Waits for the round, samples at start and end, then settles.
 //   status <roundId>
 //
-// Env: BINANCE_W3_API_KEY/SECRET_KEY, ESCROW_ADDRESS, KEEPER_PRIVATE_KEY,
-//      BSC_RPC_URL, LEAGUE_CHAIN (bsc|local), LEAGUE_DATA_DIR (default ./data).
+// Prices: LEAGUE_PRICE_SOURCE (or --source) chainlink (default, Robinhood
+// Chain's Chainlink feeds) or robinhood (Robinhood's quote API, for short
+// demo rounds). Testnet rounds read the same stocks' mainnet feeds.
+//
+// Env: ESCROW_ADDRESS, KEEPER_PRIVATE_KEY, RH_RPC_URL, PRICE_RPC_URL,
+//      LEAGUE_CHAIN (testnet|mainnet|local), LEAGUE_DATA_DIR (default ./data).
 
-import { parseEther, formatEther } from "viem";
-import { rwaTokens } from "../src/bsc/binanceWeb3";
-import { cryptoSamples } from "../src/bsc/cryptoPrices";
-import { clientsFromEnv, escrowFromEnv } from "../src/league/chain";
-import { leagueEscrowAbi, readEntries, readRound, roundTokens, submitSettlement } from "../src/league/escrow";
-import { buildSnapshot, sampleFromTokens, type PriceMode } from "../src/league/snapshot";
+import { formatUnits, parseUnits } from "viem";
+import { clientsFromEnv, escrowFromEnv, leagueChain } from "../src/league/chain";
+import { erc20Abi, leagueEscrowAbi, readEntries, readRound, roundTokens, submitSettlement } from "../src/league/escrow";
+import { buildSnapshot } from "../src/league/snapshot";
 import { settleRound } from "../src/league/settlement";
 import { FileStore, type Phase } from "../src/league/store";
-import { livePrices } from "../src/league/live";
-import { cryptoTokensForChain } from "../src/league/registry";
+import { priceSourceFromEnv, samplePrices, type PriceSource } from "../src/league/prices";
 
 const args = process.argv.slice(2);
 const cmd = args[0];
@@ -45,7 +46,9 @@ async function open() {
   const now = Math.floor(Date.now() / 1000);
   const entryClose = now + Number(opt("entry-min", "60")) * 60;
   const end = entryClose + Number(opt("run-min", "60")) * 60;
-  const stake = parseEther(opt("stake", "5")!);
+  const stakeToken = await pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "stakeToken" });
+  const decimals = await pub.readContract({ address: stakeToken, abi: erc20Abi, functionName: "decimals" });
+  const stake = parseUnits(opt("stake", "5")!, decimals);
   const hash = await wallet!.writeContract({
     address: escrow,
     abi: leagueEscrowAbi,
@@ -59,32 +62,17 @@ async function open() {
   log(`opened round ${id}: entries close ${new Date(entryClose * 1000).toISOString()}, ends ${new Date(end * 1000).toISOString()} (tx ${hash})`);
 }
 
-async function sample(roundId: bigint, phase: Phase, mode: PriceMode) {
-  // Local demo chain: demo prices for the mock tokens, stamped with chain time
-  // (anvil's clock can be moved forward to end a round early).
-  if (process.env.LEAGUE_CHAIN === "local") {
-    const { pub } = clientsFromEnv();
-    const at = Number((await pub.getBlock()).timestamp) * 1000;
-    const s = await livePrices();
-    if (!s) throw new Error("no local demo prices (run scripts/local-demo.mts first)");
-    for (const p of s.values()) p.at = at;
-    return log(`saved ${phase} sample (${s.size} local demo tokens) → ${store.saveSample(roundId, phase, s, at)}`);
-  }
-  const at = Date.now();
-  const tokens = await rwaTokens();
-  const s = sampleFromTokens(tokens, mode, at);
-  // Crypto slice (BNB, BTC, ETH): Binance spot prices.
-  try {
-    for (const [k, v] of await cryptoSamples(at)) s.set(k, v);
-  } catch (e) {
-    log(`crypto prices unavailable: ${e instanceof Error ? e.message : e}`);
-  }
+async function sample(roundId: bigint, phase: Phase, source: PriceSource) {
+  // Local demo chain: stamped with chain time (anvil's clock can be moved
+  // forward to end a round early).
+  const at = leagueChain() === "local" ? Number((await clientsFromEnv().pub.getBlock()).timestamp) * 1000 : Date.now();
+  const s = await samplePrices(source, at);
+  const stale = [...s.values()].filter((p) => !p.trading).length;
   const file = store.saveSample(roundId, phase, s, at);
-  log(`saved ${phase} sample (${s.size} tokens, ${Date.now() - at} ms) → ${file}`);
+  log(`saved ${phase} sample from ${source} (${s.size} tokens${stale ? `, ${stale} not live` : ""}) → ${file}`);
 }
 
 async function settle(roundId: bigint) {
-  const mode = (opt("mode", "reference") as PriceMode) ?? "reference";
   const windowMs = Number(opt("window-min", "30")) * 60_000;
   const minSamples = Number(opt("min-samples", "3"));
   const dry = flag("dry-run");
@@ -119,12 +107,14 @@ async function settle(roundId: bigint) {
     start: start.prices,
     end: end.prices,
     priceProblems: problems,
-    cryptoTokens: cryptoTokensForChain(),
   });
+  const decimals = await pub.readContract({ address: await pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "stakeToken" }), abi: erc20Abi, functionName: "decimals" });
+  const fmt = (x: bigint) => formatUnits(x, decimals);
   const file = store.saveInputs(roundId, s.inputs);
   log(`round ${roundId}: ${entries.length} entries, ${s.teams.length} teams, void=${s.void ?? "no"}`);
-  for (const t of s.teams) log(`  ${t.isWinner ? "WIN " : "    "} ${t.captain} ${(Number(t.ret) / 1e10).toFixed(3)}% (${t.members} on team)`);
-  log(`  platform ${formatEther(s.platformCut)}, season in ${formatEther(s.seasonIn)}, season out ${formatEther(s.seasonOut)}`);
+  if (s.average !== null) log(`  AVERAGE ${(Number(s.average) / 1e10).toFixed(3)}%`);
+  for (const t of s.teams) log(`  ${t.isWinner ? "WIN " : t.isDraw ? "DRAW" : "    "} ${t.captain} ${(Number(t.ret) / 1e10).toFixed(3)}% (${t.members} on team)`);
+  log(`  platform ${fmt(s.platformCut)}, season in ${fmt(s.seasonIn)}, season out ${fmt(s.seasonOut)}`);
   if (problems.length) log(`  price problems: ${problems.join(", ")}`);
   log(`  inputs → ${file} (hash ${s.inputsHash})`);
   if (dry) return log("dry run: nothing sent");
@@ -133,7 +123,7 @@ async function settle(roundId: bigint) {
 }
 
 async function auto(roundId: bigint) {
-  const mode = (opt("mode", "reference") as PriceMode) ?? "reference";
+  const source = sourceOpt();
   const n = Number(opt("samples", "3"));
   const every = Number(opt("every-min", "5")) * 60_000;
   const { pub } = clientsFromEnv();
@@ -148,7 +138,7 @@ async function auto(roundId: bigint) {
       await sleep(wait + 5_000);
     }
     for (let i = 0; i < n; i++) {
-      await sample(roundId, phase, mode);
+      await sample(roundId, phase, source);
       if (i < n - 1) await sleep(every);
     }
   }
@@ -160,10 +150,15 @@ async function status(roundId: bigint) {
   const { pub } = clientsFromEnv();
   const info = await readRound(pub, escrowFromEnv(), roundId);
   const entries = await readEntries(pub, escrowFromEnv(), roundId);
-  log(`round ${roundId}: ${info.status}, ${entries.length} entries, stake ${formatEther(info.stake)}`);
+  log(`round ${roundId}: ${info.status}, ${entries.length} entries, stake ${info.stake} (base units)`);
   log(`  entries close ${new Date(info.entryClose * 1000).toISOString()}, ends ${new Date(info.end * 1000).toISOString()}`);
   log(`  samples: start ${store.loadSamples(roundId, "start").length}, end ${store.loadSamples(roundId, "end").length}`);
 }
+
+const sourceOpt = (): PriceSource => {
+  const s = opt("source");
+  return s === "chainlink" || s === "robinhood" ? s : priceSourceFromEnv();
+};
 
 const id = () => {
   if (!args[1]) throw new Error("round id required");
@@ -172,7 +167,7 @@ const id = () => {
 
 try {
   if (cmd === "open") await open();
-  else if (cmd === "sample") await sample(id(), args[2] as Phase, (opt("mode", "reference") as PriceMode) ?? "reference");
+  else if (cmd === "sample") await sample(id(), args[2] as Phase, sourceOpt());
   else if (cmd === "settle") await settle(id());
   else if (cmd === "auto") await auto(id());
   else if (cmd === "status") await status(id());

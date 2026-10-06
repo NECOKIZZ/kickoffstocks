@@ -2,7 +2,7 @@
 
 // Turning API round data into the UI components' shapes.
 
-import { BSTOCKS } from "../../ui/data/stocks";
+import { STOCKS } from "../../ui/data/stocks";
 import type { Holding } from "../../ui/components/EtfHand";
 import type { LeagueEntry } from "../../ui/components/LeagueRow";
 import { LeagueTable } from "../../ui/components/LeagueRow";
@@ -11,11 +11,14 @@ import type { RoundView, TeamView } from "../api";
 import { useRound } from "../hooks";
 import { short } from "./ConnectButton";
 
+/** A USD value with 18 decimals (basket values). */
 export const usd = (wei: string | bigint, dp = 2) => (Number(BigInt(wei) / 10n ** 12n) / 1e6).toFixed(dp);
+/** A USDG amount (6 decimals): tickets, pots, payouts. */
+export const usdg = (amt: string | bigint, dp = 2) => (Number(BigInt(amt)) / 1e6).toFixed(dp);
 
 export function holdingsOf(t: TeamView): Holding[] {
   return t.holdings
-    .map((h) => ({ stock: BSTOCKS.find((s) => s.ticker === h.ticker)!, weightPct: Math.round(h.weightBps / 100) }))
+    .map((h) => ({ stock: STOCKS.find((s) => s.ticker === h.ticker)!, weightPct: Math.round(h.weightBps / 100) }))
     .filter((h) => h.stock);
 }
 
@@ -30,7 +33,7 @@ export function toEntry(t: TeamView, stake: string): LeagueEntry {
     holdings: holdingsOf(t),
     returnPct: t.returnPct,
     team: t.members + 1,
-    ifWins: t.winningNow && pay > BigInt(stake) ? Number(usd(pay - BigInt(stake))) : null,
+    ifWins: t.winningNow && pay > BigInt(stake) ? Number(usdg(pay - BigInt(stake))) : null,
     href: `/etf/${t.teamKey}`,
   };
 }
@@ -41,7 +44,7 @@ export function RoundStats({ r }: { r: RoundView }) {
       <RoundPill round={Number(r.id)} locksAt={r.entryClose * 1000} endsAt={r.end * 1000} />
       <span className="text-[14px] text-muted">
         <span className="t-num text-ink">{r.teams.length}</span> ETFs · <span className="t-num text-ink">{r.entries}</span> tickets · pot{" "}
-        <span className="t-num text-ink">${usd(r.pot, 0)}</span>
+        <span className="t-num text-ink">${usdg(r.pot, 0)}</span>
       </span>
     </div>
   );

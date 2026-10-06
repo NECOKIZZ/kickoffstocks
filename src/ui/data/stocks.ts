@@ -1,117 +1,105 @@
-// League assets on BSC: bStocks (a snapshot of Binance's RWA token list, 5 Oct
-// 2026, ~11:40 UTC) plus a small crypto slice (BNB, BTC, ETH as BEP-20 tokens).
-// Used for the UI and as a fallback when live prices aren't reachable.
+// League assets on Robinhood Chain: every Robinhood Stock Token that has a
+// Chainlink price feed (35 stocks and funds, 6 Oct 2026). A token without a
+// feed can't be scored on-chain, so it can't go into a basket.
 //
-// Leveraged funds (TQQQ, SOXL, KORU, MUU, INTW, SNXX, MVLL) are left out:
-// they are banned from the league. Crypto is capped at 20% of a basket.
+// Addresses: Robinhood's asset registry (api.robinhood.com/rhj/assets).
+// Feeds: Chainlink's Robinhood mainnet directory. Prices are a snapshot of
+// those feeds, used for the UI when live prices aren't reachable.
+//
+// Testnet: Robinhood's faucet hands out TSLA, AMZN, PLTR, AMD (and NFLX,
+// which has no feed). There are no Chainlink feeds on testnet, so testnet
+// rounds are priced by the same stocks' MAINNET feeds.
 
 import { assignCardColors } from "./palette";
 
-export type AssetKind = "stock" | "etf" | "crypto";
+export type AssetKind = "stock" | "etf";
 
 export interface StockInfo {
-  symbol: string;   // token symbol, e.g. NVDAB
-  ticker: string;   // underlying ticker, e.g. NVDA
-  name: string;     // company / fund name
+  /** Token symbol: Robinhood Stock Tokens use the plain ticker. */
+  symbol: string;
+  ticker: string;
+  name: string;
   kind: AssetKind;
-  price: number;    // USD per token
+  price: number;    // USD per token (feed price: share price × multiplier)
+  /** Mainnet token (chain 4663). */
   address: `0x${string}`;
+  /** Chainlink price feed proxy on mainnet (8 decimals, multiplier-adjusted). */
+  feed: `0x${string}`;
+  /** Faucet token on testnet (chain 46630), when the faucet hands it out. */
+  testnet?: `0x${string}`;
   /** Company brand colour: only a hint for picking `color`. */
   brand: string;
   /** The stock's own card colour (unique per stock, src/ui/data/palette.ts). */
   color: string;
   /** Pale tint of `color` for the bottom of the card. */
   colorLight: string;
-  /** Company logo, from Binance's token list (saved under public/logos). */
+  /** Company logo (Robinhood's CDN, saved under public/logos). */
   logo?: string;
 }
 
-type Raw = Omit<StockInfo, "color" | "colorLight" | "logo">;
+type Raw = Omit<StockInfo, "symbol" | "color" | "colorLight" | "logo">;
 
-const s = (
-  symbol: string,
-  ticker: string,
-  name: string,
-  price: number,
-  address: string,
-  brand: string,
-  _ink?: "light" | "dark",
-  kind: AssetKind = "stock",
-): Raw => ({ symbol, ticker, name, price, address: address as `0x${string}`, brand, kind });
+const s = (ticker: string, name: string, kind: AssetKind, price: number, address: string, feed: string, brand: string, testnet?: string): Raw => ({
+  ticker,
+  name,
+  kind,
+  price,
+  address: address as `0x${string}`,
+  feed: feed as `0x${string}`,
+  brand,
+  ...(testnet ? { testnet: testnet as `0x${string}` } : {}),
+});
 
 // Most recognisable first: they get first pick of the colours.
 const RAW: Raw[] = [
-  s("NVDAB", "NVDA", "NVIDIA", 235.28, "0x02fca66c1d1afb4e2a7884261eb00f63598a7436", "#76B900", "dark"),
-  s("TSLAB", "TSLA", "Tesla", 369.14, "0x5b1910eaad6450e50f816082aa078c41f10c292f", "#E31937"),
-  s("METAB", "META", "Meta Platforms", 726.65, "0x7425889fe94f9d693e8daefe88bcced6acfef4c0", "#0866FF"),
-  s("MSFTB", "MSFT", "Microsoft", 520.17, "0x80106cb3ead06659a5ad19df39d9b4733863b9b0", "#0078D4"),
-  s("GOOGLB", "GOOGL", "Alphabet", 343.73, "0x3f53de71c126bdabae20f9cd64848d317f6c3238", "#4285F4"),
-  s("AMDB", "AMD", "AMD", 627.41, "0x75fd4cf6f8392e41e70391d60c90c0d5211603a1", "#111111"),
-  s("AVGOB", "AVGO", "Broadcom", 355.45, "0x76682c454467b3a1150ad8b6a92fc5ee2c21d7ed", "#CC092F"),
-  s("TSMB", "TSM", "TSMC", 482.28, "0xab78b89b5bb00236be0b4b20704cbfa04efc711c", "#C8102E"),
-  s("PLTRB", "PLTR", "Palantir", 189.55, "0x0ca5d51d0277bd006fd9607d3e560785ebad8222", "#1B1C1F"),
-  s("ORCLB", "ORCL", "Oracle", 142.62, "0x4684d9887fc1c71cba7bab8e88835cec217eb598", "#C74634"),
-  s("COINB", "COIN", "Coinbase", 188.05, "0x585bde7c54abb5ccd7791f923d6c2187635f3952", "#0052FF"),
-  s("HOODB", "HOOD", "Robinhood", 114.42, "0xa394dcea3fd3847fd793afbfd163e2e3858b7c65", "#CCFF00", "dark"),
-  s("MSTRB", "MSTR", "Strategy", 164.6, "0xe87afb3076aeb0f9b14e368de8145ae6a2826a14", "#F7931A", "dark"),
-  s("CRCLB", "CRCL", "Circle", 83.85, "0x80f3d493ebce97e343c53d29a137942416b4ffc0", "#3D7EFF"),
-  s("ARMB", "ARM", "Arm Holdings", 307.61, "0xd42a79ebb7f527f40faecd196ffb47ad5e8d6f8c", "#0091BD"),
-  s("QCOMB", "QCOM", "Qualcomm", 185.98, "0x5f7a56e877b9130608bf8be962621011182fefe1", "#3253DC"),
-  s("INTCB", "INTC", "Intel", 114.65, "0xe614e2fc6c787035ff51f452e8e826bfd32d5283", "#0071C5"),
-  s("MUB", "MU", "Micron", 1070.32, "0xcdf2f3e0fa43c47a6662a91c9e4a7c5f69762699", "#0065B3"),
-  s("MRVLB", "MRVL", "Marvell", 273.2, "0x16cd4fe7e8880ecc3ba222795229e20489fc2c76", "#D51F2A"),
-  s("IBMB", "IBM", "IBM", 223.96, "0xfa273b076feb8c0fb34e554ae341082323d016a3", "#0F62FE"),
-  s("BABAB", "BABA", "Alibaba", 107.71, "0x4ef9d3062c7f6eba4aae4990c5036598c6eff4ec", "#FF6A00"),
-  s("NBISB", "NBIS", "Nebius", 243.42, "0xe256bc2a4f5297f8ba6f043f180a46300ecbcbb1", "#D9F84A", "dark"),
-  s("CRWVB", "CRWV", "CoreWeave", 90.0, "0x33e7317e17838fee56b10fe8d0b9ca6ca3090c95", "#5B3DF5"),
-  s("RKLBB", "RKLB", "Rocket Lab", 73.83, "0xc8da12cbcce7c45180692a6420b0076e03a5179a", "#0B0B0C"),
-  s("SPCXB", "SPCX", "SpaceX", 159.1, "0xbe9d156892e55e7154bcd3cb0fea677f9d3103e1", "#1A1A1A"),
-  s("SNDKB", "SNDK", "Sandisk", 1726.2, "0x3ee4df61bd4f867e349beae8bfe07bc31b4850fb", "#E2001A"),
-  s("WDCB", "WDC", "Western Digital", 421.46, "0xebe29695f8047c13d36e7a790ca8c1b239ffad1c", "#0055A5"),
-  s("LITEB", "LITE", "Lumentum", 1085.25, "0x64748bea17b6d19e242adf20425de2440c656142", "#E35205"),
-  s("GLWB", "GLW", "Corning", 163.73, "0x740e075cbbea22a082b9d6679e65e82767875b6a", "#00A3E0"),
-  s("SKHYB", "SKHY", "SK hynix", 194.32, "0xca750ef65f295bbecd685abf54e82caf297bdb61", "#F37321"),
-  s("AAOIB", "AAOI", "Applied Optoelectronics", 115.77, "0x10343ef7da3301493d7ecb647d68a288c6c1db2f", "#00539B"),
-  s("AXTIB", "AXTI", "AXT Inc", 86.17, "0x9bdc8b470dbf89dbcb123587c6f5e49cca3463be", "#2F4F7F"),
-  s("CBRSB", "CBRS", "Cerebras", 173.97, "0xe81c6bb0266cd68b4f17278531dd03ea1f12da4e", "#F15A29"),
-  s("NOKB", "NOK", "Nokia", 10.48, "0x7c4d7a180d737dd5a70d8065a90e6746a69c37ea", "#124191"),
-  s("QNTB", "QNT", "Quantum", 46.37, "0xd721c192d612db77621df57a9fab38418033c02e", "#4B2E83"),
-  s("SPYB", "SPY", "SPDR S&P 500 ETF", 770.79, "0x7138b48df7d98d7e3cc221bfe7192d0a178182d8", "#1D2B53", "light", "etf"),
-  s("QQQB", "QQQ", "Invesco QQQ", 749.45, "0x205812cdbed920aff76c6580abd681a46d11efc7", "#00205B", "light", "etf"),
-  s("EWYB", "EWY", "iShares MSCI South Korea", 191.36, "0xbe82f76637dba2c114c41df856c2c51e522e2cb8", "#000000", "light", "etf"),
-  s("DRAMB", "DRAM", "Memory ETF", 61.63, "0x93862d63fd9fd488b1328e9b47717d75e994a84b", "#2B2D42", "light", "etf"),
-  // Crypto slice (max 20% of a basket). BNB is held as WBNB, BTC as BTCB
-  // (Binance-pegged), ETH as Binance-Peg Ethereum. Prices: Binance spot, 5 Oct 2026.
-  s("WBNB", "BNB", "BNB", 787.52, "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", "#F0B90B", "dark", "crypto"),
-  s("BTCB", "BTC", "Bitcoin", 85308, "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c", "#F7931A", "dark", "crypto"),
-  s("ETH", "ETH", "Ethereum", 2696.79, "0x2170Ed0880ac9A755fd29B2688956BD959F933F8", "#627EEA", "light", "crypto"),
+  s("NVDA", "NVIDIA", "stock", 240.66, "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC", "0x379EC4f7C378F34a1B47E4F3cbeBCbAC3E8E9F15", "#76B900"),
+  s("TSLA", "Tesla", "stock", 381.32, "0x322F0929c4625eD5bAd873c95208D54E1c003b2d", "0x4A1166a659A55625345e9515b32adECea5547C38", "#E31937", "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E"),
+  s("AAPL", "Apple", "stock", 332.51, "0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9", "0x6B22A786bAa607d76728168703a39Ea9C99f2cD0", "#A2AAAD"),
+  s("MSFT", "Microsoft", "stock", 534.09, "0xe93237C50D904957Cf27E7B1133b510C669c2e74", "0x45C3C877C15E6BA2EBB19eA114Ea508d14C1Af2E", "#0078D4"),
+  s("AMZN", "Amazon", "stock", 255.63, "0x12f190a9F9d7D37a250758b26824B97CE941bF54", "0xD5a1508ceD74c084eBf3cBe853e2C968fB2a651C", "#FF9900", "0x5884aD2f920c162CFBbACc88C9C51AA75eC09E02"),
+  s("GOOGL", "Alphabet Class A", "stock", 347.43, "0x2e0847E8910a9732eB3fb1bb4b70a580ADAD4FE3", "0xF6f373a037c30F0e5010d854385cA89185AE638b", "#4285F4"),
+  s("META", "Meta Platforms", "stock", 744.49, "0xc0D6457C16Cc70d6790Dd43521C899C87ce02f35", "0x7C38C00C30BEe9378381E7B6135d7283356D71b1", "#0866FF"),
+  s("AMD", "AMD", "stock", 657.21, "0x86923f96303D656E4aa86D9d42D1e57ad2023fdC", "0x943A29E7ae51A4798823ca9eEd2ed533B2A22C72", "#111111", "0x71178BAc73cBeb415514eB542a8995b82669778d"),
+  s("PLTR", "Palantir Technologies", "stock", 191.93, "0x894E1EC2D74FFE5AEF8Dc8A9e84686acCB964F2A", "0x820ABedFF239034956B7A9d2F0a331f9F075eB4c", "#1B1C1F", "0x1FBE1a0e43594b3455993B5dE5Fd0A7A266298d0"),
+  s("TSM", "Taiwan Semiconductor Manufacturing", "stock", 483.65, "0x58FfE4a942d3885bAa22D7520691F611EF09e7AA", "0x874cF94aa8eC88Fd9560094dD065f2fB3E41Fc2F", "#C8102E"),
+  s("COIN", "Coinbase", "stock", 188.42, "0x6330D8C3178a418788dF01a47479c0ce7CCF450b", "0xA3a468A452940B7D6b69991207B508c609a98Ef2", "#0052FF"),
+  s("SPCX", "Space Exploration Technologies Corp. Class A Common Stock", "stock", 173.38, "0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa", "0xB265810950ba6c5C0Ff821c9963014a56fD8Bffb", "#1A1A1A"),
+  s("ASML", "ASML Holding NV", "stock", 1842.06, "0x47F93d52cBeC7C6D2CfC080e154002370a60dAEA", "0xB4106147E8cce40b7d46124090d373A71b70f87D", "#0F238C"),
+  s("MU", "Micron Technology", "stock", 1065.55, "0xfF080c8ce2E5feadaCa0Da81314Ae59D232d4afD", "0x425EEFdCf05ed6526C3cE61Af99429A228a6d596", "#0065B3"),
+  s("ORCL", "Oracle", "stock", 146.1, "0xb0992820E760d836549ba69BC7598b4af75dEE03", "0x0e6a64a2B58A6693a531E6c555f3A5d042eEA844", "#C74634"),
+  s("INTC", "Intel", "stock", 113.95, "0xc72b96e0E48ecd4DC75E1e45396e26300BC39681", "0x3f390C5C24628Ac7C489515402235FeAD71D1913", "#0071C5"),
+  s("MSTR", "Strategy Inc.", "stock", 164.88, "0xec262a75e413fAfD0dF80480274532C79D42da09", "0x396118bdFB181e6240E74D243F266B061c0edc3D", "#F7931A"),
+  s("CRCL", "Circle Internet Group", "stock", 84.5, "0xdF0992E440dD0be65BD8439b609d6D4366bf1CB5", "0x6652eDf64bA3731C4F2D3ce821A0Fb1f1f6b482a", "#3D7EFF"),
+  s("BABA", "Alibaba", "stock", 108.49, "0xad25Ac6C84D497db898fa1E8387bf6Af3532a1c4", "0x62Cc8F9b5f56a33c9C8A60c8B92779f523c4E984", "#FF6A00"),
+  s("DELL", "Dell", "stock", 577.07, "0x941AE714EC6D8130c7B75d67160Ca08f1e7d11Dd", "0x1C6c8cADBe02E19129c39dDB92281cE4c0bf206b", "#007DB8"),
+  s("SNDK", "Sandisk Corporation", "stock", 1673.74, "0xB90A19fF0Af67f7779afF50A882A9CfF42446400", "0xfb133Fa4B7b385802B693a293606682Df47109A3", "#E2001A"),
+  s("NBIS", "Nebius Group", "stock", 253.18, "0x9D9c6684F596F66a64C030B93A886D51Fd4D7931", "0xE1D87B116Ba0fe898998f1D140339D1fA1E09705", "#D9F84A"),
+  s("CRWV", "CoreWeave", "stock", 91.55, "0x5f10A1C971B69e47e059e1dC91901B59b3fB49C3", "0xe1b3aABCAFAd1c94708dc1367dcfF8Aa4407487C", "#5B3DF5"),
+  s("RKLB", "Rocket Lab Corporation", "stock", 74.14, "0x3b14C39E89D60D627b42a1A4CA45b5bb45Fc12e2", "0x045477BF65Aef6f4F2386ad0164579e48381CC74", "#0B0B0C"),
+  s("IONQ", "IonQ", "stock", 43.4, "0x558378E000D634A36593E338eBacdd6207640EfE", "0x22EfeC4919baf55F360E0EDee4AbEB26DE4971eb", "#2E2BFF"),
+  s("RGTI", "Rigetti Computing", "stock", 15.11, "0x284358abc07F9359f19f4b5b4aC91901Be2597Ba", "0x2A045cF1C49c61c166C036d2f06FA2D2d984f765", "#3F51B5"),
+  s("GME", "GameStop", "stock", 24.74, "0x1b0E319c6A659F002271B69dB8A7df2F911c153E", "0x27C71df6A64fB476468EdF256CF72c038baB5B67", "#E2231A"),
+  s("CLSK", "CleanSpark", "stock", 12.38, "0xcBB95BBF36099d34dA091dc6Fa6F49EfA257Cee3", "0x810c12D3a554Bc47fd39597Fe3b3AAC4941F50eF", "#00B2A9"),
+  s("USAR", "USA Rare Earth", "stock", 13.92, "0xd917B029C761D264c6A312BBbcDA868658eF86a6", "0xA994d3684e8400A6c8078226925779FdeE682DD9", "#8B5E3C"),
+  s("SPY", "SPDR S&P 500 ETF Trust", "etf", 780.08, "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C", "0x319724394D3A0e3669269846abE664Cd621f9f6A", "#1D2B53"),
+  s("QQQ", "Invesco QQQ", "etf", 759.94, "0xD5f3879160bc7c32ebb4dC785F8a4F505888de68", "0x80901d846d5D7B030F26B480776EE3b29374C2ae", "#00205B"),
+  s("EWY", "iShares MSCI South Korea fund", "etf", 188.58, "0x7f0aBeF0C07280F82c6a08ead09dEd6BAE2C13Fc", "0xEFdf54610B62A7753Ec30bDc380847c12D32e1D1", "#000000"),
+  s("SGOV", "iShares 0-3 Month Treasury Bond", "etf", 101.19, "0x92FD66527192E3e61d4DDd13322Aa222DE86F9B5", "0xa0DF4ee0fFf975306345875E3548Fcc519577A11", "#2E7D32"),
+  s("SLV", "iShares Silver Trust", "etf", 55.31, "0x411eFb0E7f985935DAec3D4C3ebaEa0d0AD7D89f", "0x209b73908e92Ae021826eD79609845451Ecba2ce", "#A8A9AD"),
+  s("USO", "United States Oil Fund", "etf", 144.08, "0xa30FA36Db767ad9eD3f7a60fC79526fB4d56D344", "0x75a9c76Ef439e2C7c2E5a34Ab105EcFe3766431c", "#1F1F1F"),
 ];
 
-/** Tickers with a logo saved in public/logos/<TICKER>.png (Binance's bStock logos; crypto from Trust Wallet's open assets). */
-export const LOGOS = new Set<string>([
-  "BNB", "BTC", "ETH",
-  "AAOI", "AMD", "ARM", "AVGO", "AXTI", "BABA", "CBRS", "COIN", "CRCL", "CRWV",
-  "DRAM", "EWY", "GLW", "GOOGL", "HOOD", "IBM", "INTC", "LITE", "META", "MRVL",
-  "MSFT", "MSTR", "MU", "NBIS", "NOK", "NVDA", "ORCL", "PLTR", "QCOM", "QNT",
-  "QQQ", "RKLB", "SKHY", "SNDK", "SPCX", "SPY", "TSLA", "TSM", "WDC",
-]);
+const COLORS = assignCardColors(RAW.map((r) => ({ key: r.ticker, brand: r.brand })));
 
-// Colour picking order: the top stocks, then crypto (their brand colours are iconic), then the rest.
-const colourOrder = [...RAW.slice(0, 5), ...RAW.filter((r) => r.kind === "crypto"), ...RAW.slice(5).filter((r) => r.kind !== "crypto")];
-const COLORS = assignCardColors(colourOrder.map((r) => ({ key: r.ticker, brand: r.brand })));
-
-export const BSTOCKS: StockInfo[] = RAW.map((r) => ({
+export const STOCKS: StockInfo[] = RAW.map((r) => ({
   ...r,
+  symbol: r.ticker,
   color: COLORS[r.ticker].c,
   colorLight: COLORS[r.ticker].l,
-  logo: LOGOS.has(r.ticker) ? `/logos/${r.ticker}.png` : undefined,
+  logo: `/logos/${r.ticker}.png`,
 }));
 
-export const byTicker = (t: string): StockInfo | undefined => BSTOCKS.find((x) => x.ticker === t);
-
-export const isCrypto = (s: Pick<StockInfo, "kind">) => s.kind === "crypto";
-/** The crypto slice's tokens (lowercase addresses), for the basket rules. */
-export const CRYPTO_ADDRESSES = BSTOCKS.filter(isCrypto).map((s) => s.address.toLowerCase());
+export const byTicker = (t: string): StockInfo | undefined => STOCKS.find((x) => x.ticker === t.toUpperCase());
 
 /**
  * Showcase-only movement numbers (% since round start). Deterministic so the

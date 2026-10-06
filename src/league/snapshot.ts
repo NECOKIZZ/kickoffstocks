@@ -1,48 +1,19 @@
 // Price snapshots for scoring a round.
 //
-// One /rwa/tokens call returns every token's price, token→share ratio and
-// market status, so a "sample" is one call. A snapshot averages several
-// samples over a window (time-weighted by equal spacing) so one odd print
-// can't swing a round.
-//
-// Token value (USD per token, 18-decimal fixed point):
-//   "reference" mode: referencePrice × tokenToShareRatio (the underlying share
-//                     price, including reinvested dividends) — the default;
-//   "onchain" mode:   tokenPrice (the on-chain token price) — demo rounds,
-//                     since bStocks trade 24/7.
-
-import { decimalToE18, tokenValueE18, type RwaToken } from "../bsc/binanceWeb3";
-
-export type PriceMode = "reference" | "onchain";
+// A "sample" is one read of every scored token's Chainlink feed
+// (src/rh/feeds.ts). A snapshot averages several samples over a window so one
+// odd print can't swing a round. Token value = USD per token, 18-decimal
+// fixed point: the feed price, which includes the corporate-action
+// multiplier (reinvested dividends), so returns are total returns.
 
 export interface PriceSample {
   token: string;        // lower-case contract address
   value: bigint;        // USD per token, 1e18
   decimals: number;
-  trading: boolean;     // statusInfo.reasonCode === "TRADING"
+  trading: boolean;     // fresh feed, oracle not paused, chain live
   at: number;           // unix ms when sampled
-}
-
-/** One sample from a /rwa/tokens response. */
-export function sampleFromTokens(tokens: RwaToken[], mode: PriceMode, at: number): Map<string, PriceSample> {
-  const out = new Map<string, PriceSample>();
-  for (const t of tokens) {
-    const token = t.tokenContractAddress.toLowerCase();
-    let value: bigint;
-    try {
-      value = mode === "reference" ? tokenValueE18(t.referencePrice, t.tokenToShareRatio) : decimalToE18(t.tokenPrice);
-    } catch {
-      continue; // missing or malformed price: the token simply has no sample
-    }
-    out.set(token, {
-      token,
-      value,
-      decimals: Number(t.decimals),
-      trading: t.statusInfo?.reasonCode === "TRADING",
-      at,
-    });
-  }
-  return out;
+  /** Feed's updatedAt (unix seconds), when known. */
+  updatedAt?: number;
 }
 
 export interface Snapshot {

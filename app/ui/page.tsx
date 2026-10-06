@@ -1,7 +1,7 @@
 // Component showcase: every signature piece from docs/UI.md §3 on one page.
 // Data: the bStock snapshot in src/ui/data/stocks.ts; movements are demo values.
 
-import { BSTOCKS, byTicker, demoChangePct, type StockInfo } from "@/ui/data/stocks";
+import { STOCKS, byTicker, demoChangePct, type StockInfo } from "@/ui/data/stocks";
 import { AnnouncementBar, SiteHeader } from "@/ui/components/SiteHeader";
 import { SiteFooter } from "@/ui/components/SiteFooter";
 import { TickerStrip } from "@/ui/components/TickerStrip";
@@ -18,7 +18,7 @@ import { Pill, Change } from "@/ui/components/Pills";
 export const metadata = { title: "UI kit · League of Stocks" };
 
 const st = (t: string): StockInfo => byTicker(t)!;
-const changes = Object.fromEntries(BSTOCKS.map((s) => [s.ticker, demoChangePct(s.ticker)]));
+const changes = Object.fromEntries(STOCKS.map((s) => [s.ticker, demoChangePct(s.ticker)]));
 const hold = (...pairs: [string, number][]): Holding[] => pairs.map(([t, w]) => ({ stock: st(t), weightPct: w }));
 
 const AI_CHIPS = hold(["NVDA", 40], ["AMD", 25], ["AVGO", 20], ["TSM", 15]);
@@ -56,7 +56,7 @@ export default function UiKit() {
         <span className="mr-2 inline-block size-1.5 rounded-full bg-up align-middle" /> <b className="text-white">UI kit.</b> Every League of Stocks component on one page.
       </AnnouncementBar>
       <SiteHeader />
-      <TickerStrip stocks={BSTOCKS.slice(0, 18)} changes={changes} source="Binance reference · demo movements" />
+      <TickerStrip stocks={STOCKS.slice(0, 18)} changes={changes} source="Binance reference · demo movements" />
 
       {/* Hero panel (Gloam) with the deck (Kickoff) */}
       <div className="px-3 pt-3 md:px-6 md:pt-6">

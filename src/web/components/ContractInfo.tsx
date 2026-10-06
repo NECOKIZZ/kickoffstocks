@@ -12,15 +12,15 @@ export function ContractInfo() {
       <dl className="mt-4 space-y-3">
         <div>
           <dt className="text-muted">Chain</dt>
-          <dd>{cfg ? (cfg.chain === "local" ? `Local demo chain (${cfg.chainId})` : `BNB Smart Chain (${cfg.chainId})`) : "…"}</dd>
+          <dd>{cfg ? `${cfg.chainName} (${cfg.chainId})` : "…"}</dd>
         </div>
         <div>
           <dt className="text-muted">League contract</dt>
           <dd className="t-num break-all">{link(cfg?.escrow)}</dd>
         </div>
         <div>
-          <dt className="text-muted">Ticket token (USDT)</dt>
-          <dd className="t-num break-all">{link(cfg?.usdt)}</dd>
+          <dt className="text-muted">Ticket token (USDG)</dt>
+          <dd className="t-num break-all">{link(cfg?.usdg)}</dd>
         </div>
       </dl>
       <a className="mt-5 inline-block font-medium underline-offset-4 hover:underline" href="https://github.com/NECOKIZZ/ETF/blob/main/contracts/src/LeagueEscrow.sol" target="_blank" rel="noreferrer">

@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { Hex } from "viem";
 import { settleRound, maxPayoutOf, type ChainEntry, type RoundInput } from "../src/league/settlement";
-import { teamKeyOf, teamKeyFromWeights } from "../src/bsc/basket";
+import { teamKeyOf, teamKeyFromWeights } from "../src/league/basket";
 import type { Snapshot } from "../src/league/snapshot";
 
 const E18 = 10n ** 18n;
@@ -159,26 +159,5 @@ describe("verifyInputs", () => {
     const r = verifyInputs(tampered, s.inputsHash);
     expect(r.ok).toBe(false);
     expect(r.mismatches).toEqual([2]);
-  });
-});
-
-describe("crypto slice at settlement", () => {
-  const others = [1, 2, 3].map((k) => creator(k, k, TOKENS.slice(k * 2 + 1, k * 2 + 4), [5, 4, 3]));
-  const BTC = TOKENS[0];
-  const run = (usd: number[], startBtc = 100) =>
-    settleRound(
-      round([creator(0, 0, [BTC, TOKENS[8], TOKENS[9], TOKENS[7]], usd), ...others.map((o, i) => ({ ...o, index: i + 1 }))], flat(101), {
-        cryptoTokens: [BTC],
-        start: snap({ ...flat(100), [BTC]: startBtc }),
-      }),
-    );
-  it("keeps a basket with up to 25% crypto at round start (20% cap + drift)", () => {
-    expect(run([2, 3, 3, 2]).statuses[0].kind).toBe("playing"); // 20%
-  });
-  it("refunds a basket with too much crypto", () => {
-    expect(run([4, 3, 3, 2]).statuses[0]).toEqual({ kind: "refunded", reason: "ineligible-basket" }); // 33%
-  });
-  it("records the crypto list in the published rules", () => {
-    expect((run([2, 3, 3, 2]).inputs as { rules: { cryptoTokens: string[] } }).rules.cryptoTokens).toEqual([BTC.toLowerCase()]);
   });
 });

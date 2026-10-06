@@ -8,7 +8,7 @@ import Link from "next/link";
 import { erc20Abi, formatUnits } from "viem";
 import { useConnection, useReadContracts } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
-import { BSTOCKS, isCrypto, type StockInfo } from "../../ui/data/stocks";
+import { STOCKS, type StockInfo } from "../../ui/data/stocks";
 import { StockCard } from "../../ui/components/StockCard";
 import { WeightBar } from "../../ui/components/WeightBar";
 import { useConfig, usePlanRunner, useRound, useStocks } from "../hooks";
@@ -17,7 +17,7 @@ import { equalWeights } from "../weights";
 import { ConnectButton } from "./ConnectButton";
 import { TxSteps } from "./TxSteps";
 
-type Filter = "all" | "stock" | "etf" | "crypto";
+type Filter = "all" | "stock" | "etf";
 
 export function CreateFlow() {
   const { data: cfg } = useConfig();
@@ -38,33 +38,30 @@ export function CreateFlow() {
   const [faucet, setFaucet] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
   const [entered, setEntered] = useState<string | null>(null);
 
-  const rules = cfg?.rules ?? { minTokens: 3, minStocks: 3, maxCryptoPct: 20, maxTokens: 10, maxWeightPct: 50, minBasketUsd: 10, ticketUsd: 5, maxBuyFeePct: 2, driftPct: 5 };
+  const rules = cfg?.rules ?? { minTokens: 3, minStocks: 3, maxTokens: 10, maxWeightPct: 50, minBasketUsd: 10, ticketUsd: 5, maxBuyFeePct: 2, driftPct: 5 };
   const live = useMemo(() => new Map(stocksData?.stocks.map((s) => [s.ticker, s]) ?? []), [stocksData]);
-  const available = BSTOCKS.filter((s) => !stocksData || live.has(s.ticker));
+  const available = STOCKS.filter((s) => !stocksData || live.has(s.ticker));
   const shown = available.filter(
     (s) => (filter === "all" || s.kind === filter) && (!q || `${s.ticker} ${s.name}`.toLowerCase().includes(q.toLowerCase())),
   );
-  const stock = (t: string) => BSTOCKS.find((s) => s.ticker === t)!;
+  const stock = (t: string) => STOCKS.find((s) => s.ticker === t)!;
 
   // ?add=NVDA from the landing page's cards.
   useEffect(() => {
     const t = new URLSearchParams(window.location.search).get("add");
-    if (t && BSTOCKS.some((s) => s.ticker === t)) setPicked([t]);
+    if (t && STOCKS.some((s) => s.ticker === t)) setPicked([t]);
   }, []);
-  // Equal weights whenever the selection changes, with crypto kept under its cap.
+  // Equal weights whenever the selection changes.
   useEffect(() => {
-    setWeights(equalWeights(picked.map((t) => ({ ticker: t, crypto: isCrypto(stock(t)) })), rules.maxCryptoPct));
+    setWeights(equalWeights(picked));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked]);
 
   const toggle = (t: string) => setPicked((p) => (p.includes(t) ? p.filter((x) => x !== t) : p.length >= rules.maxTokens ? p : [...p, t]));
   const total = picked.reduce((s, t) => s + (weights[t] ?? 0), 0);
-  const stockCount = picked.filter((t) => !isCrypto(stock(t))).length;
-  const cryptoCount = picked.length - stockCount;
-  const cryptoPct = picked.reduce((s, t) => s + (isCrypto(stock(t)) ? (weights[t] ?? 0) : 0), 0);
+  const stockCount = picked.length;
   const enoughStocks = stockCount >= rules.minStocks;
-  const weightsOk =
-    enoughStocks && total === 100 && cryptoPct <= rules.maxCryptoPct && picked.every((t) => (weights[t] ?? 0) > 0 && weights[t] <= rules.maxWeightPct);
+  const weightsOk = enoughStocks && total === 100 && picked.every((t) => (weights[t] ?? 0) > 0 && weights[t] <= rules.maxWeightPct);
   const holdings = picked.map((t) => ({ stock: stock(t), weightPct: weights[t] ?? 0 }));
 
   // Wallet balances of the picked stocks (this chain's addresses).
@@ -90,10 +87,10 @@ export function CreateFlow() {
     try {
       const usd = Number(amount);
       const stocks = Object.fromEntries(picked.map((t) => [t, (usd * (weights[t] ?? 0)) / 100]));
-      await post("/api/faucet", { wallet: address, usdt: 10, stocks });
+      await post("/api/faucet", { wallet: address, usdg: 10, stocks });
       await refetchBals();
       await qc.invalidateQueries();
-      setFaucet({ busy: false, msg: `Sent test ${picked.join(", ")} worth $${usd.toFixed(2)}, 10 test USDT and gas.` });
+      setFaucet({ busy: false, msg: `Sent test ${picked.join(", ")} worth $${usd.toFixed(2)}, 10 test USDG and gas.` });
     } catch (e) {
       setFaucet({ busy: false, msg: e instanceof Error ? e.message : String(e) });
     }
@@ -107,7 +104,7 @@ export function CreateFlow() {
           n="1"
           title="Pick your stocks"
           done={enoughStocks}
-          hint={`${stockCount} ${stockCount === 1 ? "stock" : "stocks"}${cryptoCount ? ` + ${cryptoCount} crypto` : ""} · need ${rules.minStocks}+ stocks, ${rules.maxTokens} max`}
+          hint={`${stockCount} picked · need ${rules.minStocks}+, ${rules.maxTokens} max`}
         >
           <div className="mb-5 flex flex-wrap items-center gap-3">
             <input
@@ -118,9 +115,9 @@ export function CreateFlow() {
               className="h-10 w-full rounded-full border border-line bg-bg px-4 text-[14px] outline-none focus:border-ink/40 sm:w-64"
             />
             <div className="flex gap-1 rounded-full bg-surface p-1 text-[13px]">
-              {(["all", "stock", "etf", "crypto"] as Filter[]).map((f) => (
+              {(["all", "stock", "etf"] as Filter[]).map((f) => (
                 <button key={f} type="button" onClick={() => setFilter(f)} className={`h-8 rounded-full px-3 ${filter === f ? "bg-bg font-medium shadow-card" : "text-muted"}`}>
-                  {f === "all" ? "All" : f === "stock" ? "Stocks" : f === "etf" ? "Funds" : "Crypto"}
+                  {f === "all" ? "All" : f === "stock" ? "Stocks" : "Funds"}
                 </button>
               ))}
             </div>
@@ -143,7 +140,7 @@ export function CreateFlow() {
             })}
           </div>
           <p className="mt-4 text-[12px] text-muted">
-            At least {rules.minStocks} stocks or funds. Add BNB, BTC or ETH as a crypto slice of up to {rules.maxCryptoPct}% in total. Leveraged funds aren&rsquo;t allowed, so they aren&rsquo;t listed.
+            At least {rules.minStocks} stocks or funds. Only Robinhood Stock Tokens with a Chainlink price feed are listed: that&rsquo;s what scores your ETF on-chain.
           </p>
         </Panel>
 
@@ -152,7 +149,7 @@ export function CreateFlow() {
           n="2"
           title="Set the weights"
           done={weightsOk}
-          hint={`total ${total}% · max ${rules.maxWeightPct}% each${cryptoCount ? ` · crypto ${cryptoPct}% of ${rules.maxCryptoPct}%` : ""}`}
+          hint={`total ${total}% · max ${rules.maxWeightPct}% each`}
           disabled={!enoughStocks}
         >
           <div className="space-y-3">
@@ -163,7 +160,7 @@ export function CreateFlow() {
                 <input
                   type="range"
                   min={1}
-                  max={isCrypto(stock(t)) ? rules.maxCryptoPct : rules.maxWeightPct}
+                  max={rules.maxWeightPct}
                   value={weights[t] ?? 0}
                   onChange={(e) => setWeights((w) => ({ ...w, [t]: Number(e.target.value) }))}
                   className="accent-[var(--ink)]"
@@ -186,8 +183,8 @@ export function CreateFlow() {
             <WeightBar holdings={holdings} legend={false} />
           </div>
           <div className="mt-4 flex items-center justify-between text-[13px]">
-            <span className={total === 100 && cryptoPct <= rules.maxCryptoPct ? "text-up" : "text-down"}>
-              {total !== 100 ? `Adds up to ${total}%: needs 100%` : cryptoPct > rules.maxCryptoPct ? `Crypto is ${cryptoPct}%: the cap is ${rules.maxCryptoPct}%` : "Adds up to 100%"}
+            <span className={total === 100 ? "text-up" : "text-down"}>
+              {total !== 100 ? `Adds up to ${total}%: needs 100%` : "Adds up to 100%"}
             </span>
             <button type="button" className="font-medium underline-offset-4 hover:underline" onClick={() => setPicked((p) => [...p])}>
               Equal weights
@@ -205,9 +202,9 @@ export function CreateFlow() {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
                 className="t-num w-full bg-transparent text-[32px] outline-none"
-                aria-label="Amount in USDT"
+                aria-label="Amount in USDG"
               />
-              <span className="t-num text-[18px] text-muted">USDT</span>
+              <span className="t-num text-[18px] text-muted">USDG</span>
             </span>
             <span className="mt-1 block text-[13px] text-muted">
               Split by weight: {picked.map((t) => `${t} $${((Number(amount) * (weights[t] ?? 0)) / 100).toFixed(2)}`).join(" · ")}
@@ -219,18 +216,25 @@ export function CreateFlow() {
           <div className="mt-4">
             {!isConnected ? (
               <ConnectButton size="md" />
-            ) : cfg?.faucet ? (
+            ) : cfg?.chain === "local" ? (
               <button type="button" disabled={faucet.busy || !weightsOk || !(Number(amount) >= rules.minBasketUsd)} onClick={getTestStocks} className="h-12 w-full rounded-full bg-ink text-[16px] font-medium text-bg disabled:opacity-40">
                 {faucet.busy ? "Sending…" : "Get test stocks (local demo chain)"}
               </button>
+            ) : cfg?.stockFaucet ? (
+              <div className="space-y-3">
+                <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="grid h-12 w-full place-items-center rounded-full bg-ink text-[16px] font-medium text-bg">
+                  Get test stocks from Robinhood&rsquo;s faucet ↗
+                </a>
+                <p className="text-[12px] text-muted">Testnet: the faucet sends 5 each of TSLA, AMZN, PLTR and AMD (plus NFLX, which has no price feed) every 24 hours. Test USDG for the ticket comes from the button on the league page.</p>
+              </div>
             ) : cfg?.buyEnabled ? (
               <button
                 type="button"
                 disabled={buyRunner.busy || !weightsOk || !(Number(amount) >= rules.minBasketUsd)}
-                onClick={() => buyRunner.run({ action: "buy-basket", tickers: picked, weightsPct: picked.map((t) => weights[t]), usdt: Number(amount) }, { onDone: () => refetchBals() })}
+                onClick={() => buyRunner.run({ action: "buy-basket", tickers: picked, weightsPct: picked.map((t) => weights[t]), usdg: Number(amount) }, { onDone: () => refetchBals() })}
                 className="h-12 w-full rounded-full bg-ink text-[16px] font-medium text-bg disabled:opacity-40"
               >
-                {buyRunner.busy ? "Working…" : `Buy for ${Number(amount).toFixed(2)} USDT via Binance`}
+                {buyRunner.busy ? "Working…" : `Buy for ${Number(amount).toFixed(2)} USDG via 0x`}
               </button>
             ) : (
               <p className="text-[13px] text-muted">Buying isn&rsquo;t available on this deployment yet. If you already hold the stocks, go to step 4.</p>
@@ -270,10 +274,9 @@ export function CreateFlow() {
           </div>
           <ul className="mt-5 space-y-1.5 text-[13px] text-muted">
             <li>· Your whole balance of these {picked.length} assets (${heldUsd.toFixed(2)}) is locked until the round ends, then returned.</li>
-            <li>· Plus a ${rules.ticketUsd} USDT ticket. Top half wins the bottom half&rsquo;s tickets.</li>
+            <li>· Plus a ${rules.ticketUsd} USDG ticket. Beat AVERAGE (the middle ETF) and you win a share of the tickets below it. Tie AVERAGE and your ticket comes back.</li>
             <li>· Same stocks and weights as an existing ETF? You join that team instead.</li>
-            <li>· If prices move your weights more than {rules.driftPct} points away before the round starts (or crypto above {rules.maxCryptoPct + rules.driftPct}%), the entry is refunded.</li>
-            {picked.includes("BNB") && <li>· BNB is held as WBNB (wrapped BNB), the token form the league can lock.</li>}
+            <li>· If prices move your weights more than {rules.driftPct} points away before the round starts, the entry is refunded.</li>
           </ul>
           <div className="mt-5">
             {entered ? (
@@ -311,7 +314,7 @@ export function CreateFlow() {
             {picked.length ? picked.map((t) => <StockCard key={t} stock={stock(t)} size="tiny64" weightPct={weights[t]} />) : <p className="self-center text-[14px] text-white/50">Pick stocks to see them here.</p>}
           </div>
           <dl className="mt-6 space-y-2 text-[14px]">
-            <div className="flex justify-between"><dt className="text-white/55">Assets</dt><dd className="t-num">{stockCount}{cryptoCount ? ` + ${cryptoCount} crypto` : ""}</dd></div>
+            <div className="flex justify-between"><dt className="text-white/55">Assets</dt><dd className="t-num">{stockCount}</dd></div>
             <div className="flex justify-between"><dt className="text-white/55">Basket</dt><dd className="t-num">${(holdsAll ? heldUsd : Number(amount) || 0).toFixed(2)}</dd></div>
             <div className="flex justify-between"><dt className="text-white/55">Ticket</dt><dd className="t-num">${rules.ticketUsd}</dd></div>
             <div className="flex justify-between"><dt className="text-white/55">Buy fee</dt><dd className="t-num">{fee.toFixed(1)}%</dd></div>

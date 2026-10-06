@@ -1,19 +1,28 @@
 // Chain + keeper wallet from environment.
-//   LEAGUE_CHAIN       bsc (default) | local
-//   BSC_RPC_URL        RPC for BSC mainnet (or a fork)
+//   LEAGUE_CHAIN       testnet (default) | mainnet | local
+//   RH_RPC_URL         RPC for the league chain (defaults to the public RPC)
 //   ESCROW_ADDRESS     LeagueEscrow address
 //   KEEPER_PRIVATE_KEY keeper wallet (falls back to DEPLOYER_PRIVATE_KEY)
 
 import { createPublicClient, createWalletClient, http, type Address, type Chain, type Hex } from "viem";
-import { bsc, foundry } from "viem/chains";
+import { foundry } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
+import { robinhood, robinhoodTestnet } from "../rh/chains";
+
+export type LeagueChain = "mainnet" | "testnet" | "local";
+
+export function leagueChain(): LeagueChain {
+  const c = process.env.LEAGUE_CHAIN;
+  return c === "mainnet" || c === "local" ? c : "testnet";
+}
 
 export function chainFromEnv(): Chain {
-  return process.env.LEAGUE_CHAIN === "local" ? foundry : bsc;
+  const c = leagueChain();
+  return c === "local" ? foundry : c === "mainnet" ? robinhood : robinhoodTestnet;
 }
 
 export function rpcFromEnv(): string {
-  return process.env.BSC_RPC_URL ?? (process.env.LEAGUE_CHAIN === "local" ? "http://127.0.0.1:8545" : "https://bsc-dataseed.bnbchain.org");
+  return process.env.RH_RPC_URL ?? (leagueChain() === "local" ? "http://127.0.0.1:8545" : chainFromEnv().rpcUrls.default.http[0]);
 }
 
 export function escrowFromEnv(): Address {

@@ -10,7 +10,7 @@ import { foundry } from "viem/chains";
 import { mnemonicToAccount } from "viem/accounts";
 import { leagueEscrowAbi, erc20Abi, readEntries, readRound, roundTokens, submitSettlement } from "../src/league/escrow";
 import { settleRound } from "../src/league/settlement";
-import { teamKeyOf } from "../src/bsc/basket";
+import { teamKeyOf } from "../src/league/basket";
 import type { Snapshot } from "../src/league/snapshot";
 
 const ANVIL = [process.env.ANVIL_BIN, `${homedir()}/.foundry/bin/anvil`, "/usr/local/bin/anvil"].find((p) => p && existsSync(p));

@@ -1,7 +1,7 @@
 "use client";
 
 // Gloam-style action panel for an ETF: "Back the team" ($5 ticket) and
-// "Buy the ETF" (Binance swaps, creator fee). Runs the plan from the wallet.
+// "Buy the ETF" (0x swaps, creator fee). Runs the plan from the wallet.
 
 import { useState } from "react";
 import { useConnection } from "wagmi";
@@ -9,7 +9,7 @@ import type { RoundView, TeamView } from "../api";
 import { useConfig, usePlanRunner } from "../hooks";
 import { ConnectButton } from "./ConnectButton";
 import { TxSteps } from "./TxSteps";
-import { teamName, usd } from "./league";
+import { teamName, usdg } from "./league";
 
 export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
   const [tab, setTab] = useState<"back" | "buy">("back");
@@ -46,11 +46,11 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
         <div className="mt-5">
           <div className="rounded-[20px] bg-bg p-5">
             <div className="text-[13px] text-muted">You pay</div>
-            <div className="t-num mt-1 text-[32px]">{usd(r.stake, 0)} USDT</div>
+            <div className="t-num mt-1 text-[32px]">{usdg(r.stake, 0)} USDG</div>
             <div className="mt-1 text-[13px] text-muted">one ticket on {teamName(t)}</div>
           </div>
           <dl className="mt-4 space-y-2 text-[14px]">
-            <Row k="If the round ended now" v={t.winningNow && pay > stake ? `${usd(pay)} USDT back` : "ticket lost (below the cut)"} />
+            <Row k="If the round ended now" v={t.drawingNow ? "ticket back (tied with AVERAGE)" : t.winningNow && pay > stake ? `${usdg(pay)} USDG back` : "ticket lost (below AVERAGE)"} />
             <Row k="Creator's cut of your winnings" v="10%" />
             <Row k="Entries close" v={new Date(r.entryClose * 1000).toUTCString().slice(5, 22) + " UTC"} />
           </dl>
@@ -64,7 +64,7 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
                 onClick={() => runner.run({ action: "back", teamKey: t.teamKey, roundId: r.id })}
                 className="h-12 w-full rounded-full bg-ink text-[16px] font-medium text-bg transition hover:opacity-90 disabled:opacity-40"
               >
-                {!open ? "Entries are closed" : runner.busy ? "Working…" : `Back ${teamName(t)} · $${usd(r.stake, 0)}`}
+                {!open ? "Entries are closed" : runner.busy ? "Working…" : `Back ${teamName(t)} · $${usdg(r.stake, 0)}`}
               </button>
             )}
           </div>
@@ -79,21 +79,21 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value.replace(/[^\d.]/g, ""))}
                 className="t-num w-full bg-transparent text-[32px] outline-none"
-                aria-label="Amount in USDT"
+                aria-label="Amount in USDG"
               />
-              <span className="t-num text-[18px] text-muted">USDT</span>
+              <span className="t-num text-[18px] text-muted">USDG</span>
             </span>
             <span className="mt-1 block text-[13px] text-muted">→ the same basket, in your wallet</span>
           </label>
           <dl className="mt-4 space-y-2 text-[14px]">
             <Row k="Creator fee" v={`${fee}% to the creator`} />
-            <Row k="Route" v="Binance Web3 aggregator" />
+            <Row k="Route" v="0x (RFQ market makers + Uniswap)" />
             <Row k="Slippage" v="auto" />
           </dl>
           <div className="mt-5">
             {!cfg?.buyEnabled ? (
               <p className="rounded-[16px] bg-bg p-4 text-[13px] text-muted">
-                Buying runs through Binance&rsquo;s swap on BSC mainnet. It isn&rsquo;t available on {cfg?.chain === "local" ? "the local demo chain" : "this deployment yet"}.
+                Buying runs through 0x on Robinhood Chain mainnet. It isn&rsquo;t available on {cfg?.chain === "local" ? "the local demo chain" : cfg?.chain === "testnet" ? "testnet: get the stocks from Robinhood's faucet" : "this deployment yet"}.
               </p>
             ) : !isConnected ? (
               <ConnectButton size="md" />
@@ -101,7 +101,7 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
               <button
                 type="button"
                 disabled={runner.busy || !(Number(amount) >= 1)}
-                onClick={() => runner.run({ action: "buy-etf", teamKey: t.teamKey, usdt: Number(amount), roundId: r.id })}
+                onClick={() => runner.run({ action: "buy-etf", teamKey: t.teamKey, usdg: Number(amount), roundId: r.id })}
                 className="h-12 w-full rounded-full bg-ink text-[16px] font-medium text-bg transition hover:opacity-90 disabled:opacity-40"
               >
                 {runner.busy ? "Working…" : `Buy ${teamName(t)}`}

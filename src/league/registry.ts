@@ -1,33 +1,54 @@
-// Token address → stock info, for the real bStocks and for the local demo's
-// mock copies (data/local-demo.json maps ticker → mock address).
+// The league's tokens on the current chain: mainnet Stock Tokens, the
+// testnet faucet tokens, or the local demo's mock copies (data/local-demo.json
+// maps ticker → mock address). Every token maps back to its stock, and so to
+// its mainnet Chainlink feed.
 
 import { existsSync, readFileSync } from "node:fs";
-import { BSTOCKS, type StockInfo } from "../ui/data/stocks";
+import { getAddress, type Address } from "viem";
+import { STOCKS, type StockInfo } from "../ui/data/stocks";
+import { leagueChain } from "./chain";
+import type { FeedSource } from "../rh/feeds";
 
-let cache: Map<string, StockInfo> | null = null;
+export interface ChainStock {
+  stock: StockInfo;
+  /** The token on the league chain (checksummed). */
+  address: Address;
+}
+
+let cache: { key: string; list: ChainStock[] } | null = null;
+
+const demoFile = () => (process.env.LEAGUE_DATA_DIR ? `${process.env.LEAGUE_DATA_DIR}/local-demo.json` : "data/local-demo.json");
+
+/** League stocks playable on this chain, with their addresses here. */
+export function chainStockList(): ChainStock[] {
+  const chain = leagueChain();
+  const key = chain === "local" ? `local:${existsSync(demoFile())}` : chain;
+  if (cache?.key === key) return cache.list;
+  let list: ChainStock[];
+  if (chain === "mainnet") list = STOCKS.map((stock) => ({ stock, address: getAddress(stock.address) }));
+  else if (chain === "testnet") list = STOCKS.filter((s) => s.testnet).map((stock) => ({ stock, address: getAddress(stock.testnet!) }));
+  else {
+    const tokens = existsSync(demoFile()) ? (JSON.parse(readFileSync(demoFile(), "utf8")) as { tokens: Record<string, string> }).tokens : {};
+    list = STOCKS.filter((s) => tokens[s.ticker]).map((stock) => ({ stock, address: getAddress(tokens[stock.ticker]) }));
+  }
+  cache = { key, list };
+  return list;
+}
 
 export function tokenRegistry(): Map<string, StockInfo> {
-  if (cache) return cache;
-  const m = new Map<string, StockInfo>();
-  for (const s of BSTOCKS) m.set(s.address.toLowerCase(), s);
-  const demo = process.env.LEAGUE_DATA_DIR ? `${process.env.LEAGUE_DATA_DIR}/local-demo.json` : "data/local-demo.json";
-  if (process.env.LEAGUE_CHAIN === "local" && existsSync(demo)) {
-    const { tokens } = JSON.parse(readFileSync(demo, "utf8")) as { tokens: Record<string, string> };
-    for (const [ticker, addr] of Object.entries(tokens)) {
-      const s = BSTOCKS.find((x) => x.ticker === ticker);
-      if (s) m.set(addr.toLowerCase(), s);
-    }
-  }
-  cache = m;
-  return m;
+  return new Map(chainStockList().map((c) => [c.address.toLowerCase(), c.stock]));
 }
 
 export const tickerOf = (token: string): string | null => tokenRegistry().get(token.toLowerCase())?.ticker ?? null;
 
-/** The crypto slice's token addresses on this chain (mock copies on the local demo chain). */
-export function cryptoTokensForChain(): string[] {
-  const crypto = BSTOCKS.filter((s) => s.kind === "crypto");
-  if (process.env.LEAGUE_CHAIN !== "local") return crypto.map((s) => s.address.toLowerCase());
-  const mainnet = new Set(crypto.map((s) => s.address.toLowerCase()));
-  return [...tokenRegistry()].filter(([a, s]) => s.kind === "crypto" && !mainnet.has(a)).map(([a]) => a);
+/** Feed sources for the given league tokens (unknown tokens are skipped). */
+export function feedSources(tokens: string[]): FeedSource[] {
+  const reg = tokenRegistry();
+  return tokens.flatMap((t) => {
+    const s = reg.get(t.toLowerCase());
+    return s ? [{ token: t.toLowerCase(), feed: s.feed, mainnetToken: s.address, decimals: 18 }] : [];
+  });
 }
+
+/** Ticker → league token (lower case), for the Robinhood quote API. */
+export const tokenByTicker = (): Map<string, string> => new Map(chainStockList().map((c) => [c.stock.ticker, c.address.toLowerCase()]));
