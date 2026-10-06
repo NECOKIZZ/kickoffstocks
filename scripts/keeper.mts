@@ -10,8 +10,11 @@
 //   settle <roundId> [--window-min 30] [--min-samples 3] [--dry-run]
 //          Settles from the saved samples taken inside each window
 //          (start: entryClose … +window, end: end … +window).
-//   auto   <roundId> [--samples 3] [--every-min 5] [--source …]
-//          Waits for the round, samples at start and end, then settles.
+//   park   <roundId>   Puts the round's tickets in the savings vault (after entries close).
+//   unpark <roundId>   Brings them back; the interest goes into the pot.
+//   auto   <roundId> [--samples 3] [--every-min 5] [--source …] [--no-park]
+//          Waits for the round, samples at start (then parks the tickets if a
+//          savings vault is set), samples at the end, unparks and settles.
 //   status <roundId>
 //
 // Prices: LEAGUE_PRICE_SOURCE (or --source) chainlink (default, Robinhood
@@ -79,8 +82,12 @@ async function settle(roundId: bigint) {
   const { pub, wallet, account, chain } = clientsFromEnv(!dry);
   const escrow = escrowFromEnv();
 
-  const info = await readRound(pub, escrow, roundId);
+  let info = await readRound(pub, escrow, roundId);
   if (info.status !== "Open") throw new Error(`round ${roundId} is ${info.status}`);
+  if (info.parked && !dry) {
+    await unpark(roundId);
+    info = await readRound(pub, escrow, roundId);
+  }
   const chainNow = Number((await pub.getBlock()).timestamp); // the contract goes by chain time
   if (!dry && chainNow < info.end) throw new Error("round has not ended yet");
   const entries = await readEntries(pub, escrow, roundId);
@@ -107,11 +114,13 @@ async function settle(roundId: bigint) {
     start: start.prices,
     end: end.prices,
     priceProblems: problems,
+    bonus: info.yield,
   });
   const decimals = await pub.readContract({ address: await pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "stakeToken" }), abi: erc20Abi, functionName: "decimals" });
   const fmt = (x: bigint) => formatUnits(x, decimals);
   const file = store.saveInputs(roundId, s.inputs);
   log(`round ${roundId}: ${entries.length} entries, ${s.teams.length} teams, void=${s.void ?? "no"}`);
+  if (info.yield > 0n) log(`  ticket interest in the pot: ${fmt(info.yield)}`);
   if (s.average !== null) log(`  AVERAGE ${(Number(s.average) / 1e10).toFixed(3)}%`);
   for (const t of s.teams) log(`  ${t.isWinner ? "WIN " : t.isDraw ? "DRAW" : "    "} ${t.captain} ${(Number(t.ret) / 1e10).toFixed(3)}% (${t.members} on team)`);
   log(`  platform ${fmt(s.platformCut)}, season in ${fmt(s.seasonIn)}, season out ${fmt(s.seasonOut)}`);
@@ -120,6 +129,27 @@ async function settle(roundId: bigint) {
   if (dry) return log("dry run: nothing sent");
   const hash = await submitSettlement(pub, wallet!, escrow, roundId, s, account!, chain);
   log(`settled round ${roundId} (tx ${hash})`);
+}
+
+async function tx(functionName: "parkTickets" | "unparkTickets", roundId: bigint) {
+  const { pub, wallet, account, chain } = clientsFromEnv(true);
+  const hash = await wallet!.writeContract({ address: escrowFromEnv(), abi: leagueEscrowAbi, functionName, args: [roundId], account: account!, chain });
+  const r = await pub.waitForTransactionReceipt({ hash });
+  if (r.status !== "success") throw new Error(`${functionName} reverted: ${hash}`);
+  return hash;
+}
+
+async function park(roundId: bigint) {
+  const { pub } = clientsFromEnv();
+  const vault = await pub.readContract({ address: escrowFromEnv(), abi: leagueEscrowAbi, functionName: "yieldVault" });
+  if (/^0x0+$/.test(vault)) return log("no savings vault set: tickets stay in the escrow");
+  log(`parked round ${roundId}'s tickets in ${vault} (tx ${await tx("parkTickets", roundId)})`);
+}
+
+async function unpark(roundId: bigint) {
+  const hash = await tx("unparkTickets", roundId);
+  const info = await readRound(clientsFromEnv().pub, escrowFromEnv(), roundId);
+  log(`unparked round ${roundId}: interest ${info.yield} (base units) goes into the pot (tx ${hash})`);
 }
 
 async function auto(roundId: bigint) {
@@ -141,6 +171,7 @@ async function auto(roundId: bigint) {
       await sample(roundId, phase, source);
       if (i < n - 1) await sleep(every);
     }
+    if (phase === "start" && !flag("no-park")) await park(roundId).catch((e) => log(`park skipped: ${e instanceof Error ? e.message : e}`));
   }
   await settle(roundId);
 }
@@ -152,6 +183,7 @@ async function status(roundId: bigint) {
   const entries = await readEntries(pub, escrowFromEnv(), roundId);
   log(`round ${roundId}: ${info.status}, ${entries.length} entries, stake ${info.stake} (base units)`);
   log(`  entries close ${new Date(info.entryClose * 1000).toISOString()}, ends ${new Date(info.end * 1000).toISOString()}`);
+  if (info.parked || info.yield > 0n) log(`  tickets ${info.parked ? "parked in the savings vault" : "back"}; interest so far ${info.yield}`);
   log(`  samples: start ${store.loadSamples(roundId, "start").length}, end ${store.loadSamples(roundId, "end").length}`);
 }
 
@@ -170,8 +202,10 @@ try {
   else if (cmd === "sample") await sample(id(), args[2] as Phase, sourceOpt());
   else if (cmd === "settle") await settle(id());
   else if (cmd === "auto") await auto(id());
+  else if (cmd === "park") await park(id());
+  else if (cmd === "unpark") await unpark(id());
   else if (cmd === "status") await status(id());
-  else console.log("usage: keeper.mts open|sample|settle|auto|status (see the header of this file)");
+  else console.log("usage: keeper.mts open|sample|settle|park|unpark|auto|status (see the header of this file)");
 } catch (e) {
   console.error(`error: ${e instanceof Error ? e.message : String(e)}`);
   process.exit(1);

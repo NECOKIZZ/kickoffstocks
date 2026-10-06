@@ -9,39 +9,39 @@ interface IERC20 {
     function approve(address, uint256) external returns (bool);
 }
 
-/// Runs the escrow against REAL BSC mainnet tokens on a fork: can bStocks
-/// and BSC USDT be locked in a fresh contract and returned?
+/// Runs the escrow against REAL Robinhood Chain mainnet tokens on a fork: can
+/// Robinhood Stock Tokens and USDG be locked in a fresh contract and returned?
 ///
-///   BSC_RPC_URL=https://bsc-dataseed.bnbchain.org forge test --match-contract LeagueEscrowFork -vv
+///   RH_FORK_URL=https://rpc.mainnet.chain.robinhood.com forge test --match-contract LeagueEscrowFork -vv
 ///
-/// Skipped when BSC_RPC_URL is not set.
+/// Skipped when RH_FORK_URL is not set.
 contract LeagueEscrowForkTest is Test {
-    address constant USDT = 0x55d398326f99059fF775485246999027B3197955;
-    address constant NVDAB = 0x02Fca66C1D1aFB4E2A7884261eB00F63598a7436;
-    address constant MSFTB = 0x80106cb3EAD06659A5ad19DF39D9b4733863B9b0;
-    address constant TSLAB = 0x5b1910eAaD6450E50f816082Aa078C41F10C292f;
+    address constant USDG = 0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168;
+    address constant NVDA = 0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC;
+    address constant MSFT = 0xe93237C50D904957Cf27E7B1133b510C669c2e74;
+    address constant TSLA = 0x322F0929c4625eD5bAd873c95208D54E1c003b2d;
 
     LeagueEscrow escrow;
     address creator = makeAddr("creator");
     bool forked;
 
     function setUp() public {
-        string memory rpc = vm.envOr("BSC_RPC_URL", string(""));
+        string memory rpc = vm.envOr("RH_FORK_URL", string(""));
         if (bytes(rpc).length == 0) return;
         vm.createSelectFork(rpc);
         forked = true;
-        escrow = new LeagueEscrow(USDT, address(this));
-        escrow.setTokenAllowed(NVDAB, true);
-        escrow.setTokenAllowed(MSFTB, true);
-        escrow.setTokenAllowed(TSLAB, true);
+        escrow = new LeagueEscrow(USDG, address(this));
+        escrow.setTokenAllowed(NVDA, true);
+        escrow.setTokenAllowed(MSFT, true);
+        escrow.setTokenAllowed(TSLA, true);
     }
 
-    function test_realBStocksLockAndReturn() public {
+    function test_realStockTokensLockAndReturn() public {
         if (!forked) return;
         uint64 close = uint64(block.timestamp + 1 hours);
-        uint256 roundId = escrow.openRound(close, close + 1 hours, 5e18, 100, 20);
+        uint256 roundId = escrow.openRound(close, close + 1 hours, 5e6, 100, 20);
 
-        address[3] memory toks = [NVDAB, MSFTB, TSLAB];
+        address[3] memory toks = [NVDA, MSFT, TSLA];
         address[] memory t = new address[](3);
         uint256[] memory a = new uint256[](3);
         for (uint256 i; i < 3; ++i) {
@@ -49,10 +49,10 @@ contract LeagueEscrowForkTest is Test {
             a[i] = 0.01e18;
             deal(toks[i], creator, 0.01e18);
         }
-        deal(USDT, creator, 5e18);
+        deal(USDG, creator, 5e6);
 
         vm.startPrank(creator);
-        IERC20(USDT).approve(address(escrow), type(uint256).max);
+        IERC20(USDG).approve(address(escrow), type(uint256).max);
         for (uint256 i; i < 3; ++i) IERC20(toks[i]).approve(address(escrow), type(uint256).max);
         escrow.enterCreator(roundId, keccak256("basket"), t, a);
         vm.stopPrank();
@@ -67,6 +67,6 @@ contract LeagueEscrowForkTest is Test {
         for (uint256 i; i < 3; ++i) {
             assertEq(IERC20(toks[i]).balanceOf(creator), 0.01e18, "returned");
         }
-        assertEq(IERC20(USDT).balanceOf(creator), 5e18, "stake refunded");
+        assertEq(IERC20(USDG).balanceOf(creator), 5e6, "stake refunded");
     }
 }

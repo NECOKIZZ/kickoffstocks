@@ -16,7 +16,8 @@
 //   4. Run the engine. A void round refunds everyone.
 //
 // Conservation holds for the contract's totals: refunds pay back exactly what
-// they put in, and the engine conserves the rest.
+// they put in, and the engine conserves the rest. Ticket yield (bonus) goes
+// into the pot, or to the season pot when the round is void.
 
 import { encodeAbiParameters, keccak256, toBytes, type Hex } from "viem";
 import {
@@ -56,6 +57,8 @@ export interface RoundInput {
   end: Map<string, Snapshot>;
   /** Tokens whose snapshot failed (missing / not trading): voids the round. */
   priceProblems: string[];
+  /** Interest the round's tickets earned in the savings vault (stake-token units). */
+  bonus?: bigint;
 }
 
 /** Rules a basket must meet when it is entered (the app and agents enforce these):
@@ -101,7 +104,8 @@ export function settleRound(
   const n = input.entries.length;
   const statuses: EntryStatus[] = new Array(n);
   let average: bigint | null = null;
-  const refundAll = (reason: Settlement["void"]): Settlement => finish(reason, input.entries.map(() => input.stake), 0n, 0n, 0n, []);
+  const bonus = input.bonus ?? 0n;
+  const refundAll = (reason: Settlement["void"]): Settlement => finish(reason, input.entries.map(() => input.stake), 0n, bonus, 0n, []);
 
   // 1. Validate creators.
   const teamOrder: Hex[] = [];
@@ -181,12 +185,12 @@ export function settleRound(
     engineTeams.push({ ret: t.ret, entries: members.map((m) => ({ stake: input.stake, isCaptain: m === t.captain })) });
     memberIndex.push(members.map((m) => m.index));
   }
-  const r = settleLeague(engineTeams, params, input.seasonPot);
+  const r = settleLeague(engineTeams, params, input.seasonPot, bonus);
   if (!r.void) average = r.average;
 
   const payouts = input.entries.map(() => input.stake); // refunds by default
   if (r.void) {
-    return finish(r.void, payouts, 0n, 0n, 0n, teamSummary(false));
+    return finish(r.void, payouts, 0n, bonus, 0n, teamSummary(false));
   }
   for (const eo of r.entries) payouts[memberIndex[eo.team][eo.entry]] = eo.payout;
   return finish(null, payouts, r.platformCut, r.seasonIn, r.seasonOut, teamSummary(true));
@@ -213,6 +217,7 @@ export function settleRound(
       stake: input.stake.toString(),
       capMultiple: input.capMultiple,
       seasonPot: input.seasonPot.toString(),
+      bonus: bonus.toString(),
       params: { ...params, capMultiple: params.capMultiple.toString() },
       rules: { ...rules, minValue: rules.minValue.toString() },
       prices: {

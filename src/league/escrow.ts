@@ -1,5 +1,5 @@
 // LeagueEscrow on-chain access: read a round's entries and baskets, and
-// submit settlement. Works with any viem clients (BSC mainnet, a local fork,
+// submit settlement. Works with any viem clients (Robinhood Chain, a local fork,
 // or a plain local chain in tests).
 
 import { parseAbi, type Address, type Hex, type PublicClient, type WalletClient, type Chain, type Account } from "viem";
@@ -17,7 +17,11 @@ export const leagueEscrowAbi = parseAbi([
   "function setTokenAllowed(address token, bool allowed)",
   "function fundSeason(uint256 amount)",
   "function roundCount() view returns (uint256)",
-  "function rounds(uint256) view returns (uint8 status, uint64 entryClose, uint64 end, uint16 capMultiple, uint16 maxBackers, uint128 stake, uint128 totalStakes, bytes32 inputsHash)",
+  "function rounds(uint256) view returns (uint8 status, uint64 entryClose, uint64 end, uint16 capMultiple, uint16 maxBackers, uint128 stake, uint128 totalStakes, bytes32 inputsHash, uint128 parkedShares, uint128 yield)",
+  "function parkTickets(uint256 roundId)",
+  "function unparkTickets(uint256 roundId)",
+  "function setYieldVault(address vault)",
+  "function yieldVault() view returns (address)",
   "function entryCount(uint256 roundId) view returns (uint256)",
   "function entryAt(uint256 roundId, uint256 i) view returns ((address wallet, bytes32 teamKey, bool isCreator, bool claimed, uint128 payout))",
   "function basketOf(uint256 roundId, address wallet) view returns (address[] tokens, uint256[] amounts)",
@@ -54,12 +58,16 @@ export interface RoundInfo {
   stake: bigint;
   totalStakes: bigint;
   inputsHash: Hex;
+  /** Tickets are in the savings vault right now. */
+  parked: boolean;
+  /** Interest the tickets earned (stake-token units), added to the pot. */
+  yield: bigint;
 }
 
 export async function readRound(client: PublicClient, escrow: Address, id: bigint): Promise<RoundInfo> {
   const r = await client.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "rounds", args: [id] });
-  const [status, entryClose, end, capMultiple, maxBackers, stake, totalStakes, inputsHash] = r;
-  return { id, status: ROUND_STATUS[status] ?? "None", entryClose: Number(entryClose), end: Number(end), capMultiple, maxBackers, stake, totalStakes, inputsHash };
+  const [status, entryClose, end, capMultiple, maxBackers, stake, totalStakes, inputsHash, parkedShares, yieldEarned] = r;
+  return { id, status: ROUND_STATUS[status] ?? "None", entryClose: Number(entryClose), end: Number(end), capMultiple, maxBackers, stake, totalStakes, inputsHash, parked: parkedShares > 0n, yield: yieldEarned };
 }
 
 /** All entries of a round, in contract order, with creators' locked baskets. */

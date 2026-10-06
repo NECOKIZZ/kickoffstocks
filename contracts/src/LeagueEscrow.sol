@@ -4,28 +4,43 @@ pragma solidity ^0.8.28;
 interface IERC20Min {
     function transfer(address to, uint256 amount) external returns (bool);
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
+    function approve(address spender, uint256 amount) external returns (bool);
     function balanceOf(address who) external view returns (uint256);
 }
 
-/// @title LeagueEscrow — League of Stocks rounds on BSC (tokenized stocks).
-/// @notice Holds the fixed ticket stakes and the creators' locked stock
-///         baskets for each round, then pays out the keeper's settlement.
+/// @dev The part of ERC-4626 the escrow uses (Morpho vaults implement it).
+interface IERC4626Min {
+    function asset() external view returns (address);
+    function deposit(uint256 assets, address receiver) external returns (uint256 shares);
+    function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets);
+}
+
+/// @title LeagueEscrow — Kickoff Stocks rounds on Robinhood Chain.
+/// @notice Holds the fixed ticket stakes (USDG) and the creators' locked
+///         Robinhood Stock Token baskets for each round, then pays out the
+///         keeper's settlement.
 ///
-///         Creators lock ≥ $10 of a basket of allowlisted stock tokens
-///         (bStocks / Ondo / xStocks) plus one ticket. The locked quantities
-///         ARE the ETF: its score is the buy-and-hold return of exactly what
-///         was locked. Backers join a creator's team with a ticket only
-///         (buying the basket happens outside the escrow, through the Binance
-///         Web3 Wallet trading API, with the creator as fee referrer).
+///         Creators lock ≥ $10 of a basket of allowlisted stock tokens plus
+///         one ticket. The locked quantities ARE the ETF: its score is the
+///         buy-and-hold return of exactly what was locked (Chainlink prices,
+///         which include reinvested dividends). Backers join a creator's team
+///         with a ticket only (buying the basket happens outside the escrow,
+///         through 0x, with the creator as fee recipient).
+///
+///         Ticket yield: once entries close, the keeper can park the round's
+///         tickets in an ERC-4626 savings vault (Robinhood Earn / Morpho USDG
+///         on mainnet). They come back before settlement and the interest is
+///         added to the winners' pot. Locked stocks are never moved.
 ///
 ///         Settlement is computed off-chain by the open-source engine
 ///         (src/engine/league.ts) and submitted by the keeper — a
 ///         disclosed trust assumption. The contract enforces:
-///           - conservation: Σ payouts + platform + seasonIn == Σ stakes + seasonOut
+///           - conservation: Σ payouts + platform + seasonIn == Σ stakes + seasonOut + yield
 ///           - the season pot can never go negative
 ///           - no payout above stake × (1 + capMultiple × max team size)
 ///           - locked baskets always go back to their owner, whatever the result
-///           - liveness: if the keeper never settles, anyone can void the round
+///           - liveness: if the keeper never settles, anyone can bring parked
+///             tickets back after the round ends and void the round
 ///             VOID_GRACE after it ends, and everyone gets their stake back.
 ///         The settlement inputs (prices, baskets, team keys) are committed by
 ///         hash and published, so anyone can recompute the payouts.
@@ -57,6 +72,8 @@ contract LeagueEscrow {
         uint128 stake;      // fixed ticket, stake-token base units
         uint128 totalStakes;
         bytes32 inputsHash; // hash of the published settlement inputs
+        uint128 parkedShares; // vault shares holding this round's tickets (0 = not parked)
+        uint128 yield;        // interest earned while parked, added to the pot
     }
 
     struct Entry {
@@ -106,6 +123,11 @@ contract LeagueEscrow {
     uint256 public seasonPot;
     uint256 public platformBalance;
 
+    /// @notice Savings vault for idle tickets (address(0) = off).
+    IERC4626Min public yieldVault;
+    /// @notice Shares held across all rounds; the vault can only change at zero.
+    uint256 public totalParkedShares;
+
     bool private _locked;
 
     // --- events ----------------------------------------------------------------
@@ -125,6 +147,9 @@ contract LeagueEscrow {
     event PausedSet(bool paused);
     event SeasonFunded(uint256 amount);
     event PlatformWithdrawn(address to, uint256 amount);
+    event YieldVaultSet(address vault);
+    event TicketsParked(uint256 indexed roundId, uint256 assets, uint256 shares);
+    event TicketsUnparked(uint256 indexed roundId, uint256 assets, uint256 yield, uint256 shortfall);
 
     // --- errors ----------------------------------------------------------------
 
@@ -148,6 +173,11 @@ contract LeagueEscrow {
     error PayoutTooLarge(uint256 index);
     error NothingToClaim();
     error TransferFailed();
+    error VaultBusy();
+    error BadVault();
+    error Parked();
+    error NotParked();
+    error VaultLoss(uint256 shortfall);
 
     // --- modifiers -------------------------------------------------------------
 
@@ -203,6 +233,15 @@ contract LeagueEscrow {
         _pull(stakeToken, msg.sender, amount);
         seasonPot += amount;
         emit SeasonFunded(amount);
+    }
+
+    /// @notice Set the savings vault for idle tickets (or address(0) to turn
+    ///         it off). Only while no round has tickets parked.
+    function setYieldVault(address vault) external onlyOwner {
+        if (totalParkedShares != 0) revert VaultBusy();
+        if (vault != address(0) && IERC4626Min(vault).asset() != address(stakeToken)) revert BadVault();
+        yieldVault = IERC4626Min(vault);
+        emit YieldVaultSet(vault);
     }
 
     function withdrawPlatform(address to) external onlyOwner nonReentrant {
@@ -307,7 +346,57 @@ contract LeagueEscrow {
         emit BackerEntered(roundId, msg.sender, teamKey);
     }
 
+    /// @notice Park a round's tickets in the savings vault once entries have
+    ///         closed (nothing can be added to the round any more).
+    function parkTickets(uint256 roundId) external onlyKeeper nonReentrant {
+        Round storage r = rounds[roundId];
+        if (r.status != Status.Open) revert BadRound();
+        if (block.timestamp < r.entryClose) revert TooEarly();
+        if (r.parkedShares != 0) revert Parked();
+        IERC4626Min v = yieldVault;
+        uint256 amount = r.totalStakes;
+        if (address(v) == address(0) || amount == 0) revert BadVault();
+        _approve(stakeToken, address(v), amount);
+        uint256 shares = v.deposit(amount, address(this));
+        if (shares == 0 || shares > type(uint128).max) revert BadVault();
+        r.parkedShares = uint128(shares);
+        totalParkedShares += shares;
+        emit TicketsParked(roundId, amount, shares);
+    }
+
+    /// @notice Bring a round's tickets back from the vault. Keeper/owner any
+    ///         time; anyone once the round has ended (so a missing keeper can
+    ///         never strand them). Interest is kept as the round's yield. A
+    ///         loss is covered from the season pot, then the platform balance.
+    function unparkTickets(uint256 roundId) external nonReentrant {
+        Round storage r = rounds[roundId];
+        uint256 shares = r.parkedShares;
+        if (shares == 0) revert NotParked();
+        bool privileged = msg.sender == keeper || msg.sender == owner;
+        if (!privileged && block.timestamp < r.end) revert TooEarly();
+        r.parkedShares = 0;
+        totalParkedShares -= shares;
+        uint256 before = stakeToken.balanceOf(address(this));
+        yieldVault.redeem(shares, address(this), address(this));
+        uint256 got = stakeToken.balanceOf(address(this)) - before;
+        uint256 owed = r.totalStakes;
+        uint256 shortfall;
+        if (got >= owed) {
+            r.yield += uint128(got - owed);
+        } else {
+            shortfall = owed - got;
+            uint256 fromSeason = shortfall < seasonPot ? shortfall : seasonPot;
+            seasonPot -= fromSeason;
+            uint256 rest = shortfall - fromSeason;
+            if (rest > platformBalance) revert VaultLoss(rest - platformBalance);
+            platformBalance -= rest;
+        }
+        emit TicketsUnparked(roundId, got, got > owed ? got - owed : 0, shortfall);
+    }
+
     /// @notice Keeper submits the engine's payouts, one per entry in entry order.
+    ///         Tickets must be back from the vault; their interest (yield) is
+    ///         part of what gets paid out.
     function settle(
         uint256 roundId,
         uint128[] calldata payouts,
@@ -319,20 +408,22 @@ contract LeagueEscrow {
         Round storage r = rounds[roundId];
         if (r.status != Status.Open) revert BadRound();
         if (block.timestamp < r.end) revert TooEarly();
+        if (r.parkedShares != 0) revert Parked();
         Entry[] storage es = _entries[roundId];
         if (payouts.length != es.length) revert LengthMismatch();
 
         // A team's gain is capped at capMultiple × team stake, and the captain
         // can receive (through creator fees) up to the whole team's gain. So
-        // the per-entry ceiling is stake + capMultiple × the largest team stake.
-        uint256 maxPayout = uint256(r.stake) * (1 + uint256(r.capMultiple) * (1 + uint256(r.maxBackers)));
+        // the per-entry ceiling is stake + capMultiple × the largest team stake
+        // (plus the round's yield, which can top up any single winner).
+        uint256 maxPayout = uint256(r.stake) * (1 + uint256(r.capMultiple) * (1 + uint256(r.maxBackers))) + uint256(r.yield);
         uint256 paid;
         for (uint256 i; i < payouts.length; ++i) {
             if (payouts[i] > maxPayout) revert PayoutTooLarge(i);
             es[i].payout = payouts[i];
             paid += payouts[i];
         }
-        if (paid + platformCut + seasonIn != uint256(r.totalStakes) + seasonOut) revert NotConserved();
+        if (paid + platformCut + seasonIn != uint256(r.totalStakes) + seasonOut + uint256(r.yield)) revert NotConserved();
         if (seasonOut > seasonPot + seasonIn) revert SeasonOverdrawn();
 
         seasonPot = seasonPot + seasonIn - seasonOut;
@@ -350,7 +441,9 @@ contract LeagueEscrow {
         if (r.status != Status.Open) revert BadRound();
         bool privileged = msg.sender == keeper || msg.sender == owner;
         if (!privileged && block.timestamp < uint256(r.end) + VOID_GRACE) revert TooEarly();
+        if (r.parkedShares != 0) revert Parked();
         r.status = Status.Voided;
+        seasonPot += r.yield; // a void refunds stakes; the interest goes to the season pot
         emit RoundVoided(roundId);
     }
 
@@ -456,6 +549,11 @@ contract LeagueEscrow {
                 emit BasketReturnFailed(roundId, wallet, ts[i], amt);
             }
         }
+    }
+
+    function _approve(IERC20Min token, address spender, uint256 amount) internal {
+        (bool ok, bytes memory ret) = address(token).call(abi.encodeWithSelector(IERC20Min.approve.selector, spender, amount));
+        if (!ok || (ret.length != 0 && !abi.decode(ret, (bool)))) revert TransferFailed();
     }
 
     function _push(IERC20Min token, address to, uint256 amount) internal {
