@@ -1,75 +1,53 @@
-# League of Stocks
+# Kickoff Stocks
 
-On-chain stock ETFs on BNB Chain, playing a weekly league. Built for **BNB Hack: Tokenized Stocks Edition**.
+Kickoff's stock league on **Robinhood Chain**. Build an "ETF" from real Robinhood Stock Tokens, lock it with a $5 ticket, and **beat AVERAGE**.
+Built for the Colosseum **Crypto World's Fair** (Robinhood Chain track), as a new game mode of [Kickoff](https://kickoff.cash).
 
-- **Creators** build an ETF by locking a basket of tokenized stocks (bStocks, Ondo, xStocks), at least 3 stocks and at least $10, and pay a $5 ticket. The locked basket *is* the ETF. Its score is the real return of exactly what was locked.
-- **Backers** can **buy the ETF** in one tap through the Binance Web3 Wallet trading API (the creator earns a buy fee through the API's referral fee), **back the team** with a $5 ticket, or both.
-- Each round, ETFs are ranked by the % growth of their stocks. **The top half win the bottom half's tickets**, split by stake × accuracy. Peer to peer: the platform never puts money in.
+- **Creators** lock a basket of 3–10 Robinhood Stock Tokens (≥ $10) plus a $5 USDG ticket. The locked basket *is* the ETF: its score is the real return of exactly what was locked, priced by Robinhood Chain's Chainlink feeds (which include reinvested dividends).
+- **Backers** put a $5 ticket on a creator's ETF, and/or (mainnet) **buy the ETF** in one go through 0x, with the creator earning their buy fee.
+- **AVERAGE** (from Fantasy Premier League): a ghost team at the round's median return. Above AVERAGE wins a share of the tickets below it, split by stake × accuracy. **On AVERAGE is a draw**: your ticket comes back. Below loses the ticket. Peer to peer: the platform never puts money in.
+- **Tickets earn while you wait**: once entries close, the round's tickets are parked in a USDG savings vault (Robinhood Earn on mainnet) and the interest goes into the pot. Locked stocks never move.
+- **Bring your own agent**: an MCP server (`/api/mcp`) lets Claude, ChatGPT or your own agent read the league and prepare transactions; the user's wallet signs.
 
-> "ETF" here means an on-chain basket of tokenized stocks, not a regulated fund. Capital is at risk.
-
-## Status
-Hackathon week, 5–11 Oct 2026. Rules and plan: [`docs/BNB.md`](docs/BNB.md).
-
-| Piece | Where | State |
-|---|---|---|
-| Settlement engine | `src/engine/league.ts` | ✅ tested |
-| League contract (BSC) | `contracts/src/LeagueEscrow.sol` | ✅ tested; mainnet deploy planned Thu 8 Oct |
-| Binance Web3 API (RWA prices, swaps with creator fee) | `src/bsc/` | ✅ live-checked from an allowed region |
-| Keeper + verifiable settlement | `scripts/keeper.mts`, `scripts/verify.mts` | ✅ tested on a local chain |
-| Web app | `app/` | ✅ landing, league, ETF, create, my entries, leaderboard, results, rules, agents |
-| Agents (Binance Agentic Wallet) | `skills/league-of-stocks/`, `/api/plan`, `scripts/agent.mts` | ✅ plans tested on a local chain |
+> "ETF" here means an on-chain basket of tokenized stocks, not a regulated fund. Capital is at risk. Robinhood Stock Tokens are not available in restricted regions, including the US.
 
 ## How settlement works
-1. Every ETF's score is the buy-and-hold return of its locked basket, priced by the Binance RWA price API.
-2. D = best return − this return. With `n` ETFs, `k = n//2 + 1` and `m` = the k-th smallest D. An ETF wins if D < m, so exactly the top half wins (boundary ties lose).
-3. Accuracy `a = (1 / (1 + D/m))^6`. The pot (losing tickets minus a 10% take) is split by team stake × a, under a 100× gain cap.
-4. Inside a team, winnings split by stake. The creator takes 10% of their ticket backers' winnings.
+1. Each ETF's score is the buy-and-hold return of its locked basket: Chainlink prices averaged over several samples at the start and at the end. A stale feed, a paused oracle (corporate action) or a stalled chain voids the round.
+2. D = best return − this return. With `n` ETFs, `k = n//2 + 1`, `m` = the k-th smallest D. An ETF wins if D < m (above AVERAGE); an ETF exactly on AVERAGE draws.
+3. Accuracy `a = (1 / (1 + D/m))^6`. The pot (losing tickets minus a 10% take, plus ticket interest) is split by team stake × a, under a 100× gain cap.
+4. Inside a team, winnings split by stake. The creator takes 10% of their backers' winnings.
 5. The take is split 5% platform, 5% season pot. The season pot tops up thin pots.
 
-**Trust model:** a keeper computes settlement off-chain with this open-source engine and submits it. On-chain, the contract enforces:
-- the pot adds up (Σ payouts + platform + season in = Σ stakes + season out);
-- the season pot can't go negative;
-- no payout above the cap;
-- baskets always go back to their owners.
+**Trust model:** a keeper computes settlement off-chain with this open-source engine and publishes every input; their hash goes on-chain with the payouts. The contract enforces:
+- the pot adds up (Σ payouts + platform + season in = Σ stakes + season out + ticket interest);
+- no payout above the cap, and the season pot can't go negative;
+- baskets always go back to their owners;
+- liveness: after the round, anyone can bring parked tickets back from the vault, and 3 days after it anyone can void the round and everyone gets their stake back.
 
-If the keeper doesn't settle within 3 days of the round's end, anyone can void the round and everyone gets their stake back.
-
-## Agents
-An AI agent with the [Binance Agentic Wallet](https://developers.binance.com/docs/agentic-wallet/welcome) and the League of Stocks skill can read rounds, build and back ETFs, and claim. Every action is `POST /api/plan`, which returns the exact transactions; the Agentic Wallet previews, risk-checks and signs each one (`baw contract-call`) after the user confirms. See [`skills/league-of-stocks/SKILL.md`](skills/league-of-stocks/SKILL.md) and the `/agents` page.
+## Status
+| Piece | Where | State |
+|---|---|---|
+| Settlement engine (with AVERAGE + ticket yield) | `src/engine/league.ts` | ✅ tested |
+| League contract (+ savings vault, TestUSDG) | `contracts/src/` | ✅ 42 Foundry tests + a mainnet fork test with real Stock Tokens |
+| Prices | `src/rh/feeds.ts` (Chainlink), `src/rh/rhApi.ts` (Robinhood quotes) | ✅ live-checked |
+| Buy the ETF | `src/rh/zeroEx.ts` (0x Swap API v2, creator fee) | ✅ unit-tested; needs a 0x key |
+| Keeper + verifiable settlement | `scripts/keeper.mts`, `scripts/verify.mts` | ✅ end to end on a local chain |
+| Web app (Kickoff design) | `app/`, `src/ui/`, `src/web/` | ✅ |
+| BYO agents | `/api/mcp`, `/agent.md`, `skills/kickoff-stocks/` | ✅ |
 
 ## Run it
-Requires Node 22+, pnpm, and [Foundry](https://getfoundry.sh) for the contracts. To try the whole app with no real money, see [`docs/LOCAL.md`](docs/LOCAL.md).
-
+Node 22+, pnpm, [Foundry](https://getfoundry.sh).
 ```bash
 pnpm install
-pnpm test            # engine + API client tests
+pnpm test                       # engine, settlement, prices, 0x, MCP, end-to-end on anvil
 pnpm typecheck
-pnpm test:contracts  # Foundry tests for LeagueEscrow
+pnpm test:contracts             # Foundry tests (RH_FORK_URL=https://rpc.mainnet.chain.robinhood.com for the fork test)
 ```
-
-Live Binance API calls: copy `.env.example` to `.env.local`, add your Web3 API keys, then:
-
-```bash
-pnpm rwa:tokens      # list tokenized stocks on BSC with prices
-```
-
-The Binance Web3 API refuses requests from restricted regions (including the US), so run this from an allowed location.
+- Local demo with no real money: [`docs/LOCAL.md`](docs/LOCAL.md).
+- Deploy to Robinhood Chain testnet and run rounds: [`docs/YOUR-TODO.md`](docs/YOUR-TODO.md) and [`docs/KEEPER.md`](docs/KEEPER.md).
 
 ## Docs
-- [`docs/BNB.md`](docs/BNB.md): rules, architecture, day-by-day plan
-- [`docs/dx-notes.md`](docs/dx-notes.md): developer-experience log for the hackathon report
-- [`docs/YOUR-TODO.md`](docs/YOUR-TODO.md): what the team still has to do · [`docs/HANDOFF.md`](docs/HANDOFF.md): state of the build
-- [`docs/KEEPER.md`](docs/KEEPER.md): running rounds · [`docs/LOCAL.md`](docs/LOCAL.md): local demo chain
-- [`docs/UI.md`](docs/UI.md): design · [`docs/design/stock-card`](docs/design/stock-card): stock card handoff
-- [`docs/prototype-results.md`](docs/prototype-results.md): stress tests of the payout rules (Python prototype)
-- [`docs/robinhood-colosseum-spec.md`](docs/robinhood-colosseum-spec.md): the Robinhood Chain version (parked)
-
-## License
-MIT
-
-## Web app
-```bash
-pnpm dev             # http://localhost:3000/ui shows every UI component
-```
-The design plan is in [`docs/UI.md`](docs/UI.md).
+- [`docs/YOUR-TODO.md`](docs/YOUR-TODO.md): what's left before the Colosseum deadline
+- [`docs/KEEPER.md`](docs/KEEPER.md): running rounds
+- [`docs/LOCAL.md`](docs/LOCAL.md): the whole app on a local chain
+- [`docs/prototype-results.md`](docs/prototype-results.md): stress tests behind the rules

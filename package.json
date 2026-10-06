@@ -1,8 +1,8 @@
 {
-  "name": "league-of-stocks",
+  "name": "kickoff-stocks",
   "version": "0.1.0",
   "private": true,
-  "description": "League of Stocks: on-chain stock ETFs on BNB Chain compete in weekly leagues. Built for BNB Hack: Tokenized Stocks Edition.",
+  "description": "Kickoff Stocks: Kickoff's stock league on Robinhood Chain. Build an ETF from Robinhood Stock Tokens and beat AVERAGE.",
   "type": "module",
   "license": "MIT",
   "packageManager": "pnpm@10.28.0",
@@ -13,15 +13,15 @@
     "test": "vitest run",
     "test:contracts": "cd contracts && forge test",
     "typecheck": "tsc --noEmit",
-    "rwa:tokens": "tsx --env-file=.env.local scripts/rwa-tokens.mts",
-    "quote": "tsx --env-file=.env.local scripts/quote.mts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "preview": "next build && next start -p 8080",
     "dev:8080": "next dev -p 8080",
     "keeper": "tsx --env-file-if-exists=.env.local scripts/keeper.mts",
-    "buy-plan": "tsx --env-file=.env.local scripts/buy-plan.mts"
+    "deploy:league": "tsx --env-file-if-exists=.env.local scripts/deploy.mts",
+    "local-demo": "tsx scripts/local-demo.mts",
+    "verify": "tsx --env-file-if-exists=.env.local scripts/verify.mts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
