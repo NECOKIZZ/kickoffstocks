@@ -1,15 +1,25 @@
 // Colours. Two groups, and nothing else in the UI code (test/palette.test.ts):
 //
-// 1. The four BRAND colours for the site itself. Every other site shade is a
-//    mix of these (app/globals.css, --brand-*).
+// 1. KICKOFF's brand colours for the site itself (the Kickoff brand book:
+//    cream + ink, purple carries the light theme, green the dark one). Every
+//    other site shade is a mix of these (app/globals.css).
 // 2. The STOCK CARD design (docs/design/stock-card): black cards with each
 //    stock's own colour glowing through, so every stock gets a unique colour.
 
 export const BRAND = {
-  ink: "#0B0B0C", // text, dark panels
-  paper: "#FFFFFF", // page
-  mint: "#3DDC97", // gains, winners, highlights
-  coral: "#FF5A36", // losses, the cut-off line
+  green: "#00C805", // Kickoff green: dark theme accent, gains, winners
+  greenDeep: "#008C04", // 3D button edge
+  purple: "#7B62F6", // Kickoff purple: light theme accent, hero wash
+  purpleDeep: "#4E3CB5", // 3D button edge
+  cream: "#F7F5F0", // page (light)
+  canvas: "#EDEAE0", // cards (light)
+  ink: "#111210", // text, page (dark)
+  inkCard: "#1C1D1A", // cards (dark)
+  inkSoft: "#6B6F63", // muted text
+  red: "#D4183D", // losses (light)
+  redSoft: "#FF4D6D", // losses (dark)
+  black: "#000000", // black bands
+  white: "#FFFFFF",
 } as const;
 
 /** Fixed colours from the stock card design handoff. */

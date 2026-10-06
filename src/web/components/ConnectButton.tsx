@@ -1,14 +1,34 @@
 "use client";
 
-// Connect: injected wallets (MetaMask, Rabby, Robinhood Wallet…). Shows the address
-// when connected, and a switch button when the wallet is on another chain.
+// Connect: injected wallets (MetaMask, Rabby, Robinhood Wallet…), in Kickoff's
+// style: a 3D accent button, then a wallet chip with your avatar, address and
+// ticket balance. On testnet the chip offers free test USDG (TestUSDG's
+// faucet) when you're low. A wallet on another chain gets a switch button.
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useConnect, useConnection, useConnectors, useDisconnect, useSwitchChain } from "wagmi";
+import { erc20Abi, formatUnits, parseAbi } from "viem";
+import { useConnect, useConnection, useConnectors, useDisconnect, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
+import { useQueryClient } from "@tanstack/react-query";
+import { Button3D } from "../../ui/brand/Button3D";
+import { WalletAvatar, shortAddress } from "../../ui/brand/Avatar";
 import { useConfig } from "../hooks";
 
-export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+export const short = shortAddress;
+
+const faucetAbi = parseAbi(["function faucet()"]);
+
+function useTicketBalance(address?: `0x${string}`) {
+  const { data: cfg } = useConfig();
+  return useReadContract({
+    address: cfg?.usdg,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: address ? [address] : undefined,
+    chainId: cfg?.chainId as never,
+    query: { enabled: !!cfg?.usdg && !!address, refetchInterval: 20_000 },
+  });
+}
 
 export function ConnectButton({ size = "sm" }: { size?: "sm" | "md" }) {
   const { address, chainId, isConnected } = useConnection();
@@ -17,6 +37,10 @@ export function ConnectButton({ size = "sm" }: { size?: "sm" | "md" }) {
   const { disconnect } = useDisconnect();
   const { switchChain } = useSwitchChain();
   const { data: cfg } = useConfig();
+  const qc = useQueryClient();
+  const { data: bal, refetch } = useTicketBalance(address);
+  const { writeContractAsync, isPending: topping } = useWriteContract();
+  const [note, setNote] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -27,53 +51,109 @@ export function ConnectButton({ size = "sm" }: { size?: "sm" | "md" }) {
     return () => document.removeEventListener("mousedown", close);
   }, []);
 
-  const h = size === "sm" ? "h-9 px-4 text-[13px]" : "h-11 px-5 text-[15px]";
-  const base = `inline-flex items-center gap-2 rounded-full font-medium transition ${h}`;
-
-  if (!mounted) return <span className={`${base} bg-ink text-bg`}>Connect</span>;
+  const btnSize = size === "sm" ? "sm" : "md";
+  if (!mounted)
+    return (
+      <Button3D size={btnSize} color="accent">
+        Connect
+      </Button3D>
+    );
 
   if (!isConnected || !address) {
     const hasInjected = typeof window !== "undefined" && "ethereum" in window;
     if (!hasInjected)
       return (
-        <a className={`${base} bg-ink text-bg`} href="https://www.binance.com/en/web3wallet" target="_blank" rel="noreferrer">
-          Get a wallet ↗
+        <a href="https://metamask.io/download/" target="_blank" rel="noreferrer">
+          <Button3D size={btnSize} color="accent">
+            Get a wallet ↗
+          </Button3D>
         </a>
       );
     return (
       <span className="relative inline-flex flex-col items-end">
-        <button type="button" className={`${base} bg-ink text-bg hover:opacity-90 disabled:opacity-50`} disabled={isPending} onClick={() => connect({ connector: connectors[0] })}>
+        <Button3D size={btnSize} color="accent" disabled={isPending} onClick={() => connect({ connector: connectors[0] })}>
           {isPending ? "Connecting…" : "Connect"}
-        </button>
-        {error && <span className="absolute top-full mt-1 whitespace-nowrap text-[12px] text-down">{error.message.split("\n")[0]}</span>}
+        </Button3D>
+        {error && <span className="absolute top-full mt-2 whitespace-nowrap text-[12px] text-down">{error.message.split("\n")[0]}</span>}
       </span>
     );
   }
 
   if (cfg && chainId !== cfg.chainId)
     return (
-      <button type="button" className={`${base} bg-down-bg text-down`} onClick={() => switchChain({ chainId: cfg.chainId as never })}>
+      <Button3D size={btnSize} color="purple" onClick={() => switchChain({ chainId: cfg.chainId as never })}>
         Switch to {cfg.chain === "local" ? "local chain" : cfg.chainName}
-      </button>
+      </Button3D>
     );
 
+  const decimals = cfg?.usdgDecimals ?? 6;
+  const tickets = bal !== undefined ? Number(formatUnits(bal, decimals)) : null;
+  const unit = cfg?.chain === "mainnet" ? "USDG" : "tUSDG";
+  const low = tickets !== null && tickets < 10;
+  const canFaucet = cfg?.chain === "testnet" && !!cfg.usdg;
+
+  async function topUp() {
+    setNote(null);
+    try {
+      const hash = await writeContractAsync({ address: cfg!.usdg, abi: faucetAbi, functionName: "faucet", chainId: cfg!.chainId as never });
+      setNote(`Sent: ${hash.slice(0, 10)}…`);
+      setTimeout(() => {
+        refetch();
+        qc.invalidateQueries();
+      }, 4000);
+    } catch (e) {
+      setNote((e as { shortMessage?: string }).shortMessage ?? (e instanceof Error ? e.message.split("\n")[0] : String(e)));
+    }
+  }
+
   return (
-    <div ref={ref} className="relative">
-      <button type="button" className={`${base} border border-line bg-bg text-ink hover:bg-surface`} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <span className="size-2 rounded-full bg-brand-mint" />
+    <div ref={ref} className="relative flex items-center gap-2">
+      {tickets !== null && (
+        <span className="hidden whitespace-nowrap text-[12.5px] font-semibold text-muted sm:inline" title={`${unit} in your wallet (tickets are paid in ${unit})`}>
+          {tickets.toFixed(2)} {unit}
+        </span>
+      )}
+      {canFaucet && low && (
+        <button
+          type="button"
+          onClick={topUp}
+          disabled={topping}
+          title={note ?? "Claim 50 free test USDG (once an hour)"}
+          className="whitespace-nowrap rounded-[8px] border px-2.5 py-1.5 text-[12px] font-bold disabled:opacity-50"
+          style={{ borderColor: "var(--ui-accent)", color: note && !note.startsWith("Sent") ? "var(--down)" : "var(--ui-accent)" }}
+        >
+          {topping ? "Topping up…" : (
+            <>
+              Get<span className="hidden sm:inline"> test</span> USDG
+            </>
+          )}
+        </button>
+      )}
+      <button
+        type="button"
+        className="inline-flex h-9 items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-3 text-[13px] font-semibold text-ink transition hover:brightness-95"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+      >
+        <WalletAvatar address={address} size={26} />
         <span className="t-num">{short(address)}</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-[18px] border border-line bg-bg p-1.5 shadow-lift">
-          <Link href="/me" className="block rounded-[12px] px-3 py-2 text-[14px] hover:bg-surface" onClick={() => setOpen(false)}>
+        <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-[16px] border border-line bg-bg p-1.5 shadow-lift">
+          <Link href="/me" className="block rounded-[10px] px-3 py-2 text-[14px] hover:bg-surface" onClick={() => setOpen(false)}>
             My entries
           </Link>
-          <button type="button" className="block w-full rounded-[12px] px-3 py-2 text-left text-[14px] hover:bg-surface" onClick={() => navigator.clipboard?.writeText(address)}>
+          <button type="button" className="block w-full rounded-[10px] px-3 py-2 text-left text-[14px] hover:bg-surface" onClick={() => navigator.clipboard?.writeText(address)}>
             Copy address
           </button>
+          {cfg?.stockFaucet && (
+            <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="block rounded-[10px] px-3 py-2 text-[14px] hover:bg-surface">
+              Testnet ETH + stocks ↗
+            </a>
+          )}
           <button
             type="button"
-            className="block w-full rounded-[12px] px-3 py-2 text-left text-[14px] text-down hover:bg-surface"
+            className="block w-full rounded-[10px] px-3 py-2 text-left text-[14px] text-down hover:bg-surface"
             onClick={() => {
               disconnect();
               setOpen(false);
@@ -90,8 +170,9 @@ export function ConnectButton({ size = "sm" }: { size?: "sm" | "md" }) {
 export function ChainChip() {
   const { data: cfg } = useConfig();
   return (
-    <span className="hidden items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[13px] text-muted lg:inline-flex">
-      <span className={`size-2 rounded-full ${cfg?.chain === "mainnet" ? "bg-brand-mint" : "bg-brand-coral"}`} /> {cfg?.chain === "local" ? "Local demo chain" : (cfg?.chainName ?? "Robinhood Chain")}
+    <span className="hidden items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-[12px] font-semibold text-muted lg:inline-flex">
+      <span className={`size-2 rounded-full ${cfg?.chain === "mainnet" ? "bg-brand-mint" : "bg-brand-purple"}`} />
+      {cfg?.chain === "local" ? "Local demo chain" : cfg?.chain === "testnet" ? "Robinhood Chain testnet" : "Robinhood Chain"}
     </span>
   );
 }

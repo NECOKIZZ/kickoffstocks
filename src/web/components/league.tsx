@@ -9,7 +9,6 @@ import { LeagueTable } from "../../ui/components/LeagueRow";
 import { RoundPill } from "../../ui/components/RoundPill";
 import type { RoundView, TeamView } from "../api";
 import { useRound } from "../hooks";
-import { short } from "./ConnectButton";
 
 /** A USD value with 18 decimals (basket values). */
 export const usd = (wei: string | bigint, dp = 2) => (Number(BigInt(wei) / 10n ** 12n) / 1e6).toFixed(dp);
@@ -29,11 +28,12 @@ export function toEntry(t: TeamView, stake: string): LeagueEntry {
   return {
     rank: t.rank,
     name: teamName(t),
-    creator: short(t.captain),
+    creator: t.captain,
     holdings: holdingsOf(t),
     returnPct: t.returnPct,
     team: t.members + 1,
     ifWins: t.winningNow && pay > BigInt(stake) ? Number(usdg(pay - BigInt(stake))) : null,
+    status: t.winningNow ? "win" : t.drawingNow ? "draw" : "lose",
     href: `/etf/${t.teamKey}`,
   };
 }
@@ -64,5 +64,5 @@ export function LeagueBoard({ limit, query = "", roundId }: { limit?: number; qu
   const entries = teams.slice(0, limit).map((t) => ({ ...toEntry(t, r.stake), href: `/etf/${t.teamKey}${roundId ? `?round=${roundId}` : ""}` }));
   if (!entries.length) return <div className="rounded-[24px] bg-surface p-8 text-muted">No ETFs match.</div>;
   const winners = r.teams.filter((t) => t.winningNow).length || Math.floor(r.teams.length / 2);
-  return <LeagueTable entries={entries} cutAfter={q ? -1 : winners} />;
+  return <LeagueTable entries={entries} cutAfter={q ? -1 : winners} averagePct={r.averagePct} />;
 }

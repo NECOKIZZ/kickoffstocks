@@ -1,7 +1,7 @@
 import { Shell, PageHead, Container } from "@/web/components/Shell";
 import { AgentPrompt } from "@/web/components/AgentPrompt";
 
-export const metadata = { title: "Agents · League of Stocks" };
+export const metadata = { title: "Agents · Kickoff Stocks" };
 
 const ASKS = ["What's happening in this round?", "Back the top ETF with $5", "Build me an AI chips ETF for $12", "Did I win? Claim it for me"];
 

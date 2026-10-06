@@ -1,5 +1,6 @@
 "use client";
 
+import { Identity } from "../../ui/brand/Avatar";
 import Link from "next/link";
 import { useRound, useStocks } from "../hooks";
 import { EtfHand } from "../../ui/components/EtfHand";
@@ -9,7 +10,6 @@ import { Change, Pill } from "../../ui/components/Pills";
 import { RoundPill } from "../../ui/components/RoundPill";
 import { ActionPanel } from "./ActionPanel";
 import { holdingsOf, teamName, usd, usdg } from "./league";
-import { short } from "./ConnectButton";
 import { Container } from "./Shell";
 
 export function EtfPage({ teamKey, roundId }: { teamKey: string; roundId?: string }) {
@@ -41,14 +41,14 @@ export function EtfPage({ teamKey, roundId }: { teamKey: string; roundId?: strin
             <div className="flex flex-wrap items-center gap-2">
               <RoundPill round={Number(r.id)} locksAt={r.entryClose * 1000} endsAt={r.end * 1000} />
               <Pill tone={t.winningNow ? "up" : "neutral"}>
-                #{t.rank} of {r.teams.length} · {t.winningNow ? "above the cut" : "below the cut"}
+                #{t.rank} of {r.teams.length} · {t.winningNow ? "above AVERAGE" : t.drawingNow ? "on AVERAGE" : "below AVERAGE"}
               </Pill>
             </div>
             <div className="mt-6 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
               <div>
                 <h1 className="t-heading text-[40px] md:text-[52px]">{teamName(t)}</h1>
                 <p className="mt-2 text-[14px] text-muted">
-                  by <span className="t-num text-ink">{short(t.captain)}</span> · {t.members + 1} {t.members ? "tickets" : "ticket"} on the team · buy fee {t.buyFeeBps / 100}%
+                  by <Identity address={t.captain} size={20} className="align-middle text-ink" /> · {t.members + 1} {t.members ? "tickets" : "ticket"} on the team · buy fee {t.buyFeeBps / 100}%
                 </p>
                 <div className="mt-6 text-[13px] text-muted">Return so far</div>
                 <Change pct={t.returnPct} className="text-[40px] font-medium" />

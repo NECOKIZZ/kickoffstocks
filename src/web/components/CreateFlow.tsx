@@ -1,7 +1,7 @@
 "use client";
 
 // The create flow, as four numbered panels on one page:
-//   1 pick stocks · 2 set weights · 3 buy them (Binance, or the local faucet) · 4 name it and lock it.
+//   1 pick stocks · 2 set weights · 3 get them (0x on mainnet, Robinhood's faucet on testnet, the local faucet) · 4 name it and lock it.
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -217,12 +217,12 @@ export function CreateFlow() {
             {!isConnected ? (
               <ConnectButton size="md" />
             ) : cfg?.chain === "local" ? (
-              <button type="button" disabled={faucet.busy || !weightsOk || !(Number(amount) >= rules.minBasketUsd)} onClick={getTestStocks} className="h-12 w-full rounded-full bg-ink text-[16px] font-medium text-bg disabled:opacity-40">
+              <button type="button" disabled={faucet.busy || !weightsOk || !(Number(amount) >= rules.minBasketUsd)} onClick={getTestStocks} className="h-12 w-full btn-3d btn-accent text-[16px] disabled:opacity-40">
                 {faucet.busy ? "Sending…" : "Get test stocks (local demo chain)"}
               </button>
             ) : cfg?.stockFaucet ? (
               <div className="space-y-3">
-                <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="grid h-12 w-full place-items-center rounded-full bg-ink text-[16px] font-medium text-bg">
+                <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="grid h-12 w-full place-items-center btn-3d btn-accent text-[16px]">
                   Get test stocks from Robinhood&rsquo;s faucet ↗
                 </a>
                 <p className="text-[12px] text-muted">Testnet: the faucet sends 5 each of TSLA, AMZN, PLTR and AMD (plus NFLX, which has no price feed) every 24 hours. Test USDG for the ticket comes from the button on the league page.</p>
@@ -232,7 +232,7 @@ export function CreateFlow() {
                 type="button"
                 disabled={buyRunner.busy || !weightsOk || !(Number(amount) >= rules.minBasketUsd)}
                 onClick={() => buyRunner.run({ action: "buy-basket", tickers: picked, weightsPct: picked.map((t) => weights[t]), usdg: Number(amount) }, { onDone: () => refetchBals() })}
-                className="h-12 w-full rounded-full bg-ink text-[16px] font-medium text-bg disabled:opacity-40"
+                className="h-12 w-full btn-3d btn-accent text-[16px] disabled:opacity-40"
               >
                 {buyRunner.busy ? "Working…" : `Buy for ${Number(amount).toFixed(2)} USDG via 0x`}
               </button>
@@ -295,7 +295,7 @@ export function CreateFlow() {
                     { onDone: (p) => setEntered(p.teamKey ?? null) },
                   )
                 }
-                className="h-12 w-full rounded-full bg-ink text-[16px] font-medium text-bg disabled:opacity-40"
+                className="h-12 w-full btn-3d btn-accent text-[16px] disabled:opacity-40"
               >
                 {lockRunner.busy ? "Working…" : !open ? "Entries are closed" : `Lock and enter · $${heldUsd.toFixed(2)} + $${rules.ticketUsd} ticket`}
               </button>

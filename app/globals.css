@@ -1,68 +1,86 @@
 @import "tailwindcss";
 
-/* League of Stocks design tokens (docs/UI.md §2). */
-:root {
-  /* The four brand colours. Every other token below is a mix of these. */
-  --brand-ink: #0b0b0c;
-  --brand-paper: #ffffff;
-  --brand-mint: #3ddc97;
-  --brand-coral: #ff5a36;
+@custom-variant dark (&:is(.dark *));
 
-  --bg: var(--brand-paper);
-  --ink: var(--brand-ink);
-  --surface: color-mix(in oklab, var(--brand-ink) 4%, var(--brand-paper));
-  --surface-2: color-mix(in oklab, var(--brand-ink) 7%, var(--brand-paper));
-  --muted: color-mix(in oklab, var(--brand-ink) 62%, var(--brand-paper));
-  --line: color-mix(in oklab, var(--brand-ink) 9%, var(--brand-paper));
-  --up: color-mix(in oklab, var(--brand-mint) 50%, var(--brand-ink));
-  --up-bg: color-mix(in oklab, var(--brand-mint) 22%, var(--brand-paper));
-  --down: color-mix(in oklab, var(--brand-coral) 82%, var(--brand-ink));
-  --down-bg: color-mix(in oklab, var(--brand-coral) 14%, var(--brand-paper));
-  --mint-1: color-mix(in oklab, var(--brand-mint) 6%, var(--brand-paper));
-  --mint-2: color-mix(in oklab, var(--brand-mint) 22%, var(--brand-paper));
-  --mint-3: color-mix(in oklab, var(--brand-mint) 34%, var(--brand-paper));
+/* Kickoff Stocks design tokens: the Kickoff brand (cream + ink, purple
+   carries the light theme, green the dark one). Hex values live in
+   src/ui/data/palette.ts (BRAND); every other shade is a mix of them. */
+:root {
+  --color-kickoff-green: #00C805;
+  --color-kickoff-green-deep: #008C04;
+  --color-new-purple: #7B62F6;
+  --color-new-purple-deep: #4E3CB5;
+  --color-pitch-cream: #F7F5F0;
+  --color-canvas: #EDEAE0;
+  --color-ink: #111210;
+  --color-ink-card: #1C1D1A;
+  --color-ink-soft: #6B6F63;
+
+  /* Legacy names the components use, mapped onto the Kickoff brand. */
+  --brand-ink: var(--color-ink);
+  --brand-paper: var(--color-pitch-cream);
+  --brand-mint: var(--color-kickoff-green);
+  --brand-coral: #D4183D;
+  --brand-purple: var(--color-new-purple);
+
+  --bg: var(--color-pitch-cream);
+  --ink: var(--color-ink);
+  --surface: var(--color-canvas);
+  --surface-2: color-mix(in oklab, var(--color-ink) 6%, var(--color-canvas));
+  --muted: var(--color-ink-soft);
+  --line: color-mix(in oklab, var(--color-ink-soft) 22%, transparent);
+  --up: var(--color-kickoff-green-deep);
+  --up-bg: color-mix(in oklab, var(--color-kickoff-green) 14%, var(--color-pitch-cream));
+  --down: #D4183D;
+  --down-bg: color-mix(in oklab, #D4183D 10%, var(--color-pitch-cream));
+  --mint-1: color-mix(in oklab, var(--color-new-purple) 6%, var(--color-pitch-cream));
+  --mint-2: color-mix(in oklab, var(--color-new-purple) 16%, var(--color-pitch-cream));
+  --mint-3: color-mix(in oklab, var(--color-new-purple) 28%, var(--color-pitch-cream));
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 8px 24px rgb(0 0 0 / 0.06);
   --lift-shadow: 0 24px 60px rgb(0 0 0 / 0.18);
+
+  /* Kickoff UI accent: purple in light mode, green in dark. */
+  --primary: var(--color-new-purple);
+  --ui-accent: var(--color-new-purple);
+  --ui-accent-deep: var(--color-new-purple-deep);
+  --ui-accent-contrast: #FFFFFF;
+  --ui-accent-2: var(--color-kickoff-green);
+  --logo-mono: #000000;
+
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-highlight: rgba(255, 255, 255, 0.22);
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: var(--brand-ink);
-    --ink: var(--brand-paper);
-    --surface: color-mix(in oklab, var(--brand-paper) 6%, var(--brand-ink));
-    --surface-2: color-mix(in oklab, var(--brand-paper) 9%, var(--brand-ink));
-    --muted: color-mix(in oklab, var(--brand-paper) 60%, var(--brand-ink));
-    --line: color-mix(in oklab, var(--brand-paper) 12%, var(--brand-ink));
-    --up: var(--brand-mint);
-    --up-bg: color-mix(in oklab, var(--brand-mint) 14%, var(--brand-ink));
-    --down: var(--brand-coral);
-    --down-bg: color-mix(in oklab, var(--brand-coral) 14%, var(--brand-ink));
-    --mint-1: color-mix(in oklab, var(--brand-mint) 4%, var(--brand-ink));
-    --mint-2: color-mix(in oklab, var(--brand-mint) 10%, var(--brand-ink));
-    --mint-3: color-mix(in oklab, var(--brand-mint) 18%, var(--brand-ink));
-    --card-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
-    --lift-shadow: 0 24px 60px rgb(0 0 0 / 0.6);
-    color-scheme: dark;
-  }
-}
-
-:root[data-theme="dark"] {
-  --bg: var(--brand-ink);
-  --ink: var(--brand-paper);
-  --surface: color-mix(in oklab, var(--brand-paper) 6%, var(--brand-ink));
-  --surface-2: color-mix(in oklab, var(--brand-paper) 9%, var(--brand-ink));
-  --muted: color-mix(in oklab, var(--brand-paper) 60%, var(--brand-ink));
-  --line: color-mix(in oklab, var(--brand-paper) 12%, var(--brand-ink));
-  --up: var(--brand-mint);
-  --up-bg: color-mix(in oklab, var(--brand-mint) 14%, var(--brand-ink));
-  --down: var(--brand-coral);
-  --down-bg: color-mix(in oklab, var(--brand-coral) 14%, var(--brand-ink));
-  --mint-1: color-mix(in oklab, var(--brand-mint) 4%, var(--brand-ink));
-  --mint-2: color-mix(in oklab, var(--brand-mint) 10%, var(--brand-ink));
-  --mint-3: color-mix(in oklab, var(--brand-mint) 18%, var(--brand-ink));
+.dark {
+  --bg: var(--color-ink);
+  --ink: var(--color-pitch-cream);
+  --surface: var(--color-ink-card);
+  --surface-2: color-mix(in oklab, var(--color-pitch-cream) 8%, var(--color-ink-card));
+  --muted: color-mix(in oklab, var(--color-ink-soft) 70%, var(--color-pitch-cream));
+  --line: color-mix(in oklab, var(--color-pitch-cream) 10%, transparent);
+  --up: var(--color-kickoff-green);
+  --up-bg: color-mix(in oklab, var(--color-kickoff-green) 14%, var(--color-ink));
+  --down: #FF4D6D;
+  --down-bg: color-mix(in oklab, #FF4D6D 14%, var(--color-ink));
+  --brand-coral: #FF4D6D;
+  --mint-1: color-mix(in oklab, var(--color-kickoff-green) 4%, var(--color-ink));
+  --mint-2: color-mix(in oklab, var(--color-kickoff-green) 10%, var(--color-ink));
+  --mint-3: color-mix(in oklab, var(--color-kickoff-green) 18%, var(--color-ink));
   --card-shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.35);
   --lift-shadow: 0 24px 60px rgb(0 0 0 / 0.6);
+
+  --primary: var(--color-kickoff-green);
+  --ui-accent: var(--color-kickoff-green);
+  --ui-accent-deep: var(--color-kickoff-green-deep);
+  --ui-accent-contrast: var(--color-ink);
+  --ui-accent-2: var(--color-new-purple);
+  --logo-mono: #FFFFFF;
+
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-highlight: rgba(255, 255, 255, 0.12);
   color-scheme: dark;
 }
 
@@ -81,21 +99,25 @@
   --color-brand-paper: var(--brand-paper);
   --color-brand-mint: var(--brand-mint);
   --color-brand-coral: var(--brand-coral);
+  --color-brand-purple: var(--brand-purple);
+  --color-accent: var(--ui-accent);
+  --color-accent-contrast: var(--ui-accent-contrast);
 
-  --font-display: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-instrument), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+  --font-clash: "Clash Display", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Inter", ui-sans-serif, system-ui, sans-serif;
 
   --radius-chip: 14px;
   --radius-card: 24px;
   --radius-stock: 28px;
   --radius-panel: 32px;
-  --radius-band: 48px;
+  --radius-band: 50px;
 
   --shadow-card: var(--card-shadow);
   --shadow-lift: var(--lift-shadow);
 
-  --ease-soft: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 html,
@@ -112,29 +134,37 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Display headings: light and tight (Gloam), UI headings: medium and tight (Sleeve). */
+/* Kickoff type: Fraunces owns large type, Clash Display the UI, Inter the body. */
 .t-display {
   font-family: var(--font-display);
-  font-weight: 300;
-  letter-spacing: -0.045em;
+  font-weight: 700;
+  letter-spacing: -0.03em;
   line-height: 1.02;
 }
 .t-heading {
-  font-family: var(--font-sans);
-  font-weight: 500;
-  letter-spacing: -0.032em;
-  line-height: 1.08;
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 .t-label {
+  font-family: var(--font-clash);
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
 }
 .t-num {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+}
+.font-clash {
+  font-family: var(--font-clash);
+}
+button,
+label {
+  font-family: var(--font-clash);
 }
 
 .mint-gradient {
@@ -142,6 +172,81 @@ body {
     radial-gradient(60% 80% at 15% 20%, color-mix(in oklab, var(--surface-2) 90%, transparent), transparent 70%),
     radial-gradient(70% 90% at 85% 80%, var(--mint-3), transparent 70%),
     linear-gradient(135deg, var(--mint-1), var(--mint-2) 55%, var(--mint-3));
+}
+
+/* ── Kickoff utilities ─────────────────────────────────────────────────── */
+
+/* Cards rounded on one diagonal, sharp on the other (brand rule). */
+.card-diagonal {
+  border-radius: 24px 4px 24px 4px;
+}
+.card-diagonal-sm {
+  border-radius: 16px 2px 16px 2px;
+}
+
+.glass {
+  background: var(--glass-bg);
+  -webkit-backdrop-filter: blur(32px);
+  backdrop-filter: blur(32px);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 4px 30px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 var(--glass-highlight),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.04);
+}
+.glass-dark {
+  background: rgba(255, 255, 255, 0.055);
+  -webkit-backdrop-filter: blur(28px);
+  backdrop-filter: blur(28px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 4px 30px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: ticker-scroll 42s linear infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* Scroll reveal (Kickoff's Reveal.tsx). Content is only hidden when scripts
+   run; a failsafe reveals it if the bundle never hydrates. */
+html.js .reveal-pending {
+  opacity: 0;
+  filter: blur(var(--reveal-blur, 10px));
+  transform: var(--reveal-transform, translateY(40px));
+}
+html.js:not(.hydrated) .reveal-pending {
+  animation: reveal-failsafe 0.7s ease 3.5s forwards;
+}
+@keyframes reveal-failsafe {
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.js .reveal-pending {
+    opacity: 1;
+    filter: none;
+    transform: none;
+    animation: none;
+  }
+}
+
+.deck-card {
+  transition:
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.7s ease,
+    filter 0.7s ease;
+}
+.deck-card:hover {
+  filter: brightness(1.06);
 }
 
 /* Stock card ticker: one line filled, one outlined (Kickoff player-card type). */
@@ -166,5 +271,64 @@ body {
   }
   to {
     transform: translateX(-50%);
+  }
+}
+
+/* Kickoff rule: buttons are always 3D. Accent follows the theme (purple in
+   light, green in dark); green pairs with ink text, purple with white. */
+.btn-3d {
+  font-family: var(--font-clash);
+  font-weight: 600;
+  border-radius: 12px;
+  border: 1px solid var(--btn-edge);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  box-shadow:
+    0 5px 0 var(--btn-edge),
+    0 6px 12px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition:
+    transform 75ms,
+    box-shadow 75ms,
+    opacity 150ms;
+  user-select: none;
+}
+.btn-3d:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow:
+    0 1px 0 var(--btn-edge),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+.btn-3d:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn-accent {
+  --btn-bg: var(--ui-accent);
+  --btn-edge: var(--ui-accent-deep);
+  --btn-fg: var(--ui-accent-contrast);
+}
+.btn-green {
+  --btn-bg: var(--color-kickoff-green);
+  --btn-edge: var(--color-kickoff-green-deep);
+  --btn-fg: var(--color-ink);
+}
+.btn-purple {
+  --btn-bg: var(--color-new-purple);
+  --btn-edge: var(--color-new-purple-deep);
+  --btn-fg: #FFFFFF;
+}
+.btn-ghost {
+  --btn-bg: var(--surface);
+  --btn-edge: color-mix(in oklab, var(--ink-soft, var(--muted)) 45%, var(--surface));
+  --btn-fg: var(--ink);
+}
+
+/* Tall-narrow hero (Kickoff): size the hero to the cards plus a rider so the
+   headline and the cards stay together on phones. */
+@media (max-width: 900px) {
+  .hero-landing {
+    min-height: min(100vh, 640px);
+    min-height: min(100svh, 640px);
   }
 }

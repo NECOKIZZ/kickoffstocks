@@ -32,7 +32,7 @@ export function LeaguePage() {
           <div className="t-label text-muted">How this round pays</div>
           <ul className="mt-4 space-y-2 text-[14px] text-ink/80">
             <li>Ticket: ${r ? usdg(r.stake, 0) : "5"} for creators and backers.</li>
-            <li>Top half of ETFs win the bottom half&rsquo;s tickets.</li>
+            <li>Beat AVERAGE (the middle ETF) to win a share of the tickets below it. Tie it and your ticket comes back.</li>
             <li>Closer to the best return → bigger share.</li>
             <li>10% of winnings: 5% platform, 5% season pot.</li>
             <li>Creators keep 10% of their backers&rsquo; winnings.</li>

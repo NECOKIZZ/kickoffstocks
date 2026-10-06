@@ -51,7 +51,7 @@ export function RoundResults({ id }: { id: string }) {
           </div>
         </div>
         <div className="rounded-[24px] bg-surface p-6 text-[13px] text-muted">
-          The keeper averages several Binance reference prices at the start and at the end, runs the open-source settlement, publishes every input, and writes their hash
+          The keeper averages several Chainlink price samples at the start and at the end, runs the open-source settlement, publishes every input, and writes their hash
           on-chain with the payouts. The contract checks the money adds up; anyone can check the maths.
         </div>
       </aside>
