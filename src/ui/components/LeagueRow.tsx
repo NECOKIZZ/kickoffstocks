@@ -12,6 +12,8 @@ export interface LeagueEntry {
   name: string;
   /** The creator's wallet: their identity (avatar + short address). */
   creator: string;
+  /** The creator plays through an AI agent (avatar badge). */
+  creatorIsAgent?: boolean;
   holdings: Holding[];
   returnPct: number;
   team: number;
@@ -33,7 +35,7 @@ export function LeagueRow({ e, winning }: { e: LeagueEntry; winning: boolean }) 
       <div className="min-w-0">
         <div className="truncate font-clash font-semibold">{e.name}</div>
         <div className="mt-0.5 flex items-center gap-1.5 truncate text-[12.5px] text-muted">
-          <WalletAvatar address={e.creator} size={16} />
+          <WalletAvatar address={e.creator} size={16} agent={e.creatorIsAgent} />
           <span className="t-num">{shortAddress(e.creator)}</span>
         </div>
       </div>
