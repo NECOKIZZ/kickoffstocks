@@ -16,6 +16,8 @@
 //          Waits for the round, samples at start (then parks the tickets if a
 //          savings vault is set), samples at the end, unparks and settles.
 //   status <roundId>
+//   watch  [--samples 3] [--every-min 5] [--source …]
+//          Runs forever next to the app: runs `auto` on each new open round.
 //
 // Prices: LEAGUE_PRICE_SOURCE (or --source) chainlink (default, Robinhood
 // Chain's Chainlink feeds) or robinhood (Robinhood's quote API, for short
@@ -167,13 +169,47 @@ async function auto(roundId: bigint) {
       log(`waiting ${Math.round(wait / 60000)} min for ${phase}…`);
       await sleep(wait + 5_000);
     }
-    for (let i = 0; i < n; i++) {
+    // Resumable: samples already saved for this phase (before a restart) count.
+    const have = store.loadSamples(roundId, phase).length;
+    for (let i = have; i < n; i++) {
       await sample(roundId, phase, source);
       if (i < n - 1) await sleep(every);
     }
-    if (phase === "start" && !flag("no-park")) await park(roundId).catch((e) => log(`park skipped: ${e instanceof Error ? e.message : e}`));
+    if (phase === "start" && !info.parked && !flag("no-park")) await park(roundId).catch((e) => log(`park skipped: ${e instanceof Error ? e.message : e}`));
   }
   await settle(roundId);
+}
+
+// Runs next to the app (e.g. on Render): picks up the latest open round and
+// runs `auto` on it, so rounds only need `keeper open` from anywhere. On a host
+// that sleeps when idle (Render's free tier), it also pings the app's public
+// URL so the instance stays up while the keeper works.
+async function watch() {
+  const pingUrl = process.env.KEEPER_PING_URL ?? process.env.RENDER_EXTERNAL_URL;
+  if (pingUrl) {
+    const ping = () => fetch(`${pingUrl}/api/rounds/current`).catch(() => {});
+    setInterval(ping, 10 * 60_000);
+    log(`pinging ${pingUrl} every 10 min to stay awake`);
+  }
+  const done = new Set<bigint>();
+  log("watching for rounds…");
+  for (;;) {
+    try {
+      const { pub } = clientsFromEnv();
+      const latest = (await pub.readContract({ address: escrow(), abi: leagueEscrowAbi, functionName: "roundCount" })) as bigint;
+      if (latest > 0n && !done.has(latest)) {
+        const info = await readRound(pub, escrow(), latest);
+        if (info.status === "Open") {
+          log(`round ${latest}: running auto`);
+          await auto(latest);
+        }
+        done.add(latest);
+      }
+    } catch (e) {
+      log(`watch: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    await sleep(60_000);
+  }
 }
 const escrow = escrowFromEnv;
 
@@ -205,7 +241,8 @@ try {
   else if (cmd === "park") await park(id());
   else if (cmd === "unpark") await unpark(id());
   else if (cmd === "status") await status(id());
-  else console.log("usage: keeper.mts open|sample|settle|park|unpark|auto|status (see the header of this file)");
+  else if (cmd === "watch") await watch();
+  else console.log("usage: keeper.mts open|sample|settle|park|unpark|auto|status|watch (see the header of this file)");
 } catch (e) {
   console.error(`error: ${e instanceof Error ? e.message : String(e)}`);
   process.exit(1);

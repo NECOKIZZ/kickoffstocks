@@ -7,7 +7,8 @@ One submission per team: submit this as a **new mode of Kickoff**, inside your K
 - [ ] On colosseum.com, confirm Kickoff is your registered project and every team member is registered.
 - [ ] Check the BNB Hack rules allow the same idea in another hackathon.
 
-## 2. Testnet deploy (Cloud Shell or any computer, 15 min)
+## 2. Testnet deploy ✅ done 7 Oct
+LeagueEscrow `0xcd17bd5ac4d7c709bbf92399a4d2af34d2b3a8cf` on Robinhood Chain testnet (46630); the rest is in `deployments.json`. Steps kept for redeploys:
 ```
 git clone https://github.com/NECOKIZZ/kickoffstocks.git && cd kickoffstocks
 npx pnpm install
@@ -26,18 +27,19 @@ LEAGUE_CHAIN=testnet npx pnpm deploy:league --broadcast  # prints ESCROW_ADDRESS
 ```
 Put `ESCROW_ADDRESS` in `.env.local`, commit `deployments.json` (no secrets in it), and tell Claude the address.
 
-## 3. Host it on stocks.kickoff.cash
-- One small server with a disk for the app **and** the keeper (they share `data/`): Railway or Render (Kickoff already has configs for both) with a volume, or a VM.
-- Env vars: everything in `.env.local` except the deployer key.
-- Start: `npx pnpm build && npx pnpm start`, and in a second process the keeper (step 4).
-- DNS: a CNAME `stocks` → the host, wherever kickoff.cash's DNS is managed.
-- In Kickoff, add a "Stocks" link to the nav (Claude can do this if you give push access to `NECOKIZZ/kickoff`).
+## 3. Host it on stocks.kickoff.cash (Render free tier)
+`render.yaml` runs the app and the keeper (`keeper watch`) in one free web service.
+1. Render → **New → Blueprint** → pick `NECOKIZZ/kickoffstocks` (and this branch, until it's merged to `main`).
+2. When asked, paste `KEEPER_PRIVATE_KEY`. Everything else is filled in. Never the deployer key.
+3. Settings → Custom Domains → add `stocks.kickoff.cash`, then a CNAME `stocks` → `kickoff-stocks.onrender.com` where kickoff.cash's DNS lives.
+4. In Kickoff, add a "Stocks" link to the nav.
 
-## 4. Demo rounds (Sat–Mon)
+Free-tier limits: the keeper pings the site to keep it awake; `data/` is wiped on each deploy or restart, so **don't redeploy during a round** and record the "verify a round" part soon after it settles.
+
+## 4. Demo rounds (Thu–Fri, Mon as backup: stock prices don't move on weekends)
 A round needs **4+ ETFs** with different baskets. Each wallet can take 5 TSLA, AMZN, PLTR, AMD (and NFLX) a day from Robinhood's faucet, so use 4+ wallets, or ask Claude for a script that splits one wallet's faucet tokens across demo wallets.
 ```
-npx pnpm keeper open --entry-min 30 --run-min 60
-LEAGUE_PRICE_SOURCE=robinhood npx pnpm keeper auto <roundId> --samples 3 --every-min 5
+npx pnpm keeper open --entry-min 30 --run-min 60   # from Cloud Shell; Render's keeper does the rest
 ```
 Use `robinhood` prices for short demo rounds (Chainlink feeds only move on 0.5% changes). Run during US market hours (Mon–Fri) so prices move. Tickets: the wallet chip's **Get test USDG**.
 Try an agent too: add `https://stocks.kickoff.cash/api/mcp` as a connector in Claude and ask it to back the top ETF.
