@@ -1,9 +1,10 @@
 "use client";
 
-// Gloam-style action panel for an ETF: "Back the team" ($5 ticket) and
-// "Buy the ETF" (0x swaps, creator fee). Runs the plan from the wallet.
+// Gloam-style action panel for an ETF: "Stake $5" (a ticket on the team) and
+// "Buy the ETF" (0x swaps, creator fee). Runs the plan from the wallet. A
+// banner on top says plainly whether staking is open or locked right now.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useConnection } from "wagmi";
 import type { RoundView, TeamView } from "../api";
 import { useConfig, usePlanRunner } from "../hooks";
@@ -37,8 +38,9 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
 
   return (
     <div className="rounded-[32px] bg-surface p-5 md:p-6">
-      <div className="flex gap-1 rounded-full bg-surface-2 p-1">
-        {tabBtn("back", "Back the team")}
+      <StakeStatus r={r} />
+      <div className="mt-5 flex gap-1 rounded-full bg-surface-2 p-1">
+        {tabBtn("back", "Stake $5")}
         {tabBtn("buy", "Buy the ETF")}
       </div>
 
@@ -50,9 +52,11 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
             <div className="mt-1 text-[13px] text-muted">one ticket on {teamName(t)}</div>
           </div>
           <dl className="mt-4 space-y-2 text-[14px]">
-            <Row k="If the round ended now" v={t.drawingNow ? "ticket back (tied with MEDIAN)" : t.winningNow && pay > stake ? `${usdg(pay)} USDG back` : "ticket lost (below MEDIAN)"} />
+            {!open && <Row k="If the round ended now" v={t.drawingNow ? "ticket back (tied with MEDIAN)" : t.winningNow && pay > stake ? `${usdg(pay)} USDG back` : "ticket lost (below MEDIAN)"} />}
+            {open && <Row k="Above MEDIAN on Friday" v="a share of the pot" />}
+            {open && <Row k="Exactly on MEDIAN" v="ticket back" />}
             <Row k="Creator's cut of your winnings" v="10%" />
-            <Row k="Entries close" v={new Date(r.entryClose * 1000).toUTCString().slice(5, 22) + " UTC"} />
+            {!open && <Row k="Round ends" v={`${nyTime(r.end * 1000)} ET`} />}
           </dl>
           <div className="mt-5">
             {!isConnected ? (
@@ -64,7 +68,7 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
                 onClick={() => runner.run({ action: "back", teamKey: t.teamKey, roundId: r.id })}
                 className="h-12 w-full btn-3d btn-accent text-[16px] transition hover:opacity-90 disabled:opacity-40"
               >
-                {!open ? "Entries are closed" : runner.busy ? "Working…" : `Back ${teamName(t)} · $${usdg(r.stake, 0)}`}
+                {!open ? "Staking is locked" : runner.busy ? "Working…" : `Stake $${usdg(r.stake, 0)} on ${teamName(t)}`}
               </button>
             )}
           </div>
@@ -111,6 +115,51 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
         </div>
       )}
       <TxSteps plan={runner.plan} states={runner.states} hashes={runner.hashes} error={runner.error} />
+    </div>
+  );
+}
+
+const nyTime = (ms: number) =>
+  new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "numeric", minute: "2-digit" }).format(ms);
+
+function left(ms: number) {
+  const m = Math.max(0, Math.floor(ms / 60_000));
+  const d = Math.floor(m / 1440);
+  const h = Math.floor((m % 1440) / 60);
+  return d > 0 ? `${d}d ${h}h left` : h > 0 ? `${h}h ${m % 60}m left` : `${m % 60}m left`;
+}
+
+/** Open or locked, in plain words, with when that changes. */
+export function StakeStatus({ r }: { r: RoundView }) {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const open = r.phase === "entries-open";
+  const over = r.phase === "settled" || r.phase === "voided";
+  const title = open ? "Open for staking" : over ? "This round is over" : "Staking is locked";
+  const detail = open
+    ? `Closes ${nyTime(r.entryClose * 1000)} ET${now ? ` · ${left(r.entryClose * 1000 - now)}` : ""}`
+    : over
+      ? "Next week’s round opens for staking right after Friday’s close."
+      : "The round is running. Staking reopens for next week’s round after Friday’s close.";
+  return (
+    <div
+      role="status"
+      className={`flex items-start gap-3 rounded-[20px] p-4 ${open ? "bg-up-bg text-up" : over ? "bg-bg text-muted" : "bg-surface-2 text-ink"}`}
+    >
+      <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${open ? "bg-up text-bg" : over ? "bg-surface-2 text-ink" : "bg-ink text-bg"}`} aria-hidden="true">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="11" width="14" height="10" rx="2" />
+          <path d={open ? "M8 11V8a4 4 0 0 1 7.5-2" : "M8 11V8a4 4 0 0 1 8 0v3"} />
+        </svg>
+      </span>
+      <div>
+        <div className="text-[15px] font-semibold">{title}</div>
+        <div className="text-[13px] opacity-85">{detail}</div>
+      </div>
     </div>
   );
 }

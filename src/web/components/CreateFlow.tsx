@@ -3,7 +3,7 @@
 // The create flow, as four numbered panels on one page:
 //   1 pick stocks · 2 set weights · 3 get them (0x on mainnet, Robinhood's faucet on testnet, the local faucet) · 4 name it and lock it.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { erc20Abi, formatUnits } from "viem";
 import { useConnection, useReadContracts } from "wagmi";
@@ -12,7 +12,7 @@ import { STOCKS, type StockInfo } from "../../ui/data/stocks";
 import { StockCard } from "../../ui/components/StockCard";
 import { WeightBar } from "../../ui/components/WeightBar";
 import { useConfig, usePlanRunner, useRound, useStocks } from "../hooks";
-import { post } from "../api";
+import { fetchRound, post } from "../api";
 import { equalWeights } from "../weights";
 import { ConnectButton, useTicketBalance } from "./ConnectButton";
 import { TxSteps } from "./TxSteps";
@@ -38,6 +38,9 @@ export function CreateFlow() {
   const [faucet, setFaucet] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
   const [entered, setEntered] = useState<string | null>(null);
   const [limitHit, setLimitHit] = useState(false);
+  // ?again=<round>:<teamKey>: re-enter a past ETF with the same stocks, weights, name and fee.
+  const [again, setAgain] = useState<{ name: string; round: string } | null>(null);
+  const preset = useRef<Record<string, number> | null>(null);
 
   const rules = cfg?.rules ?? { minTokens: 3, minStocks: 3, maxCryptoPct: 20, maxTokens: 10, maxWeightPct: 50, minBasketUsd: 10, ticketUsd: 5, maxBuyFeePct: 2, driftPct: 5 };
   const live = useMemo(() => new Map(stocksData?.stocks.map((s) => [s.ticker, s]) ?? []), [stocksData]);
@@ -52,8 +55,33 @@ export function CreateFlow() {
     const t = new URLSearchParams(window.location.search).get("add");
     if (t && STOCKS.some((s) => s.ticker === t)) setPicked([t]);
   }, []);
-  // Equal weights whenever the selection changes.
   useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get("again");
+    const m = p && /^(\d+):(0x[0-9a-fA-F]{64})$/.exec(p);
+    if (!m) return;
+    fetchRound(m[1])
+      .then((rv) => {
+        const tm = rv.teams.find((x) => x.teamKey.toLowerCase() === m[2].toLowerCase());
+        const hs = tm?.holdings.filter((h) => h.ticker && STOCKS.some((x) => x.ticker === h.ticker)) ?? [];
+        if (!tm || hs.length === 0) return;
+        // Whole-percent weights that still add up to 100.
+        const w = hs.map((h) => Math.round(h.weightBps / 100));
+        w[w.indexOf(Math.max(...w))] += 100 - w.reduce((a, b) => a + b, 0);
+        preset.current = Object.fromEntries(hs.map((h, i) => [h.ticker!, w[i]]));
+        setPicked(hs.map((h) => h.ticker!));
+        if (tm.name) setName(tm.name);
+        setFee(tm.buyFeeBps / 100);
+        setAgain({ name: tm.name || "your ETF", round: rv.id });
+      })
+      .catch(() => {});
+  }, []);
+  // Equal weights whenever the selection changes (or the re-entered ETF's own weights).
+  useEffect(() => {
+    if (preset.current && picked.length === Object.keys(preset.current).length && picked.every((t) => t in preset.current!)) {
+      setWeights(preset.current);
+      preset.current = null;
+      return;
+    }
     setWeights(equalWeights(picked.map((t) => ({ ticker: t, crypto: stock(t).kind === "crypto" })), rules.maxCryptoPct));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked]);
@@ -126,6 +154,12 @@ export function CreateFlow() {
   }
 
   return (
+    <>
+    {again && (
+      <p role="status" className="mb-6 rounded-[20px] bg-up-bg px-5 py-4 text-[14px] text-up">
+        Re-entering <span className="font-semibold">{again.name}</span> from round {again.round}: same stocks, weights, name and buy fee. Claim your stocks back from My entries first if you haven&rsquo;t.
+      </p>
+    )}
     <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       <div className="space-y-6">
         {/* 1. Pick */}
@@ -394,6 +428,7 @@ export function CreateFlow() {
         </div>
       </aside>
     </div>
+    </>
   );
 }
 

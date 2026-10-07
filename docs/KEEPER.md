@@ -28,7 +28,14 @@ pnpm keeper watch [--no-schedule]                 # runs forever next to the app
 
 Testnet has no Chainlink feeds: testnet rounds read the same stocks' **mainnet** feeds (`PRICE_RPC_URL`).
 
-**Environment (`.env.local`):** `LEAGUE_CHAIN`, `RH_RPC_URL`, `PRICE_RPC_URL`, `ESCROW_ADDRESS`, `KEEPER_PRIVATE_KEY`, `LEAGUE_PRICE_SOURCE`, `DATABASE_URL` (or `LEAGUE_DATA_DIR`), `LEAGUE_SCHEDULE`.
+**Chart samples:** while a round runs, `auto` also saves one price sample an hour (phase `track`,
+24 a day, about 100 small rows a round) for the ETF page's live P&L chart, with SPY as the S&P 500
+benchmark. They use Robinhood's quotes (the Chainlink stock feeds move only on a 0.5% change or once a
+day), falling back to the feeds. Display only: scoring never reads them. `LEAGUE_TRACK_MIN` sets the
+interval (default 60; `0` turns them off). The app serves them at `/api/rounds/<id>/history?team=<key>`,
+cached for 5 minutes per round.
+
+**Environment (`.env.local`):** `LEAGUE_CHAIN`, `RH_RPC_URL`, `PRICE_RPC_URL`, `ESCROW_ADDRESS`, `KEEPER_PRIVATE_KEY`, `LEAGUE_PRICE_SOURCE`, `DATABASE_URL` (or `LEAGUE_DATA_DIR`), `LEAGUE_SCHEDULE`, `LEAGUE_TRACK_MIN`.
 
 ## What settle does
 1. Brings parked tickets back from the vault if they're still there; the interest becomes the round's bonus.

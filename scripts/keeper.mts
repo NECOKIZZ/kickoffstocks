@@ -16,6 +16,9 @@
 //          Waits for the round, samples at start (then parks the tickets if a
 //          savings vault is set), samples at the end, unparks and settles.
 //   status <roundId>
+//   Chart samples: while a round runs, `auto` also saves one price sample an
+//   hour (LEAGUE_TRACK_MIN or --track-min, default 60 = 24 a day; 0 turns them
+//   off) for the ETF page's chart. Display only: scoring uses start and end.
 //   watch  [--samples 3] [--every-min 5] [--source …] [--no-schedule]
 //          Runs forever next to the app: opens each week's round (entries close
 //          Monday 9:30am New York, ends Friday 4pm) and runs `auto` on it.
@@ -35,7 +38,7 @@ import { settleRound } from "../src/league/settlement";
 import { leagueStore, type Phase } from "../src/league/store";
 import { nextWeeklyRound } from "../src/league/schedule";
 import { cryptoTokens } from "../src/league/registry";
-import { priceSourceFromEnv, samplePrices, type PriceSource } from "../src/league/prices";
+import { priceSourceFromEnv, samplePrices, trackPrices, type PriceSource } from "../src/league/prices";
 
 const args = process.argv.slice(2);
 const cmd = args[0];
@@ -167,6 +170,8 @@ async function auto(roundId: bigint) {
     ["start", info.entryClose * 1000],
     ["end", info.end * 1000],
   ] as const) {
+    // Chart samples never get in the way of scoring.
+    if (phase === "end") await track(roundId, at).catch((e) => log(`chart samples stopped: ${e instanceof Error ? e.message : e}`));
     const wait = at - Date.now();
     if (wait > 0) {
       log(`waiting ${Math.round(wait / 60000)} min for ${phase}…`);
@@ -181,6 +186,30 @@ async function auto(roundId: bigint) {
     if (phase === "start" && !info.parked && !flag("no-park")) await park(roundId).catch((e) => log(`park skipped: ${e instanceof Error ? e.message : e}`));
   }
   await settle(roundId);
+}
+
+// Hourly chart samples from the start of the round until `until` (ms).
+// Resumes after a restart without doubling up: the next sample waits for the
+// last saved one to be an interval old.
+async function track(roundId: bigint, until: number) {
+  const every = Number(opt("track-min", process.env.LEAGUE_TRACK_MIN ?? "60")) * 60_000;
+  if (!(every > 0) || Date.now() >= until) return;
+  const tokens = roundTokens(await readEntries(clientsFromEnv().pub, escrow(), roundId));
+  const last = (await store.loadSamples(roundId, "track")).at(-1)?.at ?? 0;
+  let next = Math.max(Date.now(), last + every);
+  log(`chart samples every ${every / 60_000} min until the end`);
+  for (;;) {
+    if (next >= until) return;
+    if (next > Date.now()) await sleep(next - Date.now());
+    try {
+      const at = Date.now();
+      const s = await trackPrices(tokens, at);
+      await store.saveSample(roundId, "track", s, at);
+    } catch (e) {
+      log(`chart sample skipped: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    next += every;
+  }
 }
 
 // Runs next to the app (e.g. on Render) and runs the weekly league by itself:
@@ -238,7 +267,7 @@ async function status(roundId: bigint) {
   log(`round ${roundId}: ${info.status}, ${entries.length} entries, stake ${info.stake} (base units)`);
   log(`  entries close ${new Date(info.entryClose * 1000).toISOString()}, ends ${new Date(info.end * 1000).toISOString()}`);
   if (info.parked || info.yield > 0n) log(`  tickets ${info.parked ? "parked in the savings vault" : "back"}; interest so far ${info.yield}`);
-  log(`  samples: start ${(await store.loadSamples(roundId, "start")).length}, end ${(await store.loadSamples(roundId, "end")).length}`);
+  log(`  samples: start ${(await store.loadSamples(roundId, "start")).length}, end ${(await store.loadSamples(roundId, "end")).length}, chart ${(await store.loadSamples(roundId, "track")).length}`);
 }
 
 const sourceOpt = (): PriceSource => {

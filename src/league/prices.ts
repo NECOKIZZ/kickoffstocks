@@ -62,3 +62,35 @@ export const PRICE_SOURCE_LABEL: Record<PriceSource, string> = {
   robinhood: "Robinhood Stock Token API (token mid)",
   "local-demo": "local demo prices",
 };
+
+/** Key of the S&P 500 benchmark (SPY) in a chart sample, whatever the chain. */
+export const BENCH_KEY = "bench:spy";
+
+/**
+ * One chart sample (phase "track"): the given league tokens plus SPY as the
+ * benchmark. Robinhood's quotes move every few seconds, so the hourly chart
+ * shows real movement (the Chainlink stock feeds update on a 0.5% move or
+ * once a day); it falls back to the feeds when the quote API is down. Chart
+ * only: rounds are scored from the start and end samples.
+ */
+export async function trackPrices(tokens: string[], at = Date.now()): Promise<Map<string, PriceSample>> {
+  const keep = new Set(tokens.map((t) => t.toLowerCase()));
+  const spy = STOCKS.find((s) => s.ticker === "SPY")!;
+  let s: Map<string, PriceSample>;
+  if (priceSourceFromEnv() === "local-demo") {
+    s = await samplePrices("local-demo", at);
+  } else {
+    try {
+      // One /prices call covers the stocks and SPY; crypto comes from its feeds.
+      const quotes = await rhQuotes();
+      s = sampleFromQuotes(quotes, new Map([...tokenByTicker()].filter(([, t]) => keep.has(t))), at);
+      const bench = sampleFromQuotes(quotes, new Map([["SPY", BENCH_KEY]]), at).get(BENCH_KEY);
+      if (bench) s.set(BENCH_KEY, bench);
+      const crypto = chainStockList().filter((c) => c.stock.kind === "crypto" && keep.has(c.address.toLowerCase())).map((c) => c.address);
+      if (crypto.length) for (const [k, v] of await sampleFeeds(feedSources(crypto), undefined, at)) s.set(k, v);
+    } catch {
+      s = await sampleFeeds([...feedSources([...keep]), { token: BENCH_KEY, feed: spy.feed, mainnetToken: spy.address, decimals: 18 }], undefined, at);
+    }
+  }
+  return new Map([...s].filter(([k]) => keep.has(k) || k === BENCH_KEY));
+}

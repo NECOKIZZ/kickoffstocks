@@ -105,6 +105,11 @@ function EntryCard({ e }: { e: MeEntry }) {
         </div>
       )}
       {e.claimed && <p className="mt-4 text-[13px] text-up">Claimed.</p>}
+      {e.role === "creator" && settled && (
+        <Link href={`/create?again=${e.roundId}:${e.teamKey}`} className="mt-4 inline-block text-[14px] font-medium underline-offset-4 hover:underline">
+          Re-enter in next week&rsquo;s round →
+        </Link>
+      )}
     </div>
   );
 }

@@ -5,13 +5,16 @@
 //                       so a weekly round survives restarts and redeploys.
 //   otherwise         → JSON files under LEAGUE_DATA_DIR (default data/):
 //                       rounds/<id>/<phase>/<at>.json, rounds/<id>/inputs.json.
+// Phases: start and end (scoring), track (the hourly chart samples).
 
 import { mkdirSync, readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import postgres from "postgres";
 import type { PriceSample } from "./snapshot";
 
-export type Phase = "start" | "end";
+/** start / end: the scoring windows. track: hourly samples while the round
+ *  runs, for the ETF page's chart only (never used to score). */
+export type Phase = "start" | "end" | "track";
 export type SavedSample = { at: number; sample: Map<string, PriceSample> };
 type Row = Omit<PriceSample, "value"> & { value: string };
 

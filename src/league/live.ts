@@ -10,6 +10,7 @@ import { leagueStore } from "./store";
 import { buildRoundView, type RoundView } from "./view";
 import { cryptoTokens, tickerOf } from "./registry";
 import { samplePrices } from "./prices";
+import { buildRoundHistory, type RoundHistory } from "./history";
 
 let liveCache: { at: number; source: string; sample: Map<string, PriceSample> } | null = null;
 
@@ -76,4 +77,52 @@ export async function loadRoundView(roundId?: bigint): Promise<RoundView | null>
 
   const meta = await readTeamMeta(pub, escrow, id, entries.filter((e) => e.isCreator).map((e) => e.teamKey));
   return buildRoundView({ info, entries, start, now, nowSec: Number(block.timestamp), seasonPot, tickerOf, priceSource, meta, cryptoTokens: cryptoTokens() });
+}
+
+// Chart history, cached per round so the page (which polls every few minutes)
+// costs at most one build per round every 5 minutes, and one an hour once
+// the round has ended.
+const historyCache = new Map<string, { at: number; ttl: number; data: Promise<RoundHistory | null> }>();
+
+export function loadRoundHistory(roundId: bigint): Promise<RoundHistory | null> {
+  const key = roundId.toString();
+  const hit = historyCache.get(key);
+  if (hit && Date.now() - hit.at < hit.ttl) return hit.data;
+  const entry = { at: Date.now(), ttl: 5 * 60_000, data: Promise.resolve<RoundHistory | null>(null) };
+  entry.data = buildHistoryNow(roundId, entry).catch((e) => {
+    historyCache.delete(key); // don't cache a failure
+    throw e;
+  });
+  historyCache.set(key, entry);
+  return entry.data;
+}
+
+async function buildHistoryNow(roundId: bigint, cacheEntry: { ttl: number }): Promise<RoundHistory | null> {
+  const { pub } = clientsFromEnv();
+  const escrow = escrowFromEnv();
+  const [info, entries] = await Promise.all([readRound(pub, escrow, roundId), readEntries(pub, escrow, roundId)]);
+  const store = leagueStore();
+  const startSamples = (await store.loadSamples(roundId, "start")).map((s) => s.sample);
+  if (startSamples.length === 0) return null; // entries still open: nothing to chart yet
+  const tokens = roundTokens(entries);
+  const [track, end] = await Promise.all([store.loadSamples(roundId, "track"), store.loadSamples(roundId, "end")]);
+  const samples = [...track, ...end];
+  const ended = Date.now() >= info.end * 1000 || info.status !== "Open";
+  if (ended) cacheEntry.ttl = 60 * 60_000;
+  else {
+    // A live point, so the line ends where the page's header number is.
+    const live = await livePrices();
+    if (live) samples.push({ at: Date.now(), sample: live.sample });
+  }
+  return buildRoundHistory({
+    roundId,
+    stake: info.stake,
+    capMultiple: info.capMultiple,
+    maxBackers: info.maxBackers,
+    entries,
+    start: buildSnapshot(startSamples, tokens, 1).prices,
+    startAt: info.entryClose * 1000,
+    samples,
+    cryptoTokens: cryptoTokens(),
+  });
 }

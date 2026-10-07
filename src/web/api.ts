@@ -64,3 +64,13 @@ export const fetchStocks = () => get<{ source: string; stocks: PublicStock[] }>(
 export const fetchRound = (id?: string) => get<RoundView>(id ? `/api/rounds/${id}` : "/api/rounds/current");
 export const fetchMe = (wallet: string) => get<{ wallet: string; entries: MeEntry[] }>(`/api/me?wallet=${wallet}`);
 export const fetchPlan = (body: Record<string, unknown>) => post<PlanResponse>("/api/plan", body);
+
+/** One point of an ETF's chart: returns in percent since the round's start. */
+export interface HistoryPoint {
+  t: number;
+  etf: number | null;
+  median: number | null;
+  spy: number | null;
+}
+export const fetchHistory = (roundId: string, teamKey: string) =>
+  get<{ round: string; team: string; points: HistoryPoint[] }>(`/api/rounds/${roundId}/history?team=${teamKey}`);
