@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { PublicClient } from "viem";
 import { teamKeyOf, splitBuy, clampCreatorFee } from "../src/league/basket";
 import { decimalToE18, sampleFromQuotes, type RhQuote } from "../src/rh/rhApi";
-import { sampleFeeds, MAX_FEED_AGE_SEC } from "../src/rh/feeds";
+import { sampleFeeds, marketOpenSeconds, MAX_FEED_AGE_SEC } from "../src/rh/feeds";
 import { planBasketBuy } from "../src/rh/zeroEx";
 import { STOCKS } from "../src/ui/data/stocks";
 
@@ -102,7 +102,7 @@ describe("Chainlink feeds", () => {
   const src = (token: string, feed: string) => ({ token, feed: feed as `0x${string}`, mainnetToken: feed as `0x${string}`, decimals: 18 });
 
   it("scales 8-decimal answers to 1e18 and checks freshness, pauses and chain liveness", async () => {
-    const now = 1_790_000_000;
+    const now = 1_790_000_000 + 3 * 86_400; // a Thursday: no weekend inside the heartbeat
     const c = fakeClient(now, { "0xf1": [24_066_000_000n, now - 60], "0xf2": [38_132_000_000n, now - MAX_FEED_AGE_SEC - 1], "0xf3": [10_000_000_000n, now], "0xf4": null }, { "0xf3": true });
     const s = await sampleFeeds([src("nvda", "0xf1"), src("tsla", "0xf2"), src("aapl", "0xf3"), src("gone", "0xf4")], c, now * 1000);
     expect(s.get("nvda")).toMatchObject({ value: 24066n * 10n ** 16n, trading: true });
@@ -112,12 +112,25 @@ describe("Chainlink feeds", () => {
     const down = await sampleFeeds([src("nvda", "0xf1")], fakeClient(now - 3600, { "0xf1": [1n, now - 3600] }), now * 1000);
     expect(down.get("nvda")?.trading).toBe(false); // chain stalled
   });
+
+  it("doesn't count the weekend in a stock feed's age, but does for crypto", async () => {
+    const fri = Date.UTC(2026, 9, 9, 23, 30) / 1000; // Fri 9 Oct, 7:30pm New York
+    const mon = Date.UTC(2026, 9, 12, 13, 30) / 1000; // Mon 12 Oct, 9:30am New York
+    expect(marketOpenSeconds(fri, mon)).toBe(1.5 * 3600 + 13.5 * 3600); // to Sat 01:00 UTC, then from Mon 00:00 UTC
+    expect(marketOpenSeconds(mon - 3600, mon)).toBe(3600);
+    expect(marketOpenSeconds(fri - 7 * 86_400, mon)).toBe(mon - (fri - 7 * 86_400) - 2 * 47 * 3600);
+    const c = fakeClient(mon, { "0xf1": [24_066_000_000n, fri], "0xf2": [24_066_000_000n, fri] });
+    const s = await sampleFeeds([src("nvda", "0xf1"), { ...src("wbtc", "0xf2"), allWeek: true }], c, mon * 1000);
+    expect(s.get("nvda")?.trading).toBe(true);
+    expect(s.get("wbtc")?.trading).toBe(false); // 62 h old, crypto doesn't pause
+  });
 });
 
 describe("stock list", () => {
-  it("has 35 Robinhood Stock Tokens, each with a unique address, feed and colour", () => {
-    expect(STOCKS).toHaveLength(35);
-    for (const key of ["address", "feed", "color", "ticker"] as const) expect(new Set(STOCKS.map((s) => s[key].toLowerCase())).size).toBe(35);
-    expect(STOCKS.filter((s) => s.testnet).map((s) => s.ticker).sort()).toEqual(["AMD", "AMZN", "PLTR", "TSLA"]);
+  it("has 35 Robinhood Stock Tokens plus BTC and ETH, each with a unique address, feed and colour", () => {
+    expect(STOCKS.filter((s) => s.kind !== "crypto")).toHaveLength(35);
+    expect(STOCKS.filter((s) => s.kind === "crypto").map((s) => [s.ticker, s.symbol, s.decimals])).toEqual([["BTC", "WBTC", 8], ["ETH", "WETH", 18]]);
+    for (const key of ["address", "feed", "color", "ticker"] as const) expect(new Set(STOCKS.map((s) => s[key].toLowerCase())).size).toBe(37);
+    expect(STOCKS.filter((s) => s.testnet && s.kind !== "crypto").map((s) => s.ticker).sort()).toEqual(["AMD", "AMZN", "PLTR", "TSLA"]);
   });
 });

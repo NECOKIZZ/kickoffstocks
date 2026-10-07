@@ -47,7 +47,13 @@ export async function samplePrices(source: PriceSource = priceSourceFromEnv(), a
     if (!m) throw new Error("no local demo prices (run scripts/local-demo.mts first)");
     return m;
   }
-  if (source === "robinhood") return sampleFromQuotes(await rhQuotes(), tokenByTicker(), at);
+  if (source === "robinhood") {
+    // Robinhood quotes cover stocks only: crypto comes from its Chainlink feeds.
+    const s = sampleFromQuotes(await rhQuotes(), tokenByTicker(), at);
+    const crypto = chainStockList().filter((c) => c.stock.kind === "crypto").map((c) => c.address);
+    if (crypto.length) for (const [k, v] of await sampleFeeds(feedSources(crypto), undefined, at)) s.set(k, v);
+    return s;
+  }
   return sampleFeeds(feedSources(chainStockList().map((c) => c.address)), undefined, at);
 }
 

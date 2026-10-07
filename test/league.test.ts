@@ -55,28 +55,28 @@ describe("settleLeague — gate", () => {
     expect(r.k).toBe(3);
     checkInvariants(r);
   });
-  it("odd round: the middle team draws with AVERAGE and gets its ticket back", () => {
+  it("odd round: the middle team draws with MEDIAN and gets its ticket back", () => {
     const r = settleLeague([team(5), team(4), team(3), team(2), team(0)]);
     expect(r.teams.map((t) => t.isWinner)).toEqual([true, true, false, false, false]);
     expect(r.teams.map((t) => t.isDraw)).toEqual([false, false, true, false, false]);
-    expect(r.average).toBe(pct(3));
+    expect(r.median).toBe(pct(3));
     expect(payoutsOf(r, 2)).toEqual([STAKE]);
     expect(r.losingStakes).toBe(2n * STAKE);
     expect(r.winningStakes).toBe(2n * STAKE);
     checkInvariants(r);
   });
-  it("teams tied with AVERAGE all draw", () => {
+  it("teams tied with MEDIAN all draw", () => {
     const tie = settleLeague([team(5), team(4), team(4), team(1), team(0)]);
-    // AVERAGE = 4%: both 4% teams draw.
+    // MEDIAN = 4%: both 4% teams draw.
     expect(tie.teams.map((t) => t.isWinner)).toEqual([true, false, false, false, false]);
     expect(tie.teams.map((t) => t.isDraw)).toEqual([false, true, true, false, false]);
     expect([...payoutsOf(tie, 1), ...payoutsOf(tie, 2)]).toEqual([STAKE, STAKE]);
     checkInvariants(tie);
   });
-  it("even round: AVERAGE sits between the middle two, nobody draws", () => {
+  it("even round: MEDIAN sits between the middle two, nobody draws", () => {
     const r = settleLeague([team(3), team(1), team(-1), team(2)]);
     expect(r.teams.some((t) => t.isDraw)).toBe(false);
-    expect(r.average).toBe(pct(1.5));
+    expect(r.median).toBe(pct(1.5));
     checkInvariants(r);
   });
   it("even round: the middle two tied both draw", () => {

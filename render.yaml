@@ -1,6 +1,9 @@
 # Render Blueprint: the app and the keeper in one free web service.
-# Free instances have no persistent disk: data/ (price samples, settlement
-# inputs) lasts until the next deploy or restart, so don't redeploy mid-round.
+# The keeper (`keeper watch`) runs the weekly rounds by itself: it opens each
+# week's round, samples prices at Monday's open and Friday's close, settles
+# and opens the next. Free instances have no disk, so price samples and
+# settlement inputs live in Postgres (DATABASE_URL, e.g. a free Supabase
+# project), like Kickoff's own data service.
 services:
   - type: web
     name: kickoff-stocks
@@ -8,7 +11,8 @@ services:
     plan: free
     region: oregon
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
-    startCommand: sh -c "pnpm keeper watch & exec pnpm start"
+    # The keeper restarts itself if it ever exits; the app is the main process.
+    startCommand: sh -c "(while true; do pnpm keeper watch; sleep 30; done) & exec pnpm start"
     healthCheckPath: /api/rounds/current
     envVars:
       - key: NODE_VERSION
@@ -20,7 +24,7 @@ services:
       - key: PRICE_RPC_URL
         value: https://rpc.mainnet.chain.robinhood.com
       - key: LEAGUE_PRICE_SOURCE
-        value: robinhood
+        value: chainlink
       - key: ESCROW_ADDRESS
         value: "0xcd17bd5ac4d7c709bbf92399a4d2af34d2b3a8cf"
       - key: KEEPER_ADDRESS
@@ -30,4 +34,7 @@ services:
       - key: PUBLIC_ORIGIN
         value: https://stocks.kickoff.cash
       - key: KEEPER_PRIVATE_KEY
+        sync: false
+      # Supabase → Connect → Session pooler string, with ?sslmode=require appended.
+      - key: DATABASE_URL
         sync: false

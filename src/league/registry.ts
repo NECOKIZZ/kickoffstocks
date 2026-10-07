@@ -46,9 +46,12 @@ export function feedSources(tokens: string[]): FeedSource[] {
   const reg = tokenRegistry();
   return tokens.flatMap((t) => {
     const s = reg.get(t.toLowerCase());
-    return s ? [{ token: t.toLowerCase(), feed: s.feed, mainnetToken: s.address, decimals: 18 }] : [];
+    return s ? [{ token: t.toLowerCase(), feed: s.feed, mainnetToken: s.address, decimals: s.decimals, allWeek: s.kind === "crypto" }] : [];
   });
 }
+
+/** This chain's crypto-slice tokens (lower case), for the basket rules. */
+export const cryptoTokens = (): string[] => chainStockList().filter((c) => c.stock.kind === "crypto").map((c) => c.address.toLowerCase());
 
 /** Ticker → league token (lower case), for the Robinhood quote API. */
 export const tokenByTicker = (): Map<string, string> => new Map(chainStockList().map((c) => [c.stock.ticker, c.address.toLowerCase()]));

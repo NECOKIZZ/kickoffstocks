@@ -30,7 +30,7 @@ export interface TeamView {
   returnPct: number;
   members: number;
   winningNow: boolean;
-  /** Tied with AVERAGE right now: the ticket would come back. */
+  /** Tied with MEDIAN right now: the ticket would come back. */
   drawingNow: boolean;
   /** Payout per $5 ticket if the round ended at these prices (stake included). */
   payoutPerTicketNow: string;
@@ -46,8 +46,8 @@ export interface RoundView {
   pot: string; // total stakes
   phase: "entries-open" | "running" | "ended" | "settled" | "voided";
   teams: TeamView[];
-  /** AVERAGE's return right now (the median team return), percent; null before the round can be scored. */
-  averagePct: number | null;
+  /** MEDIAN's return right now (the median team return), percent; null before the round can be scored. */
+  medianPct: number | null;
   refunded: number;
   priceSource: string;
   /** Hash of the published settlement inputs (zero until settled). */
@@ -68,6 +68,7 @@ export function buildRoundView(opts: {
   tickerOf: (token: string) => string | null;
   priceSource: string;
   meta?: Map<string, { name: string; buyFeeBps: number }>;
+  cryptoTokens?: string[];
 }): RoundView {
   const { info, entries, start, now } = opts;
   const phase: RoundView["phase"] =
@@ -84,6 +85,7 @@ export function buildRoundView(opts: {
     end: now,
     priceProblems: [],
     bonus: info.yield,
+    cryptoTokens: opts.cryptoTokens,
   });
 
   const teams: TeamView[] = s.teams.map((t) => {
@@ -130,7 +132,7 @@ export function buildRoundView(opts: {
     pot: info.totalStakes.toString(),
     phase,
     teams,
-    averagePct: s.average === null ? null : Number(s.average) / 1e10,
+    medianPct: s.median === null ? null : Number(s.median) / 1e10,
     refunded: s.statuses.filter((x) => x.kind === "refunded").length,
     priceSource: opts.priceSource,
     inputsHash: info.inputsHash,

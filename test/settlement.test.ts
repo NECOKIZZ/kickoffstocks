@@ -146,6 +146,30 @@ describe("declared weights (enterCreatorNamed)", () => {
   });
 });
 
+describe("crypto slice", () => {
+  // TOKENS[9] is crypto. Four stock-only teams plus one with crypto.
+  const [a, b, c, d] = [0, 1, 2, 3].map((k) => creator(k, k, TOKENS.slice(k * 2, k * 2 + 3), [5, 4, 3]));
+  const crypto = [TOKENS[9]];
+  const end = { ...flat(100), [TOKENS[0]]: 110, [TOKENS[9]]: 120 };
+
+  it("allows crypto up to the cap, on top of 3 stocks, and records it in the published rules", async () => {
+    const e = creator(4, 9, [TOKENS[6], TOKENS[7], TOKENS[8], TOKENS[9]], [4, 4, 4, 3]); // crypto 20%
+    const s = settleRound(round([a, b, c, d, e], end, { cryptoTokens: crypto }));
+    expect(s.statuses[4].kind).toBe("playing");
+    expect((s.inputs.rules as { cryptoTokens: string[] }).cryptoTokens).toEqual([TOKENS[9].toLowerCase()]);
+    const { verifyInputs } = await import("../src/league/verify");
+    expect(verifyInputs(JSON.parse(JSON.stringify(s.inputs)), s.inputsHash).ok).toBe(true);
+  });
+
+  it("refunds a basket over the crypto cap, or with crypto standing in for a third stock", () => {
+    const heavy = creator(4, 9, [TOKENS[6], TOKENS[7], TOKENS[8], TOKENS[9]], [3, 3, 3, 4]); // crypto 30.8%
+    const twoStocks = creator(5, 10, [TOKENS[7], TOKENS[8], TOKENS[9]], [5, 5, 2]);
+    const s = settleRound(round([a, b, c, d, heavy, twoStocks], end, { cryptoTokens: crypto }));
+    expect(s.statuses[4]).toEqual({ kind: "refunded", reason: "ineligible-basket" });
+    expect(s.statuses[5]).toEqual({ kind: "refunded", reason: "ineligible-basket" });
+  });
+});
+
 describe("verifyInputs", () => {
   it("re-derives a settlement from its published inputs, and catches tampering", async () => {
     const { verifyInputs } = await import("../src/league/verify");

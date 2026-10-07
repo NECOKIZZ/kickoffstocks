@@ -19,7 +19,7 @@ export interface LeagueConfig {
   buyEnabled: boolean;
   faucet: boolean;
   stockFaucet: string | null;
-  rules: { minTokens: number; minStocks: number; maxTokens: number; maxWeightPct: number; minBasketUsd: number; ticketUsd: number; maxBuyFeePct: number; driftPct: number };
+  rules: { minTokens: number; minStocks: number; maxCryptoPct: number; maxTokens: number; maxWeightPct: number; minBasketUsd: number; ticketUsd: number; maxBuyFeePct: number; driftPct: number };
 }
 
 export interface MeEntry {
