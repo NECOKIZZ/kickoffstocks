@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #how { position: absolute; inset: 0; }
+        #how .bg { position: absolute; inset: 0; background: #F7F5F0; }
+        #how .head { position: absolute; left: 140px; top: 104px; }
+        #how .head .eyebrow { color: #4E3CB5; font-size: 20px; }
+        #how .head h2 { font-size: 92px; margin-top: 12px; color: #111210; }
+        #how .steps { position: absolute; left: 140px; right: 140px; top: 360px; display: flex; gap: 36px; }
+        #how .st { flex: 1; height: 560px; border-radius: 36px; background: #111210; color: #F7F5F0; padding: 40px 40px 36px; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+        #how .st .n { font-family: var(--f-mono); font-size: 22px; color: #00C805; }
+        #how .st h3 { font-size: 48px; margin-top: 14px; }
+        #how .st p { font-size: 24px; color: rgba(247,245,240,0.7); margin-top: 12px; line-height: 1.35; }
+        #how .st .viz { margin-top: auto; height: 220px; position: relative; }
+        #how .hand { position: absolute; left: 0; bottom: 6px; display: flex; gap: 12px; }
+        #how .cr { position: absolute; right: 0; top: 0; font-family: var(--f-clash); font-weight: 600; font-size: 18px; padding: 8px 14px; border-radius: 999px; background: rgba(180,159,3,0.2); color: #E9D24A; }
+        #how .ticket { position: absolute; left: 10px; bottom: 16px; width: 330px; height: 150px; border-radius: 24px; background: #00C805; color: #0B0B0B; padding: 22px 26px; display: flex; flex-direction: column; justify-content: space-between; }
+        #how .ticket .big { font-family: var(--f-display); font-weight: 700; font-size: 64px; line-height: 1; letter-spacing: -0.03em; }
+        #how .ticket .sm { font-family: var(--f-clash); font-weight: 600; font-size: 18px; letter-spacing: 0.1em; }
+        #how .ticket:before, #how .ticket:after { content: ""; position: absolute; top: 58px; width: 34px; height: 34px; border-radius: 50%; background: #111210; }
+        #how .ticket:before { left: -17px; } #how .ticket:after { right: -17px; }
+        #how .lock { position: absolute; right: 18px; bottom: 30px; width: 120px; height: 120px; border-radius: 30px; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; }
+        #how .bars { position: absolute; left: 0; right: 0; bottom: 0; height: 200px; display: flex; align-items: flex-end; gap: 12px; }
+        #how .bars .b { flex: 1; border-radius: 10px 10px 4px 4px; transform-origin: 50% 100%; }
+        #how .med { position: absolute; left: -8px; right: -8px; height: 0; border-top: 3px dashed #F7F5F0; }
+        #how .med span { position: absolute; right: 0; top: -36px; font-family: var(--f-clash); font-weight: 600; font-size: 17px; letter-spacing: 0.12em; color: #F7F5F0; }
+      </style>
+      <div id="how" data-composition-id="how" data-width="1920" data-height="1080">
+        <div class="scene">
+          <div class="bg"></div>
+          <div class="head" id="how-head">
+            <div class="eyebrow">How it works</div>
+            <h2 class="display">Three steps. One week.</h2>
+          </div>
+          <div class="steps">
+            <div class="st" id="how-s1">
+              <div class="n">01</div>
+              <h3 class="heading">Pick real stocks</h3>
+              <p>3 to 10 Robinhood Stock Tokens, plus up to 20% in BTC and ETH.</p>
+              <div class="viz"><div class="hand z150" id="how-hand"></div><div class="cr">BTC + ETH ≤ 20%</div></div>
+            </div>
+            <div class="st" id="how-s2">
+              <div class="n">02</div>
+              <h3 class="heading">Lock it with $5</h3>
+              <p>Your basket and a $5 USDG ticket go into the league contract.</p>
+              <div class="viz">
+                <div class="ticket" id="how-ticket"><span class="sm">TICKET · USDG</span><span class="big">$5</span></div>
+                <div class="lock" id="how-lock"><svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#00C805" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></div>
+              </div>
+            </div>
+            <div class="st" id="how-s3">
+              <div class="n">03</div>
+              <h3 class="heading">Beat MEDIAN</h3>
+              <p>Finish in the top half by Friday's close and win the bottom half's tickets.</p>
+              <div class="viz">
+                <div class="bars" id="how-bars"></div>
+                <div class="med" id="how-med" style="bottom:92px"><span>MEDIAN</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          document.getElementById("how-hand").innerHTML = [["NVDA", 35], ["AMD", 25], ["TSM", 20], ["MU", 20]].map(([t, w]) => KS.card(t, "tiny", { weight: w })).join("");
+          const hs = [180, 150, 128, 104, 92, 70, 52, 34];
+          document.getElementById("how-bars").innerHTML = hs
+            .map((h, i) => `<div class="b" style="height:${h}px;background:${i < 4 ? "#00C805" : i === 4 ? "#E9B949" : "#FF4D6D"}"></div>`)
+            .join("");
+          const tl = gsap.timeline({ paused: true });
+          tl.fromTo("#how-head", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 0.3);
+          const at = [0.9, 4.2, 7.6];
+          ["#how-s1", "#how-s2", "#how-s3"].forEach((s, i) => {
+            tl.fromTo(s, { opacity: 0, y: 70 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, at[i]);
+          });
+          tl.fromTo("#how-hand .sc", { opacity: 0, y: 30, rotation: -8 }, { opacity: 1, y: 0, rotation: 0, duration: 0.5, stagger: 0.12, ease: "back.out(1.8)" }, 1.5);
+          tl.fromTo("#how-s1 .cr", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, 2.4);
+          tl.fromTo("#how-ticket", { opacity: 0, x: -60, rotation: -6 }, { opacity: 1, x: 0, rotation: 0, duration: 0.7, ease: "power3.out" }, 4.8);
+          tl.to("#how-ticket", { x: 20, rotation: 0, duration: 0.6, ease: "power2.inOut" }, 6.0);
+          tl.fromTo("#how-lock", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.5, ease: "back.out(2)" }, 5.1);
+          tl.to("#how-lock", { scale: 1.12, duration: 0.18, yoyo: true, repeat: 1, ease: "power1.inOut" }, 6.6);
+          tl.fromTo("#how-bars .b", { scaleY: 0 }, { scaleY: 1, duration: 0.6, stagger: 0.07, ease: "power3.out" }, 8.1);
+          tl.fromTo("#how-med", { opacity: 0, scaleX: 0 }, { opacity: 1, scaleX: 1, duration: 0.6, ease: "power3.out" }, 9.0);
+          window.__timelines["how"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

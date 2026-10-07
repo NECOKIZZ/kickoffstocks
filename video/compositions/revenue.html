@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #revenue { position: absolute; inset: 0; }
+        #revenue .head { position: absolute; left: 140px; top: 84px; }
+        #revenue .head .eyebrow { color: #00C805; font-size: 20px; }
+        #revenue .head h2 { font-size: 92px; margin-top: 10px; color: #F7F5F0; }
+        #revenue .panel { position: absolute; left: 140px; top: 300px; width: 1080px; height: 680px; border-radius: 40px; background: #F7F5F0; color: #111210; }
+        #revenue .panel .ph { position: absolute; left: 40px; top: 30px; right: 40px; display: flex; align-items: center; }
+        #revenue .panel .ph .eyebrow { font-size: 16px; color: #6B6F63; }
+        #revenue .panel .ph .pill { margin-left: auto; font-size: 14px; padding: 6px 14px; }
+        #revenue .nd { position: absolute; width: 300px; height: 150px; border-radius: 26px; background: #fff; border: 1px solid rgba(107,111,99,0.18); padding: 20px 22px; box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 8px 24px rgba(0,0,0,0.05); }
+        #revenue .nd .k { font-family: var(--f-clash); font-weight: 600; font-size: 14px; letter-spacing: 0.12em; color: #6B6F63; }
+        #revenue .nd .v { font-family: var(--f-display); font-weight: 700; font-size: 50px; letter-spacing: -0.03em; line-height: 1.05; margin-top: 8px; }
+        #revenue .nd .s { font-size: 16px; color: #6B6F63; margin-top: 4px; }
+        #revenue .nd.hot { background: #111210; color: #F7F5F0; border: 0; box-shadow: 0 0 0 4px rgba(0,200,5,0.6), 0 20px 40px rgba(0,0,0,0.2); }
+        #revenue .nd.hot .k { color: #00C805; }
+        #revenue .nd.hot .v { color: #00C805; }
+        #revenue .nd.hot .s { color: rgba(247,245,240,0.7); }
+        #revenue svg.wires { position: absolute; left: 0; top: 0; }
+        #revenue .model { position: absolute; left: 1260px; top: 300px; width: 520px; height: 680px; border-radius: 40px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); color: #F7F5F0; padding: 38px 40px; display: flex; flex-direction: column; }
+        #revenue .model .eyebrow { font-size: 16px; color: rgba(247,245,240,0.55); }
+        #revenue .model h3 { font-size: 40px; margin-top: 10px; }
+        #revenue .model .ln { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 22px; color: rgba(247,245,240,0.75); }
+        #revenue .model .ln b { font-family: var(--f-mono); font-weight: 600; color: #F7F5F0; font-size: 24px; }
+        #revenue .model .tot { margin-top: 20px; }
+        #revenue .model .tot .v { font-family: var(--f-display); font-weight: 700; font-size: 76px; letter-spacing: -0.03em; color: #00C805; line-height: 1; }
+        #revenue .model .tot .s { font-size: 20px; color: rgba(247,245,240,0.7); margin-top: 6px; }
+        #revenue .model .next { margin-top: auto; font-size: 18px; color: rgba(247,245,240,0.7); padding: 14px 16px; border-radius: 18px; background: rgba(123,98,246,0.16); }
+        #revenue .model .next b { color: #C9BEFF; }
+        #revenue .p2p { position: absolute; left: 1260px; top: 120px; width: 520px; font-family: var(--f-display); font-style: italic; font-size: 38px; line-height: 1.2; color: #F7F5F0; }
+        #revenue .p2p b { font-style: normal; color: #00C805; font-weight: 700; }
+      </style>
+      <div id="revenue" data-composition-id="revenue" data-width="1920" data-height="1080">
+        <div class="scene dark">
+          <div class="wash"></div>
+          <div class="grid"></div>
+          <div class="head" id="revenue-head"><div class="eyebrow">Business model</div><h2 class="display">How we make money.</h2></div>
+          <div class="panel" id="revenue-panel">
+            <div class="ph"><span class="eyebrow">ROUND 12 · WHERE EVERY DOLLAR WENT</span><span class="pill ag">New · revenue panel</span></div>
+            <svg class="wires" width="1080" height="680" viewBox="0 0 1080 680" fill="none" stroke="#B9B5A8" stroke-width="3" stroke-linecap="round" id="revenue-wires">
+              <path id="revenue-w0" d="M340 175 L390 175" />
+              <path id="revenue-w1" d="M190 250 L190 300" />
+              <path id="revenue-w2" d="M690 175 L740 175" />
+              <path id="revenue-w3" d="M540 250 L540 300" />
+              <path id="revenue-w4" d="M890 250 L890 300" />
+              <path id="revenue-w5" d="M540 450 L540 490" />
+              <path id="revenue-w6" d="M1040 175 C1062 175 1062 565 1040 565" />
+            </svg>
+            <div class="nd" id="revenue-n0" style="left:40px;top:100px"><div class="k">TICKETS IN</div><div class="v num" id="revenue-v0">$5,640</div><div class="s">1,128 × $5 USDG</div></div>
+            <div class="nd" id="revenue-n1" style="left:40px;top:300px"><div class="k">BACK TO OWNERS</div><div class="v num">$2,870</div><div class="s">winning + draw tickets</div></div>
+            <div class="nd" id="revenue-n2" style="left:390px;top:100px"><div class="k">LOSING TICKETS</div><div class="v num">$2,770</div><div class="s">the bottom half</div></div>
+            <div class="nd" id="revenue-n3" style="left:390px;top:300px"><div class="k">WINNERS' POT</div><div class="v num">$2,496</div><div class="s">90% + $3.17 interest</div></div>
+            <div class="nd" id="revenue-n4" style="left:390px;top:490px"><div class="k">TO CREATORS</div><div class="v num">$214.60</div><div class="s">10% of backers' winnings</div></div>
+            <div class="nd" id="revenue-n5" style="left:740px;top:100px"><div class="k">TAKE · 10%</div><div class="v num">$277</div><div class="s">of losing tickets only</div></div>
+            <div class="nd hot" id="revenue-n6" style="left:740px;top:300px"><div class="k">PLATFORM · 5%</div><div class="v num" id="revenue-pl">$138.50</div><div class="s">Kickoff revenue</div></div>
+            <div class="nd" id="revenue-n7" style="left:740px;top:490px"><div class="k">SEASON POT · 5%</div><div class="v num">$138.50</div><div class="s">tops up thin rounds</div></div>
+          </div>
+          <div class="p2p" id="revenue-p2p">Peer to peer. <b>We never bet against our players.</b></div>
+          <div class="model" id="revenue-model">
+            <div class="eyebrow">ILLUSTRATIVE MODEL · NOT TRACTION</div>
+            <h3 class="heading">At 100k tickets a week</h3>
+            <div class="ln"><span>Tickets staked</span><b>$500,000</b></div>
+            <div class="ln"><span>Losing tickets (~45%)</span><b>$225,000</b></div>
+            <div class="ln"><span>Platform take (5%)</span><b>$11,250 / wk</b></div>
+            <div class="tot"><div class="v num" id="revenue-yr">$0</div><div class="s">a year, from the league take alone</div></div>
+            <div class="next"><b>Next:</b> a platform fee on one-click “Buy the ETF” through 0x on mainnet.</div>
+          </div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+          tl.fromTo("#revenue-head > *", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, stagger: 0.1, ease: "power3.out" }, 0.3);
+          tl.fromTo("#revenue-panel", { opacity: 0, y: 50 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 0.8);
+          // Money flows left to right, node by node, wires drawing between.
+          const step = (n, at) => tl.fromTo("#revenue-n" + n, { opacity: 0, scale: 0.9, y: 14 }, { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(1.6)" }, at);
+          const wire = (w, at) => {
+            const el = document.getElementById("revenue-w" + w);
+            el.style.strokeDasharray = 420;
+            tl.fromTo(el, { strokeDashoffset: 420 }, { strokeDashoffset: 0, duration: 0.6, ease: "power2.out" }, at);
+          };
+          step(0, 1.4); wire(1, 2.0); step(1, 2.3);
+          wire(0, 2.4); step(2, 2.7);
+          wire(2, 3.6); step(5, 3.9);
+          wire(4, 4.6); step(6, 4.9);
+          wire(6, 5.2); step(7, 5.6);
+          wire(3, 6.6); step(3, 6.9);
+          wire(5, 8.0); step(4, 8.3);
+          tl.fromTo("#revenue-n6", { boxShadow: "0 0 0 4px rgba(0,200,5,0.6), 0 20px 40px rgba(0,0,0,0.2)" }, { boxShadow: "0 0 0 10px rgba(0,200,5,0.25), 0 20px 40px rgba(0,0,0,0.2)", duration: 0.6, yoyo: true, repeat: 3, ease: "sine.inOut", immediateRender: false }, 5.4);
+          tl.fromTo("#revenue-p2p", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 8.6);
+          tl.fromTo("#revenue-model", { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.8, ease: "power3.out" }, 10.4);
+          tl.fromTo("#revenue-model .ln", { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.2, ease: "power2.out" }, 10.9);
+          KS.count(tl, document.getElementById("revenue-yr"), 0, 585000, 11.8, 1.8, (v) => "≈ $" + Math.round(v / 1000) + "k", "power3.out");
+          tl.fromTo("#revenue-model .next", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: "power2.out" }, 13.6);
+          window.__timelines["revenue"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

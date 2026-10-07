@@ -1,0 +1,199 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #build { position: absolute; inset: 0; }
+        #build .page h1 { font-size: 40px; }
+        #build .cols { position: absolute; left: 0; right: 0; top: 104px; bottom: 20px; display: flex; gap: 22px; }
+        #build .pick { flex: 1; padding: 22px 24px; border-radius: 28px; }
+        #build .ph { display: flex; align-items: center; gap: 14px; }
+        #build .ph .n { width: 34px; height: 34px; border-radius: 50%; background: #EDEAE0; display: flex; align-items: center; justify-content: center; font-family: var(--f-clash); font-weight: 600; font-size: 14px; }
+        #build .ph h2 { font-family: var(--f-display); font-weight: 600; font-size: 24px; letter-spacing: -0.02em; }
+        #build .ph .cnt { margin-left: auto; color: #6B6F63; font-size: 14px; }
+        #build .flt { display: flex; gap: 10px; margin-top: 16px; align-items: center; }
+        #build .search { width: 250px; height: 38px; border-radius: 999px; border: 1px solid rgba(107,111,99,0.3); display: flex; align-items: center; padding: 0 16px; color: #6B6F63; font-size: 14px; }
+        #build .seg { display: flex; gap: 4px; padding: 4px; border-radius: 999px; background: #EDEAE0; font-family: var(--f-clash); font-weight: 500; font-size: 13px; color: #4C4F46; }
+        #build .seg span { padding: 5px 13px; border-radius: 999px; }
+        #build .seg span.on { background: #fff; color: #111; font-weight: 600; }
+        #build .gridc { margin-top: 16px; display: grid; grid-template-columns: repeat(4, 150px); gap: 14px 16px; }
+        #build .cw { position: relative; width: 150px; height: 215px; }
+        #build .cw .ring { position: absolute; inset: -5px; border-radius: 20px; border: 3px solid #7B62F6; opacity: 0; }
+        #build .cw .chk { position: absolute; right: -8px; top: -8px; width: 28px; height: 28px; border-radius: 50%; background: #7B62F6; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; opacity: 0; box-shadow: 0 4px 10px rgba(78,60,181,0.4); }
+        #build .etf { width: 392px; padding: 26px 26px 22px; display: flex; flex-direction: column; }
+        #build .etf .eyebrow { font-size: 11px; color: rgba(247,245,240,0.55); }
+        #build .nmf { margin-top: 8px; height: 46px; border-radius: 12px; border: 1px dashed rgba(247,245,240,0.25); display: flex; align-items: center; padding: 0 12px; font-family: var(--f-display); font-weight: 600; font-size: 28px; letter-spacing: -0.02em; }
+        #build .nmf .ph0 { color: rgba(247,245,240,0.35); }
+        #build .caret { display: inline-block; width: 2px; height: 28px; background: #00C805; margin-left: 2px; vertical-align: middle; }
+        #build .hand { display: flex; gap: 10px; margin-top: 16px; height: 84px; }
+        #build .wbar { display: flex; height: 12px; border-radius: 999px; overflow: hidden; margin-top: 16px; background: rgba(255,255,255,0.08); }
+        #build .wbar div { height: 100%; transform-origin: 0 50%; }
+        #build .rows { margin-top: 12px; }
+        #build .rw { display: flex; align-items: center; gap: 10px; height: 30px; font-size: 14px; }
+        #build .rw .sw { width: 10px; height: 10px; border-radius: 3px; }
+        #build .rw .t { font-family: var(--f-clash); font-weight: 600; width: 60px; }
+        #build .rw .w { font-family: var(--f-mono); width: 54px; color: #F7F5F0; }
+        #build .rw .d { font-family: var(--f-mono); margin-left: auto; color: rgba(247,245,240,0.7); }
+        #build .stats { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px; }
+        #build .stats .s { display: flex; justify-content: space-between; height: 27px; align-items: center; font-size: 14px; color: rgba(247,245,240,0.75); }
+        #build .stats .s b { color: #F7F5F0; font-weight: 600; font-family: var(--f-mono); }
+        #build .lockb { margin-top: 14px; width: 100%; height: 50px; font-size: 16px; border-radius: 14px; }
+        #build .veil { position: absolute; inset: 0; background: rgba(17,18,16,0.4); backdrop-filter: blur(6px); z-index: 20; opacity: 0; }
+        #build .tx { position: absolute; left: 470px; top: 170px; width: 500px; z-index: 21; background: #F7F5F0; border-radius: 28px; padding: 28px; box-shadow: 0 30px 80px rgba(0,0,0,0.3); opacity: 0; }
+        #build .tx h2 { font-family: var(--f-display); font-weight: 600; font-size: 30px; letter-spacing: -0.02em; }
+        #build .tx .sub { font-size: 14px; color: #4C4F46; margin-top: 4px; }
+        #build .stp { display: flex; align-items: center; gap: 14px; margin-top: 12px; padding: 14px 16px; border-radius: 16px; background: #fff; border: 1px solid rgba(107,111,99,0.16); }
+        #build .stp .o { width: 30px; height: 30px; border-radius: 50%; position: relative; flex-shrink: 0; }
+        #build .stp .o .sp { position: absolute; inset: 0; border-radius: 50%; border: 3px solid rgba(123,98,246,0.2); border-top-color: #7B62F6; }
+        #build .stp .o .ok { position: absolute; inset: 0; border-radius: 50%; background: #00C805; color: #0B0B0B; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; opacity: 0; }
+        #build .stp .o .idle { position: absolute; inset: 0; border-radius: 50%; border: 2px solid rgba(107,111,99,0.3); }
+        #build .stp .l { font-family: var(--f-clash); font-weight: 600; font-size: 16px; }
+        #build .stp .m { font-size: 12.5px; color: #6B6F63; }
+        #build .stp .r { margin-left: auto; font-family: var(--f-mono); font-size: 12px; color: #6B6F63; }
+        #build .done { position: absolute; inset: 0; border-radius: 28px; background: #111210; color: #F7F5F0; padding: 30px; display: flex; flex-direction: column; opacity: 0; }
+        #build .done .big { width: 64px; height: 64px; border-radius: 50%; background: #00C805; color: #0B0B0B; display: flex; align-items: center; justify-content: center; font-size: 34px; font-weight: 800; }
+        #build .done h2 { font-family: var(--f-display); font-size: 34px; margin-top: 18px; }
+        #build .done .hash { margin-top: 10px; font-family: var(--f-mono); font-size: 14px; color: #00C805; }
+        #build .done .hand2 { display: flex; gap: 10px; margin-top: 20px; align-items: center; }
+        #build .done .note { margin-top: auto; font-size: 15px; color: rgba(247,245,240,0.72); }
+      </style>
+      <div id="build" data-composition-id="build" data-width="1920" data-height="1080">
+        <div class="app-stage">
+          <div class="cam" id="build-cam">
+            <div class="app">
+              <div id="build-side"></div>
+              <div class="main">
+                <div id="build-tape"></div>
+                <div class="page">
+                  <div class="eyebrow">Create</div>
+                  <h1>Build your ETF</h1>
+                  <div class="cols">
+                    <div class="card pick">
+                      <div class="ph"><span class="n">1</span><h2>Pick your stocks</h2><span class="cnt" id="build-cnt">0 of 3+ stocks picked</span></div>
+                      <div class="flt"><div class="search">Search NVIDIA, TSLA…</div><div class="seg"><span class="on">All</span><span>Stocks</span><span>Funds</span><span>Crypto</span></div></div>
+                      <div class="gridc" id="build-grid"></div>
+                    </div>
+                    <div class="ink-card etf" id="build-etf">
+                      <div class="eyebrow">YOUR ETF</div>
+                      <div class="nmf"><span id="build-name"></span><span class="ph0" id="build-ph0">Untitled</span><span class="caret" id="build-caret"></span></div>
+                      <div class="hand" id="build-hand"></div>
+                      <div class="wbar" id="build-wbar"></div>
+                      <div class="rows" id="build-rows"></div>
+                      <div class="stats">
+                        <div class="s"><span>Basket</span><b id="build-basket">$0.00</b></div>
+                        <div class="s"><span>Ticket</span><b>$5 USDG</b></div>
+                        <div class="s"><span>Buy fee (yours)</span><b>1.0%</b></div>
+                        <div class="s"><span>Round</span><b>#12 · 62 ETFs</b></div>
+                      </div>
+                      <div class="btn3d lockb" id="build-lock">Lock basket + $5 ticket</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="veil" id="build-veil"></div>
+              <div class="tx" id="build-tx" data-layout-allow-overlap>
+                <h2>Locking your ETF</h2>
+                <div class="sub">3 transactions on Robinhood Chain. Your wallet signs each one.</div>
+                <div class="stp"><span class="o"><span class="idle"></span><span class="sp" id="build-sp0"></span><span class="ok" id="build-ok0">✓</span></span><div><div class="l">Approve stocks</div><div class="m">NVDA · AMD · TSM · MU</div></div><span class="r" id="build-r0">0x31b7…</span></div>
+                <div class="stp"><span class="o"><span class="idle"></span><span class="sp" id="build-sp1"></span><span class="ok" id="build-ok1">✓</span></span><div><div class="l">Approve USDG</div><div class="m">$5 ticket</div></div><span class="r" id="build-r1">0xa09e…</span></div>
+                <div class="stp"><span class="o"><span class="idle"></span><span class="sp" id="build-sp2"></span><span class="ok" id="build-ok2">✓</span></span><div><div class="l">Lock basket + ticket</div><div class="m">LeagueEscrow · Round 12</div></div><span class="r" id="build-r2">0x8f2a…</span></div>
+                <div class="done" id="build-done" data-layout-allow-overlap>
+                  <div class="big">✓</div>
+                  <h2>Locked on Robinhood Chain</h2>
+                  <div class="hash">tx 0x8f2a…c91d · block 4,812,337</div>
+                  <div class="hand2" id="build-hand2"></div>
+                  <div class="note">“AI Chips Only” is in Round 12. Your basket comes back to you after Friday's close, win or lose.</div>
+                </div>
+              </div>
+              <div class="cursor" id="build-cur" style="width:26px;height:26px"></div>
+              <div class="ripple" id="build-rip"></div>
+            </div>
+          </div>
+          <div class="sample top">Sample round · prices: Robinhood Chain feeds, 6 Oct</div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          document.getElementById("build-side").innerHTML = KS.sidebar("build", { addr: "0x4799…28aE", bal: "250 USDG" });
+          document.getElementById("build-tape").innerHTML = KS.tickerTape("build-track");
+          document.getElementById("build-cur").innerHTML = KS.CURSOR.replace(/34/g, "26");
+          const grid = ["NVDA", "TSLA", "AAPL", "MSFT", "AMD", "TSM", "MU", "PLTR"];
+          const ch = { NVDA: 2.41, TSLA: -1.12, AAPL: 0.38, MSFT: 1.06, AMD: 3.18, TSM: 1.92, MU: 2.77, PLTR: 2.06 };
+          document.getElementById("build-grid").innerHTML = grid
+            .map((t) => `<div class="cw" id="build-cw-${t}">${KS.card(t, "medium", { pct: ch[t] })}<div class="ring"></div><div class="chk">✓</div></div>`)
+            .join("");
+          const picks = [["NVDA", 35, "#4FAE12"], ["AMD", 25, "#06726E"], ["TSM", 20, "#B71532"], ["MU", 20, "#0465AF"]];
+          document.getElementById("build-hand").innerHTML = picks.map(([t, w]) => `<div id="build-h-${t}">${KS.card(t, "tiny", { weight: w })}</div>`).join("");
+          document.getElementById("build-hand2").innerHTML = picks.map(([t, w]) => KS.card(t, "tiny", { weight: w })).join("") +
+            '<svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00C805" stroke-width="2" stroke-linecap="round" style="margin-left:8px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+          document.getElementById("build-wbar").innerHTML = picks.map(([t, w, c]) => `<div id="build-wb-${t}" style="width:${w}%;background:${c}"></div>`).join("");
+          document.getElementById("build-rows").innerHTML = picks
+            .map(([t, w, c]) => `<div class="rw" id="build-rw-${t}"><span class="sw" style="background:${c}"></span><span class="t">${t}</span><span class="w" id="build-w-${t}">25%</span><span class="d" id="build-d-${t}">$62.50</span></div>`)
+            .join("");
+
+          KS.layered(`[data-composition-id="build"] .app *`);
+          const tl = gsap.timeline({ paused: true });
+          tl.fromTo("#build-track", { x: 0 }, { x: -2000, duration: 24, ease: "none" }, 0);
+          tl.fromTo("#build .page > .eyebrow, #build .page > h1", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: "power3.out" }, 0.15);
+          tl.fromTo("#build .pick, #build-etf", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: "power3.out" }, 0.3);
+          tl.fromTo("#build-grid .cw", { opacity: 0, y: 20, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.45, stagger: 0.05, ease: "back.out(1.5)" }, 0.5);
+          tl.fromTo("#build-caret", { opacity: 1 }, { opacity: 0, duration: 0.4, repeat: 29, yoyo: true, ease: "steps(1)" }, 0);
+          const cur = "#build-cur", rip = "#build-rip";
+          tl.fromTo(cur, { x: 900, y: 600, opacity: 0, scale: 1 }, { x: 760, y: 520, opacity: 1, duration: 0.4 }, 0.9);
+          // Card centres in app coordinates (grid starts at x=332, y=333; 150×215 cards, 16/14 gaps).
+          const pos = { NVDA: [400, 430], AMD: [400, 660], TSM: [566, 660], MU: [732, 660] };
+          const rows = [];
+          let t = 1.2;
+          picks.forEach(([tk], i) => {
+            t = KS.click(tl, cur, rip, pos[tk][0], pos[tk][1], t, i === 0 ? 0.7 : 0.6);
+            tl.fromTo(`#build-cw-${tk} .ring`, { opacity: 0 }, { opacity: 1, duration: 0.2 }, t - 0.2);
+            tl.fromTo(`#build-cw-${tk} .chk`, { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2.5)" }, t - 0.2);
+            tl.fromTo(`#build-h-${tk}`, { opacity: 0, y: 30, scale: 0.6 }, { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: "back.out(1.8)" }, t - 0.1);
+            tl.fromTo(`#build-rw-${tk}`, { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.3 }, t);
+            tl.fromTo(`#build-wb-${tk}`, { scaleX: 0 }, { scaleX: 1, duration: 0.4, ease: "power2.out" }, t);
+            tl.set("#build-cnt", { textContent: `${i + 1} of 3+ stocks picked` }, t - 0.15);
+            t += 0.25;
+          });
+          // Weights settle to 35/25/20/20 on a $250 basket.
+          const W = 6.6;
+          picks.forEach(([tk, w]) => {
+            KS.count(tl, document.getElementById(`build-w-${tk}`), 25, w, W, 1.2, (v) => Math.round(v) + "%");
+            KS.count(tl, document.getElementById(`build-d-${tk}`), 62.5, 2.5 * w, W, 1.2, (v) => KS.money(v));
+          });
+          KS.count(tl, document.getElementById("build-basket"), 0, 250, 2.2, 4.0, (v) => KS.money(v));
+          // Camera leans into the ETF panel while it fills in.
+          tl.fromTo("#build-cam", { scale: 1, x: 0, y: 0 }, { scale: 1.2, x: -662, y: -215, duration: 1.4, ease: "power2.inOut" }, 6.2);
+          // Name it.
+          t = KS.click(tl, cur, rip, 1180, 270, 7.6, 0.8);
+          const name = "AI Chips Only";
+          const nm = document.getElementById("build-name");
+          const o = { n: 0 };
+          tl.set("#build-ph0", { opacity: 0 }, t);
+          tl.fromTo(o, { n: 0 }, { n: name.length, duration: 1.3, ease: "none", onUpdate: () => (nm.textContent = name.slice(0, Math.round(o.n))) }, t);
+          // Lock.
+          t = KS.click(tl, cur, rip, 1225, 762, 10.4, 0.9);
+          tl.to("#build-lock", { y: 4, boxShadow: "0 1px 0 #007A03", duration: 0.08 }, t - 0.2);
+          tl.to("#build-lock", { y: 0, boxShadow: "0 5px 0 #007A03", duration: 0.2 }, t - 0.1);
+          tl.to("#build-cam", { scale: 1, x: 0, y: 0, duration: 1.0, ease: "power2.inOut" }, t);
+          tl.to(cur, { opacity: 0, duration: 0.3 }, t + 0.1);
+          tl.to("#build-veil", { opacity: 1, duration: 0.4 }, t + 0.3);
+          tl.fromTo("#build-tx", { opacity: 0, y: 30, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.4)", immediateRender: false }, t + 0.4);
+          const S0 = t + 0.9;
+          [0, 1, 2].forEach((i) => {
+            const s = S0 + i * 1.2;
+            tl.fromTo(`#build-sp${i}`, { opacity: 0, rotation: 0 }, { opacity: 1, rotation: 540, duration: 1.1, ease: "none" }, s);
+            tl.to(`#build-sp${i}`, { opacity: 0, duration: 0.1 }, s + 1.05);
+            tl.fromTo(`#build-ok${i}`, { opacity: 0, scale: 0.4 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2.5)" }, s + 1.05);
+          });
+          const D = S0 + 3 * 1.2 + 0.3;
+          tl.fromTo("#build-done", { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.5, ease: "power3.out" }, D);
+          tl.fromTo("#build-done .big", { scale: 0.3 }, { scale: 1, duration: 0.5, ease: "back.out(2.5)" }, D + 0.1);
+          tl.fromTo("#build-hand2 > *", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.4, stagger: 0.08, ease: "back.out(1.6)" }, D + 0.4);
+          tl.fromTo("#build-cam", { scale: 1, x: 0, y: 0 }, { scale: 1.12, x: -110, y: -60, duration: 6, ease: "sine.inOut", immediateRender: false }, D + 0.4);
+          window.__timelines["build"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

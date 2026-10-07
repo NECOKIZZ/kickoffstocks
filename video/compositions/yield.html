@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #yield { position: absolute; inset: 0; }
+        #yield .head { position: absolute; left: 140px; top: 110px; width: 760px; }
+        #yield .head .eyebrow { color: #00C805; font-size: 20px; }
+        #yield .head h2 { font-size: 104px; margin-top: 14px; color: #F7F5F0; }
+        #yield .head h2 i { color: #00C805; }
+        #yield .head p { font-size: 30px; color: rgba(247,245,240,0.72); margin-top: 26px; line-height: 1.35; width: 700px; }
+        #yield .flow { position: absolute; left: 140px; top: 640px; width: 760px; height: 300px; }
+        #yield .tix { position: absolute; left: 0; top: 0; width: 760px; height: 300px; }
+        #yield .tk { position: absolute; left: 0; width: 120px; height: 56px; border-radius: 14px; background: #00C805; color: #0B0B0B; display: flex; align-items: center; justify-content: center; gap: 6px;
+          font-family: var(--f-display); font-weight: 700; font-size: 26px; letter-spacing: -0.02em; box-shadow: 0 10px 24px rgba(0,200,5,0.25); }
+        #yield .tk small { font-family: var(--f-clash); font-weight: 600; font-size: 12px; letter-spacing: 0.1em; }
+        #yield .vault { position: absolute; left: 530px; top: 30px; width: 240px; height: 240px; border-radius: 50%; border: 2px solid rgba(0,200,5,0.6);
+          background: radial-gradient(50% 50% at 50% 50%, rgba(0,200,5,0.22) 0%, rgba(0,200,5,0.03) 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: #F7F5F0; }
+        #yield .vault .t1 { font-family: var(--f-clash); font-weight: 600; font-size: 16px; letter-spacing: 0.14em; color: #00C805; }
+        #yield .vault .t2 { font-family: var(--f-display); font-weight: 600; font-size: 30px; margin-top: 6px; line-height: 1.05; }
+        #yield .vault .t3 { font-size: 15px; color: rgba(247,245,240,0.6); margin-top: 6px; }
+        #yield .ring { position: absolute; left: 510px; top: 10px; width: 280px; height: 280px; border-radius: 50%; border: 2px dashed rgba(0,200,5,0.35); }
+        #yield .panel { position: absolute; right: 140px; top: 150px; width: 760px; height: 780px; border-radius: 40px; background: #F7F5F0; color: #111210; padding: 44px 48px; display: flex; flex-direction: column; }
+        #yield .panel .eyebrow { font-size: 16px; color: #6B6F63; }
+        #yield .panel .feat { position: absolute; right: 40px; top: 40px; font-size: 14px; padding: 6px 14px; }
+        #yield .panel .ctr { font-family: var(--f-display); font-weight: 700; font-size: 150px; letter-spacing: -0.04em; line-height: 1; margin-top: 18px; color: #007A03; }
+        #yield .panel .ctr small { font-size: 60px; }
+        #yield .panel .meta { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+        #yield .panel .meta .pill { font-size: 16px; padding: 7px 14px; background: #EDEAE0; color: #3C3E37; }
+        #yield .tl2 { margin-top: 48px; }
+        #yield .tl2 .lab { display: flex; justify-content: space-between; font-family: var(--f-mono); font-size: 18px; color: #4C4F46; }
+        #yield .tl2 .bar { margin-top: 12px; height: 16px; border-radius: 999px; background: #EDEAE0; overflow: hidden; }
+        #yield .tl2 .fill { width: 100%; height: 100%; background: linear-gradient(90deg, #00C805 0%, #7B62F6 100%); transform-origin: 0 50%; }
+        #yield .tl2 .now { font-family: var(--f-mono); font-size: 26px; font-weight: 600; margin-top: 16px; }
+        #yield .pot { margin-top: auto; display: flex; align-items: center; gap: 18px; padding: 22px 24px; border-radius: 24px; background: #111210; color: #F7F5F0; }
+        #yield .pot .ar { font-size: 34px; color: #00C805; }
+        #yield .pot .k { font-family: var(--f-clash); font-weight: 600; font-size: 14px; letter-spacing: 0.14em; color: rgba(247,245,240,0.55); }
+        #yield .pot .v { font-family: var(--f-display); font-weight: 600; font-size: 34px; letter-spacing: -0.02em; }
+        #yield .never { position: absolute; left: 140px; bottom: 70px; display: flex; align-items: center; gap: 12px; font-family: var(--f-clash); font-weight: 600; font-size: 24px; color: #F7F5F0; }
+      </style>
+      <div id="yield" data-composition-id="yield" data-width="1920" data-height="1080">
+        <div class="scene dark">
+          <div class="wash"></div>
+          <div class="grid"></div>
+          <div class="head" id="yield-head">
+            <div class="eyebrow">Staked USDG earns</div>
+            <h2 class="display">Tickets <i>earn</i> while you wait.</h2>
+            <p>Once entries close, every ticket is parked in a USDG savings vault. The interest goes into the winners' pot.</p>
+          </div>
+          <div class="flow">
+            <div class="ring" id="yield-ring"></div>
+            <div class="vault" id="yield-vault"><div class="t1">USDG SAVINGS VAULT</div><div class="t2">Robinhood Earn</div><div class="t3">on mainnet · ERC-4626</div></div>
+            <div class="tix" id="yield-tix"></div>
+          </div>
+          <div class="panel" id="yield-panel">
+            <span class="pill ag feat">New · ticket interest, live</span>
+            <div class="eyebrow">ROUND 12 · TICKET INTEREST</div>
+            <div class="ctr num" id="yield-ctr">$0.00</div>
+            <div class="meta">
+              <span class="pill">$5,640 parked · 1,128 tickets</span>
+              <span class="pill">~4.8% APY · variable</span>
+            </div>
+            <div class="tl2">
+              <div class="lab"><span>Mon 9:30 AM</span><span>Fri 4:00 PM</span></div>
+              <div class="bar"><div class="fill" id="yield-fill"></div></div>
+              <div class="now" id="yield-now">Mon 9:30 AM ET</div>
+            </div>
+            <div class="pot" id="yield-pot"><span class="ar">→</span><div><div class="k">GOES TO</div><div class="v">The winners' pot, on top of the tickets</div></div></div>
+          </div>
+          <div class="never" id="yield-never">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#00C805" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            Locked stocks never move. Only the tickets earn.
+          </div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          const tix = document.getElementById("yield-tix");
+          const n = 9;
+          for (let i = 0; i < n; i++) {
+            const d = document.createElement("div");
+            d.className = "tk";
+            d.id = "yield-tk" + i;
+            d.style.top = 122 + "px";
+            d.innerHTML = "$5 <small>USDG</small>";
+            tix.appendChild(d);
+          }
+          const tl = gsap.timeline({ paused: true });
+          tl.fromTo("#yield-head > *", { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.8, stagger: 0.12, ease: "power3.out" }, 0.3);
+          tl.fromTo("#yield-vault", { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.8, ease: "back.out(1.6)" }, 1.0);
+          tl.fromTo("#yield-ring", { opacity: 0, rotation: 0 }, { opacity: 1, rotation: 120, duration: 14, ease: "none" }, 1.0);
+          // Tickets stream into the vault, each from a different lane.
+          for (let i = 0; i < n; i++) {
+            const lane = ((i * 37) % 5) - 2;
+            const at = 1.6 + i * 0.42;
+            tl.fromTo("#yield-tk" + i, { x: -40, y: lane * 46, opacity: 0, scale: 1 },
+              { keyframes: [
+                { x: 120, opacity: 1, duration: 0.35, ease: "power2.out" },
+                { x: 560, y: 0, scale: 0.35, opacity: 0, duration: 0.9, ease: "power2.in" },
+              ] }, at);
+          }
+          tl.fromTo("#yield-panel", { opacity: 0, x: 80 }, { opacity: 1, x: 0, duration: 0.9, ease: "power3.out" }, 1.4);
+          // Time-lapse: Mon 9:30 → Fri 4:00 PM, interest $0 → $3.17.
+          const ctr = document.getElementById("yield-ctr"), now = document.getElementById("yield-now");
+          const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+          const o = { p: 0 };
+          tl.fromTo(o, { p: 0 }, { p: 1, duration: 9.5, ease: "none", onUpdate: () => {
+            ctr.textContent = KS.money(3.17 * o.p);
+            const hrs = o.p * (4 * 24 + 6.5); // calendar hours: Mon 9:30 → Fri 16:00
+            const d = Math.min(4, Math.floor((hrs + 9.5) / 24));
+            const m = Math.round(((hrs + 9.5) - d * 24) * 60);
+            const hh = Math.floor(m / 60) % 24, mm = m % 60;
+            now.textContent = `${days[d]} ${((hh + 11) % 12) + 1}:${String(mm).padStart(2, "0")} ${hh >= 12 ? "PM" : "AM"} ET`;
+          } }, 2.6);
+          tl.fromTo("#yield-fill", { scaleX: 0 }, { scaleX: 1, duration: 9.5, ease: "none" }, 2.6);
+          tl.fromTo("#yield-pot", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 6.0);
+          tl.fromTo("#yield-never", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 9.0);
+          window.__timelines["yield"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #brand { position: absolute; inset: 0; }
+        #brand .mark0 { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; }
+        #brand .nav { position: absolute; left: 176px; top: 64px; display: flex; align-items: center; gap: 16px; }
+        #brand .nav .bar { width: 1px; height: 30px; background: rgba(255,255,255,0.3); }
+        #brand .nav .word { font-family: var(--f-display); font-weight: 700; font-size: 30px; color: #fff; letter-spacing: -0.02em; }
+        #brand .nav .word i { font-weight: 400; }
+        #brand .copy { position: absolute; left: 176px; top: 300px; width: 860px; }
+        #brand .w1, #brand .w2 { font-size: 196px; color: #fff; display: block; }
+        #brand .w2 { font-style: italic; font-weight: 400; margin-top: -10px; }
+        #brand .tag { font-family: var(--f-display); font-style: italic; font-size: 44px; color: rgba(247,245,240,0.78); margin-top: 40px; line-height: 1.25; width: 820px; }
+        #brand .chain { position: absolute; left: 176px; bottom: 120px; display: flex; gap: 14px; }
+        #brand .chain .pill { font-size: 20px; padding: 10px 20px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14); color: #F7F5F0; }
+        #brand .chain .pill b { color: #00C805; font-weight: 600; }
+        #brand .deck { position: absolute; left: 1040px; top: 190px; width: 700px; height: 700px; perspective: 1600px; }
+        #brand .deck .slot { position: absolute; left: 24px; top: 70px; transform-origin: 50% 100%; }
+        #brand .halo { position: absolute; left: 1000px; top: 160px; width: 900px; height: 900px; border-radius: 50%;
+          background: radial-gradient(50% 50% at 50% 50%, rgba(212,10,10,0.45) 0%, rgba(212,10,10,0) 100%); filter: blur(30px); }
+      </style>
+      <div id="brand" data-composition-id="brand" data-width="1920" data-height="1080">
+        <div class="scene dark">
+          <div class="wash"></div>
+          <div class="grid"></div>
+          <div class="halo" id="brand-halo"></div>
+          <div class="mark0" id="brand-mark0"></div>
+          <div class="nav" id="brand-nav"></div>
+          <div class="copy">
+            <span class="display w1" id="brand-w1">Profit</span>
+            <span class="display w2" id="brand-w2">Markets.</span>
+            <div class="tag" id="brand-tag">Build an ETF from real stocks. Beat the median. Get paid Friday.</div>
+          </div>
+          <div class="deck" id="brand-deck" data-layout-allow-overlap></div>
+          <div class="chain" id="brand-chain">
+            <span class="pill">Built on <b>Robinhood Chain</b></span>
+            <span class="pill">Real Robinhood Stock Tokens</span>
+            <span class="pill">A new mode of Kickoff</span>
+          </div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          document.getElementById("brand-mark0").innerHTML = KS.mark(220, "#fff");
+          document.getElementById("brand-nav").innerHTML =
+            KS.mark(44, "#fff") + '<span class="bar"></span><span class="word">Profit <i>Markets</i></span>' + KS.trend(28);
+          const deck = document.getElementById("brand-deck");
+          const order = ["MSFT", "META", "AAPL", "NVDA", "TSLA"]; // back to front
+          const pct = { MSFT: 1.06, META: -0.42, AAPL: 0.38, NVDA: 2.41, TSLA: -1.12 };
+          order.forEach((t, i) => {
+            const s = document.createElement("div");
+            s.className = "slot z175";
+            s.setAttribute("data-layout-allow-overlap", "");
+            s.id = "brand-c" + i;
+            s.innerHTML = KS.card(t, "big", { pct: pct[t] });
+            deck.appendChild(s);
+          });
+          KS.layered("#brand-deck *");
+          const tl = gsap.timeline({ paused: true });
+          // Mark punches in, then hands off to the nav lockup.
+          tl.fromTo("#brand-mark0", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.7, ease: "back.out(1.7)" }, 0.2);
+          tl.to("#brand-mark0", { opacity: 0, scale: 0.25, x: -760, y: -440, duration: 0.8, ease: "power3.inOut" }, 1.4);
+          tl.fromTo("#brand-nav", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.6, ease: "power2.out" }, 2.0);
+          tl.fromTo("#brand-w1", { opacity: 0, y: 80, filter: "blur(12px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.9, ease: "power4.out" }, 1.8);
+          tl.fromTo("#brand-w2", { opacity: 0, y: 80, filter: "blur(12px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.9, ease: "power4.out" }, 2.05);
+          // Deck fans out (back cards first), like the landing hero.
+          const fan = [
+            { x: 150, y: -24, r: 14, s: 0.86 },
+            { x: 112, y: -16, r: 10, s: 0.9 },
+            { x: 74, y: -8, r: 6, s: 0.94 },
+            { x: 36, y: 0, r: 2, s: 0.97 },
+            { x: 0, y: 0, r: -4, s: 1 },
+          ];
+          order.forEach((t, i) => {
+            const f = fan[i];
+            tl.fromTo("#brand-c" + i, { opacity: 0, x: 0, y: 340, rotation: -18, scale: 0.8 },
+              { opacity: i === 4 ? 1 : 0.92, x: f.x, y: f.y, rotation: f.r, scale: f.s, duration: 1.0, ease: "power3.out" }, 2.6 + i * 0.12);
+          });
+          tl.fromTo("#brand-halo", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 1.4, ease: "power2.out" }, 3.0);
+          tl.fromTo("#brand-c4", { rotationY: 0 }, { rotationY: -8, duration: 6, ease: "sine.inOut", immediateRender: false }, 3.8);
+          tl.fromTo("#brand-tag", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.8, ease: "power3.out" }, 5.2);
+          tl.fromTo("#brand-chain .pill", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.12, ease: "power2.out" }, 6.4);
+          window.__timelines["brand"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

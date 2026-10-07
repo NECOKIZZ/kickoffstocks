@@ -1,0 +1,145 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #settle { position: absolute; inset: 0; }
+        #settle .hd { display: flex; align-items: flex-end; gap: 16px; }
+        #settle .hd h1 { font-size: 40px; }
+        #settle .hd .pill { margin-bottom: 8px; font-size: 13px; }
+        #settle .board { position: absolute; left: 0; top: 112px; width: 760px; padding: 14px 18px; border-radius: 28px; }
+        #settle .th { display: flex; height: 30px; align-items: center; font-family: var(--f-clash); font-weight: 600; font-size: 11px; letter-spacing: 0.14em; color: #6B6F63; padding: 0 12px; }
+        #settle .r { display: flex; align-items: center; height: 44px; padding: 0 12px; border-radius: 12px; font-size: 14px; position: relative; }
+        #settle .r .k { width: 36px; font-family: var(--f-mono); color: #6B6F63; }
+        #settle .r .nm { font-family: var(--f-clash); font-weight: 600; width: 200px; }
+        #settle .r .lg { display: flex; width: 120px; }
+        #settle .r .lg img { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #fff; margin-left: -5px; background: #fff; }
+        #settle .r .rt { width: 90px; font-family: var(--f-mono); font-weight: 600; text-align: right; }
+        #settle .r .res { width: 120px; display: flex; justify-content: center; }
+        #settle .r .po { margin-left: auto; font-family: var(--f-mono); font-weight: 600; width: 90px; text-align: right; }
+        #settle .res .pill, #settle .po { opacity: 0; }
+        #settle .r.me { background: #F1EEFF; box-shadow: inset 0 0 0 1.5px #7B62F6; }
+        #settle .gap { height: 26px; display: flex; align-items: center; padding-left: 48px; color: #6B6F63; font-size: 13px; }
+        #settle .medline { position: relative; height: 0; margin: 4px 0; }
+        #settle .medline .ln { position: absolute; left: 0; right: 0; top: -1px; border-top: 3px dashed #C9A227; transform-origin: 0 50%; }
+        #settle .medline .tg { position: absolute; right: 10px; top: -15px; padding: 3px 10px; border-radius: 999px; background: #C9A227; color: #111; font-family: var(--f-clash); font-weight: 700; font-size: 11px; letter-spacing: 0.14em; }
+        #settle .r.draw { background: #FFF6DD; }
+        #settle .side2 { position: absolute; left: 782px; top: 112px; right: 0; display: flex; flex-direction: column; gap: 16px; }
+        #settle .you { padding: 22px 24px; border-radius: 28px; }
+        #settle .you .lab { font-family: var(--f-clash); font-weight: 600; font-size: 11px; letter-spacing: 0.16em; color: rgba(247,245,240,0.55); }
+        #settle .you .v { font-family: var(--f-display); font-weight: 700; font-size: 64px; letter-spacing: -0.03em; color: #00C805; line-height: 1.05; margin-top: 6px; }
+        #settle .you .s { font-size: 14px; color: rgba(247,245,240,0.72); margin-top: 4px; }
+        #settle .you .claim { margin-top: 16px; width: 100%; height: 48px; font-size: 16px; }
+        #settle .ver { padding: 20px 22px; border-radius: 28px; }
+        #settle .ver h3 { font-family: var(--f-display); font-weight: 600; font-size: 22px; letter-spacing: -0.02em; }
+        #settle .ver .ln2 { display: flex; align-items: center; gap: 10px; font-size: 13.5px; height: 34px; border-top: 1px solid rgba(107,111,99,0.12); }
+        #settle .ver .ln2:first-of-type { border-top: 0; }
+        #settle .ver .ln2 code { font-family: var(--f-mono); font-size: 12.5px; color: #4C4F46; margin-left: auto; }
+        #settle .ver .ok { width: 20px; height: 20px; border-radius: 50%; background: #00C805; color: #0B0B0B; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; flex-shrink: 0; }
+        #settle .term { margin-top: 10px; border-radius: 14px; background: #111210; color: #E8E6DF; padding: 12px 14px; font-family: var(--f-mono); font-size: 12.5px; line-height: 1.7; }
+        #settle .term .g { color: #4ADE80; }
+        #settle .stamp { position: absolute; left: 560px; top: 250px; z-index: 30; padding: 16px 28px; border-radius: 22px; background: #111210; color: #F7F5F0; font-family: var(--f-display); font-weight: 700; font-size: 44px; letter-spacing: -0.03em; box-shadow: 0 24px 60px rgba(0,0,0,0.3); }
+        #settle .stamp span { color: #00C805; }
+      </style>
+      <div id="settle" data-composition-id="settle" data-width="1920" data-height="1080">
+        <div class="app-stage">
+          <div class="cam" id="settle-cam">
+            <div class="app">
+              <div id="settle-side"></div>
+              <div class="main">
+                <div id="settle-tape"></div>
+                <div class="page">
+                  <div class="eyebrow">Leaderboard · Round 12</div>
+                  <div class="hd"><h1>Final standings</h1><span class="pill up" id="settle-pill">✓ Settled · Fri 4:00 PM ET</span></div>
+                  <div class="card board" id="settle-board">
+                    <div class="th"><span style="width:36px">#</span><span style="width:200px">ETF</span><span style="width:120px">BASKET</span><span style="width:90px;text-align:right">RETURN</span><span style="width:120px;text-align:center">RESULT</span><span style="margin-left:auto">PER $5</span></div>
+                    <div id="settle-rows"></div>
+                  </div>
+                  <div class="side2">
+                    <div class="ink-card you" id="settle-you">
+                      <div class="lab">AI CHIPS ONLY · YOUR TICKET</div>
+                      <div class="v num" id="settle-pay">$5.00</div>
+                      <div class="s">+172% on $5 · #2 of 64 · 21 backers paid · basket back in your wallet</div>
+                      <div class="btn3d claim">Claim $13.62</div>
+                    </div>
+                    <div class="card ver" id="settle-ver">
+                      <h3>Verify this round</h3>
+                      <div class="ln2"><span class="ok">✓</span>Inputs public<code>/api/rounds/12/inputs</code></div>
+                      <div class="ln2"><span class="ok">✓</span>Hash on-chain<code>keccak 0x9f3c…a41e</code></div>
+                      <div class="ln2"><span class="ok">✓</span>Pot adds up<code>LeagueEscrow</code></div>
+                      <div class="term" id="settle-term"><div>$ pnpm verify inputs.json 12</div><div id="settle-t2">recomputed 64 ETFs · 1,128 entries</div><div class="g" id="settle-t3">✓ payouts match the chain exactly</div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="stamp" id="settle-stamp" data-layout-allow-overlap>Friday, <span>4:00 PM</span>. Settled.</div>
+            </div>
+          </div>
+          <div class="sample top">Sample round · prices: Robinhood Chain feeds, 6 Oct</div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          document.getElementById("settle-side").innerHTML = KS.sidebar("board", { addr: "0x4799…28aE", bal: "245 USDG" });
+          document.getElementById("settle-tape").innerHTML = KS.tickerTape("settle-track");
+          const R = [
+            [1, "Space & Rockets", ["SPCX", "RKLB", "PLTR"], 7.92, "win", "$25.77"],
+            [2, "AI Chips Only", ["NVDA", "AMD", "TSM", "MU"], 6.84, "win", "$13.62", "me"],
+            [3, "Agent Alpha", ["NVDA", "PLTR", "MSFT", "BTC"], 5.12, "win", "$7.66", "", true],
+            [4, "Quantum Leap", ["IONQ", "RGTI", "NBIS"], 4.47, "win", "$6.80"],
+            [5, "Mag 7 Lite", ["AAPL", "MSFT", "GOOGL", "AMZN"], 2.31, "win", "$5.57"],
+            ["gap", "··· 26 more above MEDIAN"],
+            [32, "Boring But Rich", ["SPY", "QQQ", "SGOV"], 1.21, "win", "$5.34"],
+            ["med"],
+            [33, "Crypto Adjacent", ["COIN", "MSTR", "ETH"], 1.08, "draw", "$5.00"],
+            [34, "Meme Season", ["GME", "TSLA", "USAR"], -0.37, "lose", "$0.00"],
+            ["gap", "··· 30 more below MEDIAN"],
+            [64, "Oil Bet", ["USO", "SLV", "EWY"], -4.86, "lose", "$0.00"],
+          ];
+          const lab = { win: ['up', 'Win'], draw: ['draw', 'Draw'], lose: ['dn', 'Lose'] };
+          document.getElementById("settle-rows").innerHTML = R.map((r, i) => {
+            if (r[0] === "gap") return `<div class="gap" id="settle-r${i}">${r[1]}</div>`;
+            if (r[0] === "med") return `<div class="medline" id="settle-r${i}"><div class="ln" id="settle-ln"></div><span class="tg" id="settle-tg">MEDIAN +1.08%</span></div>`;
+            const [k, n, ts, ret, res, po, cls, ag] = r;
+            return `<div class="r ${cls || ""} ${res === "draw" ? "draw" : ""}" id="settle-r${i}"><span class="k">${k}</span><span class="nm">${n}${ag ? ' <span class="pill ag" style="font-size:10px;padding:2px 7px;margin-left:4px">Agent</span>' : ""}</span>` +
+              `<span class="lg">${ts.map((t) => `<img src="${KS.L(t)}">`).join("")}</span><span class="rt" style="color:${ret >= 1.08 ? (ret === 1.08 ? "#8A6100" : "#007A03") : "#D4183D"}">${KS.pct(ret)}</span>` +
+              `<span class="res"><span class="pill ${lab[res][0]}" id="settle-p${i}">${lab[res][1]}</span></span><span class="po" id="settle-po${i}">${po}</span></div>`;
+          }).join("");
+          KS.layered(`[data-composition-id="settle"] .app *`);
+          const tl = gsap.timeline({ paused: true });
+          tl.fromTo("#settle-track", { x: 0 }, { x: -1600, duration: 18, ease: "none" }, 0);
+          // Bell: the stamp, then the table.
+          tl.fromTo("#settle-stamp", { opacity: 0, scale: 0.8, y: 20 }, { opacity: 1, scale: 1, y: 0, duration: 0.6, ease: "back.out(1.8)" }, 0.3);
+          tl.to("#settle-stamp", { opacity: 0, scale: 0.94, y: -20, duration: 0.45, ease: "power2.in" }, 2.1);
+          tl.fromTo("#settle .page > .eyebrow, #settle .hd", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: "power3.out" }, 2.3);
+          tl.fromTo("#settle-board", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 2.5);
+          tl.fromTo("#settle-rows > *", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.4, stagger: 0.07, ease: "power2.out" }, 2.8);
+          // MEDIAN drops in, then results pop above / on / below it.
+          tl.fromTo("#settle-ln", { scaleX: 0 }, { scaleX: 1, duration: 0.8, ease: "power3.inOut" }, 4.0);
+          tl.fromTo("#settle-tg", { opacity: 0, x: 20 }, { opacity: 1, x: 0, duration: 0.4, ease: "power2.out" }, 4.6);
+          const idx = R.map((r, i) => (typeof r[0] === "number" ? i : -1)).filter((i) => i >= 0);
+          idx.forEach((i, j) => {
+            tl.fromTo("#settle-p" + i, { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(2.5)", immediateRender: false }, 5.2 + j * 0.12);
+            tl.fromTo("#settle-po" + i, { opacity: 0 }, { opacity: 1, duration: 0.3, immediateRender: false }, 5.4 + j * 0.12);
+          });
+          tl.fromTo("#settle-r8", { boxShadow: "0 0 0 0 rgba(201,162,39,0)" }, { boxShadow: "0 0 0 4px rgba(201,162,39,0.55)", duration: 0.5, yoyo: true, repeat: 1, ease: "sine.inOut" }, 7.0);
+          // Your payout.
+          tl.fromTo("#settle-you", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 7.6);
+          KS.count(tl, document.getElementById("settle-pay"), 5, 13.62, 8.0, 1.6, (v) => KS.money(v));
+          // Verify.
+          tl.fromTo("#settle-ver", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 11.0);
+          tl.fromTo("#settle-ver .ln2", { opacity: 0, x: -10 }, { opacity: 1, x: 0, duration: 0.35, stagger: 0.25, ease: "power2.out" }, 11.4);
+          tl.fromTo("#settle-term", { opacity: 0 }, { opacity: 1, duration: 0.3 }, 12.4);
+          tl.fromTo("#settle-t2", { opacity: 0 }, { opacity: 1, duration: 0.2 }, 13.1);
+          tl.fromTo("#settle-t3", { opacity: 0 }, { opacity: 1, duration: 0.2 }, 13.7);
+          // Camera: table → payout → verify.
+          tl.fromTo("#settle-cam", { scale: 1, x: 0, y: 0 }, { scale: 1.12, x: -60, y: -40, duration: 3.5, ease: "sine.inOut" }, 3.0);
+          tl.to("#settle-cam", { scale: 1.15, x: -765, y: -12, duration: 1.6, ease: "power2.inOut" }, 7.4);
+          tl.to("#settle-cam", { scale: 1.15, x: -765, y: -265, duration: 1.4, ease: "power2.inOut" }, 11.0);
+          window.__timelines["settle"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

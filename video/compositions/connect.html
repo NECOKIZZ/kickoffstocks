@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #connect { position: absolute; inset: 0; }
+        #connect .banner { margin-top: 26px; display: flex; gap: 16px; }
+        #connect .rb { flex: 1; padding: 20px 24px; display: flex; align-items: center; gap: 18px; }
+        #connect .rb .k { font-family: var(--f-clash); font-weight: 600; font-size: 11px; letter-spacing: 0.16em; color: #6B6F63; }
+        #connect .rb .v { font-family: var(--f-display); font-weight: 600; font-size: 26px; letter-spacing: -0.02em; margin-top: 2px; }
+        #connect .rb .v.mono { font-family: var(--f-mono); font-size: 22px; font-weight: 600; }
+        #connect .list { margin-top: 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        #connect .etf { padding: 16px 18px; display: flex; align-items: center; gap: 14px; }
+        #connect .etf .nm { font-family: var(--f-clash); font-weight: 600; font-size: 16px; }
+        #connect .etf .by { font-size: 12.5px; color: #6B6F63; }
+        #connect .etf .lg { display: flex; margin-left: auto; }
+        #connect .etf .lg img { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; margin-left: -8px; background: #fff; }
+        #connect .etf .bk { font-family: var(--f-mono); font-size: 12px; color: #6B6F63; width: 86px; text-align: right; }
+        #connect .veil { position: absolute; inset: 0; background: rgba(17,18,16,0.35); backdrop-filter: blur(6px); z-index: 20; }
+        #connect .modal { position: absolute; left: 500px; top: 150px; width: 440px; z-index: 21; background: #F7F5F0; border-radius: 28px; padding: 28px; box-shadow: 0 30px 80px rgba(0,0,0,0.3); }
+        #connect .modal .eyebrow { font-size: 11px; color: #6B6F63; letter-spacing: 0.16em; }
+        #connect .modal h2 { font-family: var(--f-display); font-weight: 600; font-size: 32px; letter-spacing: -0.02em; margin-top: 6px; }
+        #connect .modal p { font-size: 14px; color: #4C4F46; margin-top: 6px; }
+        #connect .opt { display: flex; align-items: center; gap: 14px; margin-top: 10px; padding: 12px 14px; border-radius: 16px; background: #fff; border: 1px solid rgba(107,111,99,0.18); font-family: var(--f-clash); font-weight: 600; font-size: 16px; }
+        #connect .opt .ic { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-family: var(--f-card); font-weight: 900; font-size: 18px; }
+        #connect .opt .tag { margin-left: auto; font-size: 11px; color: #6B6F63; font-family: var(--f-sans); font-weight: 500; }
+        #connect .opt.sel { border: 2px solid #7B62F6; background: #F4F1FF; }
+        #connect .wait { opacity: 0; display: flex; align-items: center; gap: 12px; margin-top: 16px; padding: 14px; border-radius: 16px; background: #EDEAE0; font-size: 14px; color: #3C3E37; }
+        #connect .spin { width: 20px; height: 20px; border-radius: 50%; border: 3px solid rgba(123,98,246,0.25); border-top-color: #7B62F6; }
+        #connect .toast { position: absolute; left: 50%; top: 58px; margin-left: -230px; width: 460px; white-space: nowrap; z-index: 30; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 16px; background: #111210; color: #F7F5F0; font-size: 14px; box-shadow: 0 16px 40px rgba(0,0,0,0.25); }
+        #connect .toast .ok { width: 24px; height: 24px; border-radius: 50%; background: #00C805; color: #0B0B0B; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+        #connect .wslot { position: absolute; left: 24px; right: 24px; bottom: 24px; height: 48px; }
+        #connect .wslot .wallet { position: absolute; inset: 0; margin: 0; }
+      </style>
+      <div id="connect" data-composition-id="connect" data-width="1920" data-height="1080">
+        <div class="app-stage">
+          <div class="cam" id="connect-cam">
+            <div class="app" id="connect-app">
+              <div id="connect-side"></div>
+              <div class="main">
+                <div id="connect-tape"></div>
+                <div class="page">
+                  <div class="eyebrow">This week</div>
+                  <h1>The league</h1>
+                  <div class="lede">Every ETF is the locked basket of its creator. Back one with a $5 ticket, or build your own. Above MEDIAN wins on Friday.</div>
+                  <div class="banner">
+                    <div class="card rb"><div><div class="k">ROUND 12</div><div class="v">Entries open</div></div><span class="pill up" style="margin-left:auto">● Live</span></div>
+                    <div class="card rb"><div><div class="k">ENTRIES CLOSE</div><div class="v mono">Mon 9:30 ET</div></div></div>
+                    <div class="card rb"><div><div class="k">IN THE ROUND</div><div class="v">62 ETFs · 1,104 tickets</div></div></div>
+                  </div>
+                  <div class="list" id="connect-list"></div>
+                </div>
+              </div>
+              <div class="veil" id="connect-veil"></div>
+              <div class="modal" id="connect-modal" data-layout-allow-overlap>
+                <div class="eyebrow">STEP 1 OF 5</div>
+                <h2>Connect a wallet</h2>
+                <p>On Robinhood Chain. No account, no custody: you sign everything yourself.</p>
+                <div class="opt" id="connect-o1"><span class="ic" style="background:#0B8F3A">R</span>Robinhood Wallet<span class="tag">Recommended</span></div>
+                <div class="opt"><span class="ic" style="background:#E8831D">M</span>MetaMask<span class="tag">Browser</span></div>
+                <div class="opt"><span class="ic" style="background:#7084FF">R</span>Rabby<span class="tag">Browser</span></div>
+                <div class="opt"><span class="ic" style="background:#3B99FC">W</span>WalletConnect<span class="tag">Mobile</span></div>
+                <div class="wait" id="connect-wait"><span class="spin" id="connect-spin"></span>Approve the connection in Robinhood Wallet…</div>
+              </div>
+              <div class="toast" id="connect-toast" data-layout-allow-overlap><span class="ok">✓</span>Connected to Robinhood Chain · 250.00 USDG</div>
+              <div class="cursor" id="connect-cur" style="width:26px;height:26px"></div>
+              <div class="ripple" id="connect-rip"></div>
+            </div>
+          </div>
+          <div class="sample top">Sample round · prices: Robinhood Chain feeds, 6 Oct</div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          const side = KS.sidebar("league", null);
+          document.getElementById("connect-side").innerHTML = side;
+          // Two wallet buttons in one slot: crossfade from "Connect" to the connected chip.
+          const sideEl = document.querySelector("#connect-side .side");
+          const old = sideEl.querySelector(".wallet");
+          const slot = document.createElement("div");
+          slot.style.cssText = "position:relative;height:48px;margin-top:10px";
+          old.replaceWith(slot);
+          slot.innerHTML = '<div class="wallet" id="connect-w0" style="position:absolute;inset:0;margin:0">Connect wallet</div>' +
+            '<div class="wallet connected" id="connect-w1" style="position:absolute;inset:0;margin:0"><span style="display:flex;align-items:center"><span class="dot"></span><span class="mono" style="font-size:13px">0x4799…28aE</span></span><span class="mono" style="font-size:12px;color:#B9BCB0">250 USDG</span></div>';
+          document.getElementById("connect-tape").innerHTML = KS.tickerTape("connect-track");
+          const etfs = [
+            ["Space & Rockets", "0x91c2…0b7e", ["SPCX", "RKLB", "PLTR"], 38],
+            ["Quantum Leap", "0x2f04…e19a", ["IONQ", "RGTI", "NBIS"], 27],
+            ["Mag 7 Lite", "0x7aa1…44d0", ["AAPL", "MSFT", "GOOGL", "AMZN"], 31],
+            ["Boring But Rich", "0xc3d8…9f12", ["SPY", "QQQ", "SGOV"], 19],
+            ["Crypto Adjacent", "0x5e6b…a7c3", ["COIN", "MSTR", "ETH"], 14],
+            ["Meme Season", "0x0d4f…6b21", ["GME", "TSLA", "USAR"], 22],
+          ];
+          document.getElementById("connect-list").innerHTML = etfs
+            .map(([n, by, ts, b]) => `<div class="card etf"><div><div class="nm">${n}</div><div class="by">by ${by}</div></div><div class="lg">${ts.map((t) => `<img src="${KS.L(t)}">`).join("")}</div><div class="bk">${b} backers</div></div>`)
+            .join("");
+          document.getElementById("connect-cur").innerHTML = KS.CURSOR.replace(/34/g, "26");
+
+          KS.layered("#connect-app *");
+          const tl = gsap.timeline({ paused: true });
+          tl.fromTo("#connect-track", { x: 0 }, { x: -900, duration: 10, ease: "none" }, 0);
+          tl.fromTo("#connect .page > *", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.08, ease: "power3.out" }, 0.2);
+          tl.fromTo("#connect-list .etf", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.06, ease: "power2.out" }, 0.7);
+          // Cursor → Connect wallet.
+          const cur = "#connect-cur", rip = "#connect-rip";
+          tl.fromTo(cur, { x: 760, y: 560, scale: 1, opacity: 0 }, { x: 700, y: 520, opacity: 1, duration: 0.4 }, 0.6);
+          let t = KS.click(tl, cur, rip, 120, 768, 1.1, 0.9);
+          tl.fromTo("#connect-veil", { opacity: 0 }, { opacity: 1, duration: 0.4 }, t);
+          tl.fromTo("#connect-modal", { opacity: 0, y: 30, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.5, ease: "back.out(1.4)" }, t);
+          tl.fromTo("#connect-modal .opt", { opacity: 0, x: -14 }, { opacity: 1, x: 0, duration: 0.35, stagger: 0.07, ease: "power2.out" }, t + 0.2);
+          // Pick Robinhood Wallet.
+          t = KS.click(tl, cur, rip, 640, 352, t + 1.1, 0.8);
+          tl.fromTo("#connect-o1", { borderColor: "rgba(107,111,99,0.18)", backgroundColor: "#FFFFFF" }, { borderColor: "#7B62F6", backgroundColor: "#F4F1FF", duration: 0.2 }, t - 0.2);
+          tl.fromTo("#connect-wait", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.3, immediateRender: false }, t);
+          tl.fromTo("#connect-spin", { rotation: 0 }, { rotation: 720, duration: 1.6, ease: "none" }, t);
+          // Approved: modal out, chip in, toast.
+          const ok = t + 1.6;
+          tl.to("#connect-modal", { opacity: 0, y: 20, scale: 0.97, duration: 0.35, ease: "power2.in" }, ok);
+          tl.to("#connect-veil", { opacity: 0, duration: 0.4 }, ok + 0.1);
+          tl.fromTo("#connect-w1", { opacity: 0, scale: 0.9 }, { opacity: 1, scale: 1, duration: 0.45, ease: "back.out(2)" }, ok + 0.3);
+          tl.to("#connect-w0", { opacity: 0, duration: 0.25 }, ok + 0.3);
+          tl.fromTo("#connect-toast", { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.45, ease: "back.out(1.6)" }, ok + 0.5);
+          tl.to(cur, { x: 330, y: 700, opacity: 0, duration: 0.6, ease: "power2.inOut" }, ok + 0.4);
+          // Camera: gentle push to the wallet chip.
+          tl.fromTo("#connect-cam", { scale: 1, x: 0, y: 0 }, { scale: 1.18, x: -20, y: -190, duration: 2.2, ease: "power2.inOut" }, ok + 0.6);
+          window.__timelines["connect"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

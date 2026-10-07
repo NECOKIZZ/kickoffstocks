@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #hook { position: absolute; inset: 0; }
+        #hook .bub { position: absolute; display: flex; align-items: center; gap: 14px; padding: 16px 24px 16px 16px; border-radius: 26px;
+          background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); color: #F7F5F0; font-size: 28px; font-weight: 500; white-space: nowrap; }
+        #hook .bub img { width: 44px; height: 44px; border-radius: 50%; background: #fff; }
+        #hook .bub .who { font-family: var(--f-clash); font-weight: 600; font-size: 18px; color: rgba(247,245,240,0.5); margin-right: 4px; }
+        #hook .field { position: absolute; inset: 0; }
+        #hook .center { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; }
+        #hook .line { font-size: 120px; position: absolute; width: 1600px; }
+        #hook .line i { color: #00C805; }
+      </style>
+      <div id="hook" data-composition-id="hook" data-width="1920" data-height="1080">
+        <div class="scene dark">
+          <div class="wash"></div>
+          <div class="grid"></div>
+          <div class="field" id="hook-field" data-layout-ignore></div>
+          <div class="center">
+            <div class="line display" id="hook-l1">Everyone has a stock pick.</div>
+            <div class="line display" id="hook-l2">Nobody gets <i>paid</i> for being right.</div>
+          </div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          const field = document.getElementById("hook-field");
+          const msgs = [
+            ["NVDA", "Sam", "NVDA to the moon", 140, 170],
+            ["TSLA", "Ade", "TSLA is cooked, sell", 1240, 120],
+            ["PLTR", "Mia", "called PLTR at $20 btw", 1300, 820],
+            ["AMD", "Leo", "buy the AMD dip?", 180, 760],
+            ["SPY", "Kofi", "just SPY and chill", 760, 900],
+            ["MU", "Jo", "MU is the sleeper pick", 820, 70],
+            ["COIN", "Rae", "COIN when BTC rips", 90, 470],
+            ["GME", "Ty", "GME one more time", 1420, 480],
+          ];
+          msgs.forEach(([t, who, text, x, y], i) => {
+            const d = document.createElement("div");
+            d.className = "bub";
+            d.id = "hook-b" + i;
+            d.style.left = x + "px";
+            d.style.top = y + "px";
+            d.innerHTML = `<img src="${KS.L(t)}"><span class="who">${who}</span>${text}`;
+            field.appendChild(d);
+          });
+          const tl = gsap.timeline({ paused: true });
+          msgs.forEach((m, i) => {
+            const at = 0.15 + i * 0.22;
+            tl.fromTo("#hook-b" + i, { opacity: 0, y: 40, scale: 0.92 }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: "back.out(1.6)" }, at);
+            tl.fromTo("#hook-b" + i, { x: 0 }, { x: (i % 2 ? -1 : 1) * 40, duration: 7.5, ease: "none" }, at);
+          });
+          tl.fromTo("#hook-l1", { opacity: 0, y: 30, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 1.5);
+          tl.to("#hook-field", { opacity: 0.28, filter: "blur(6px)", duration: 0.8, ease: "power2.inOut" }, 1.7);
+          tl.to("#hook-l1", { opacity: 0, y: -30, filter: "blur(10px)", duration: 0.5, ease: "power2.in" }, 3.9);
+          tl.fromTo("#hook-l2", { opacity: 0, y: 30, filter: "blur(10px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.8, ease: "power3.out" }, 4.3);
+          tl.to("#hook-field", { opacity: 0.12, duration: 0.8 }, 4.3);
+          tl.fromTo("#hook-l2", { scale: 1 }, { scale: 1.04, duration: 3.6, ease: "none", immediateRender: false }, 4.3);
+          window.__timelines["hook"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

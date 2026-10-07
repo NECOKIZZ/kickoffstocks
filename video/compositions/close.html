@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #close { position: absolute; inset: 0; }
+        #close .arc { position: absolute; left: 0; right: 0; top: 0; height: 1080px; }
+        #close .slot { position: absolute; left: 851px; top: 640px; zoom: 1.0; transform-origin: 50% 100%; }
+        #close .ctr { position: absolute; left: 0; right: 0; top: 150px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        #close .lock { display: flex; align-items: center; gap: 18px; }
+        #close .lock .bar { width: 1px; height: 40px; background: rgba(255,255,255,0.3); }
+        #close .lock .word { font-family: var(--f-display); font-weight: 700; font-size: 40px; color: #fff; letter-spacing: -0.02em; }
+        #close .lock .word i { font-weight: 400; }
+        #close .big { font-size: 150px; color: #fff; margin-top: 40px; }
+        #close .big i { color: #00C805; }
+        #close .tag { font-family: var(--f-display); font-style: italic; font-size: 46px; color: rgba(247,245,240,0.8); margin-top: 22px; }
+        #close .pills { display: flex; gap: 14px; margin-top: 40px; }
+        #close .pills .pill { font-size: 22px; padding: 12px 22px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.14); color: #F7F5F0; }
+        #close .pills .pill.go { background: #00C805; color: #0B0B0B; border-color: #00C805; box-shadow: 0 5px 0 #007A03; }
+        #close .black { position: absolute; inset: 0; background: #000; opacity: 0; }
+      </style>
+      <div id="close" data-composition-id="close" data-width="1920" data-height="1080">
+        <div class="scene dark">
+          <div class="wash"></div>
+          <div class="grid"></div>
+          <div class="arc" id="close-arc" data-layout-ignore></div>
+          <div class="ctr">
+            <div class="lock" id="close-lock"></div>
+            <div class="display big" id="close-big">Real stocks. <i>Real</i> stakes.</div>
+            <div class="tag" id="close-tag">Build an ETF. Beat the median. Get paid Friday.</div>
+            <div class="pills" id="close-pills">
+              <span class="pill">● Live on Robinhood Chain testnet</span>
+              <span class="pill go">stocks.kickoff.cash</span>
+              <span class="pill">Colosseum · Robinhood Chain track</span>
+            </div>
+          </div>
+          <div class="black" id="close-black"></div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          document.getElementById("close-lock").innerHTML = KS.mark(52, "#fff") + '<span class="bar"></span><span class="word">Profit <i>Markets</i></span>' + KS.trend(32);
+          const arc = document.getElementById("close-arc");
+          const deck = ["SPY", "AMZN", "META", "MSFT", "NVDA", "TSLA", "AAPL", "GOOGL", "AMD", "BTC", "ETH"];
+          deck.forEach((t, i) => {
+            const s = document.createElement("div");
+            s.className = "slot";
+            s.id = "close-c" + i;
+            s.innerHTML = KS.card(t, "big");
+            arc.appendChild(s);
+          });
+          const tl = gsap.timeline({ paused: true });
+          const n = deck.length, mid = (n - 1) / 2;
+          deck.forEach((t, i) => {
+            const k = i - mid;
+            tl.fromTo("#close-c" + i, { opacity: 0, y: 500, rotation: 0, x: 0 },
+              { opacity: 0.5, y: 170 + Math.abs(k) * Math.abs(k) * 9, x: k * 150, rotation: k * 6, duration: 1.1, ease: "power3.out" }, 0.2 + Math.abs(k) * 0.07);
+          });
+          tl.fromTo("#close-lock", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 0.6);
+          tl.fromTo("#close-big", { opacity: 0, y: 40, filter: "blur(12px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.9, ease: "power4.out" }, 1.0);
+          tl.fromTo("#close-tag", { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.7, ease: "power3.out" }, 4.6);
+          tl.fromTo("#close-pills .pill", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.12, ease: "back.out(1.6)" }, 6.2);
+          tl.fromTo("#close-arc", { y: 0 }, { y: -30, duration: 11, ease: "sine.inOut" }, 0.5);
+          tl.fromTo("#close-black", { opacity: 0 }, { opacity: 1, duration: 1.0, ease: "power2.in" }, 11.0);
+          window.__timelines["close"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

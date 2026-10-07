@@ -1,0 +1,213 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #live { position: absolute; inset: 0; }
+        #live .hd { display: flex; align-items: flex-end; gap: 16px; }
+        #live .hd h1 { font-size: 40px; }
+        #live .hd .pill { margin-bottom: 8px; font-size: 13px; padding: 5px 12px; }
+        #live .by { color: #6B6F63; font-size: 14px; margin-top: 4px; display: flex; gap: 14px; align-items: center; }
+        #live .by .hand { display: flex; gap: 6px; }
+        #live .cols { position: absolute; left: 0; right: 0; top: 136px; bottom: 20px; display: flex; gap: 22px; }
+        #live .lc { flex: 1; display: flex; flex-direction: column; gap: 16px; }
+        #live .chart { padding: 20px 22px; border-radius: 28px; height: 400px; position: relative; }
+        #live .ck { display: flex; align-items: flex-start; }
+        #live .ck .big { font-family: var(--f-display); font-weight: 700; font-size: 54px; letter-spacing: -0.03em; line-height: 1; color: #007A03; }
+        #live .ck .lab { font-family: var(--f-clash); font-weight: 600; font-size: 11px; letter-spacing: 0.16em; color: #6B6F63; margin-bottom: 6px; }
+        #live .ck .vs { margin-left: 34px; }
+        #live .ck .vs .v { font-family: var(--f-mono); font-size: 22px; font-weight: 600; margin-top: 8px; }
+        #live .ck .clock { margin-left: auto; text-align: right; }
+        #live .ck .clock .v { font-family: var(--f-mono); font-size: 18px; font-weight: 600; margin-top: 8px; }
+        #live svg.plot { position: absolute; left: 22px; top: 120px; }
+        #live .hold { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        #live .hc { padding: 12px 14px; border-radius: 20px; display: flex; align-items: center; gap: 12px; }
+        #live .hc img { width: 34px; height: 34px; border-radius: 50%; }
+        #live .hc .t { font-family: var(--f-clash); font-weight: 600; font-size: 15px; }
+        #live .hc .w { font-family: var(--f-mono); font-size: 11px; color: #6B6F63; }
+        #live .hc .p { margin-left: auto; text-align: right; font-family: var(--f-mono); font-size: 13px; font-weight: 600; }
+        #live .hc .c { font-size: 12px; color: #007A03; }
+        #live .rc { width: 392px; display: flex; flex-direction: column; gap: 16px; }
+        #live .tbl { padding: 20px 20px 16px; border-radius: 28px; position: relative; }
+        #live .tbl h3 { font-family: var(--f-display); font-weight: 600; font-size: 22px; letter-spacing: -0.02em; }
+        #live .tbl .sub { font-size: 12.5px; color: #6B6F63; }
+        #live .rowsbox { position: relative; height: 330px; margin-top: 12px; }
+        #live .tr { position: absolute; left: 0; right: 0; height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 10px; border-radius: 12px; font-size: 14px; will-change: transform; background: #FFFFFF; }
+        #live .tr .nm { font-family: var(--f-clash); font-weight: 600; }
+        #live .tr .lg { display: flex; }
+        #live .tr .lg img { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid #fff; margin-left: -5px; background: #fff; }
+        #live .tr .v { margin-left: auto; font-family: var(--f-mono); font-weight: 600; font-size: 13px; }
+        #live .tr.me { background: #F1EEFF; box-shadow: inset 0 0 0 1.5px #7B62F6, 0 6px 16px rgba(78,60,181,0.18); z-index: 3; }
+        #live .tr.med { background: #FFF6DD; color: #8A6100; }
+        #live .tr.med .nm { letter-spacing: 0.14em; font-size: 12px; }
+        #live .pay { padding: 18px 20px; border-radius: 24px; }
+        #live .pay .lab { font-family: var(--f-clash); font-weight: 600; font-size: 11px; letter-spacing: 0.16em; color: rgba(247,245,240,0.55); }
+        #live .pay .v { font-family: var(--f-display); font-weight: 700; font-size: 40px; letter-spacing: -0.03em; margin-top: 4px; color: #00C805; }
+        #live .pay .s { font-size: 13px; color: rgba(247,245,240,0.7); }
+      </style>
+      <div id="live" data-composition-id="live" data-width="1920" data-height="1080">
+        <div class="app-stage">
+          <div class="cam" id="live-cam">
+            <div class="app">
+              <div id="live-side"></div>
+              <div class="main">
+                <div id="live-tape"></div>
+                <div class="page">
+                  <div class="eyebrow">ETF · Round 12 · scoring live</div>
+                  <div class="hd"><h1>AI Chips Only</h1><span class="pill up" id="live-status">● Winning now</span></div>
+                  <div class="by"><span>by 0x4799…28aE · 21 backers · locked $250.00</span><span class="hand z062" id="live-hand"></span></div>
+                  <div class="cols">
+                    <div class="lc">
+                      <div class="card chart" id="live-chart">
+                        <div class="ck">
+                          <div><div class="lab">RETURN SINCE MONDAY'S OPEN</div><div class="big num" id="live-ret">+0.00%</div></div>
+                          <div class="vs"><div class="lab">MEDIAN</div><div class="v num" id="live-med">+0.00%</div></div>
+                          <div class="clock"><div class="lab">CHAINLINK · ROBINHOOD CHAIN</div><div class="v" id="live-clock">Mon 9:30 AM ET</div></div>
+                        </div>
+                        <svg class="plot" width="676" height="260" viewBox="0 0 676 260" id="live-svg">
+                          <g stroke="rgba(107,111,99,0.14)" stroke-width="1">
+                            <line x1="0" y1="40" x2="676" y2="40" /><line x1="0" y1="110" x2="676" y2="110" /><line x1="0" y1="180" x2="676" y2="180" /><line x1="0" y1="250" x2="676" y2="250" />
+                          </g>
+                          <path id="live-area" fill="rgba(0,200,5,0.10)" d="" />
+                          <path id="live-medp" fill="none" stroke="#C9A227" stroke-width="2.5" stroke-dasharray="7 7" d="" />
+                          <path id="live-path" fill="none" stroke="#00A804" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" d="" />
+                          <circle id="live-dot" r="8" fill="#00C805" stroke="#fff" stroke-width="3" cx="0" cy="180" />
+                          <g font-family="Inter" font-size="12" fill="#6B6F63"><text x="0" y="258" dy="0">Mon</text><text x="168" y="258">Tue</text><text x="336" y="258">Wed</text><text x="504" y="258">Thu</text><text x="640" y="258">Fri</text></g>
+                        </svg>
+                      </div>
+                      <div class="hold" id="live-hold"></div>
+                    </div>
+                    <div class="rc">
+                      <div class="card tbl">
+                        <h3>Live table</h3>
+                        <div class="sub">62 ETFs · re-scored every price update</div>
+                        <div class="rowsbox" id="live-rows"></div>
+                      </div>
+                      <div class="ink-card pay">
+                        <div class="lab">IF THE ROUND ENDED NOW</div>
+                        <div class="v num" id="live-pay">$5.00</div>
+                        <div class="s">on your $5 ticket · above MEDIAN</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="sample top">Sample round · prices: Robinhood Chain feeds, 6 Oct</div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          document.getElementById("live-side").innerHTML = KS.sidebar("league", { addr: "0x4799…28aE", bal: "245 USDG" });
+          document.getElementById("live-tape").innerHTML = KS.tickerTape("live-track");
+          document.getElementById("live-hand").innerHTML = [["NVDA", 35], ["AMD", 25], ["TSM", 20], ["MU", 20]].map(([t, w]) => KS.card(t, "tiny", { weight: w })).join("");
+          const H = [["NVDA", 35, 4.1], ["AMD", 25, 3.62], ["TSM", 20, 2.2], ["MU", 20, 1.7]];
+          document.getElementById("live-hold").innerHTML = H.map(([t, w]) =>
+            `<div class="card hc"><img src="${KS.L(t)}"><div><div class="t">${t}</div><div class="w">${w}%</div></div><div class="p"><div id="live-hp-${t}">${KS.money(KS.S[t][2])}</div><div class="c" id="live-hc-${t}">▲ 0.00%</div></div></div>`).join("");
+
+          // Baked, deterministic price paths (seeded), Mon open → Wed afternoon.
+          const N = 120, END = 0.62; // fraction of the week shown when the scene ends
+          const r = KS.rng(1207);
+          const walk = (final, vol, seed) => {
+            const g = KS.rng(seed), out = [0];
+            for (let i = 1; i <= N; i++) out.push(out[i - 1] + (g() - 0.5) * vol);
+            const drift = out[N];
+            return out.map((v, i) => v - (drift * i) / N + (final * i) / N);
+          };
+          const etf = walk(3.12, 0.55, 11);
+          const med = walk(1.04, 0.22, 29);
+          const X = (i) => (i / N) * 676 * END;
+          const Y = (v) => 180 - v * 32;
+          const path = (arr, k) => arr.slice(0, k + 1).map((v, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join(" ");
+
+          const T = [
+            ["AI Chips Only", ["NVDA", "AMD", "TSM", "MU"], 3.12, 21, "me"],
+            ["Space & Rockets", ["SPCX", "RKLB", "PLTR"], 2.95, 5, ""],
+            ["Quantum Leap", ["IONQ", "RGTI", "NBIS"], 2.1, 47, ""],
+            ["Mag 7 Lite", ["AAPL", "MSFT", "GOOGL", "AMZN"], 1.48, 83, ""],
+            ["MEDIAN", [], 1.04, 29, "med"],
+            ["Meme Season", ["GME", "TSLA", "USAR"], -0.81, 61, ""],
+          ];
+          const rowsEl = document.getElementById("live-rows");
+          rowsEl.innerHTML = T.map(([n, ts, , , cls], i) =>
+            `<div class="tr ${cls}" id="live-tr${i}"><span class="nm">${n}</span><span class="lg">${ts.map((t) => `<img src="${KS.L(t)}">`).join("")}</span><span class="v" id="live-tv${i}">+0.00%</span></div>`).join("");
+          KS.layered("#live-rows *");
+          const series = T.map(([, , f, seed], i) => (i === 0 ? etf : i === 4 ? med : walk(f, 0.5, seed)));
+          // Early in the week the others lead; AI Chips climbs through the field.
+          series[1] = series[1].map((v, i) => v + Math.sin((i / N) * Math.PI) * 1.4);
+          series[2] = series[2].map((v, i) => v + Math.sin((i / N) * Math.PI) * 1.1);
+          series[3] = series[3].map((v, i) => v + Math.sin((i / N) * Math.PI) * 0.9);
+
+          const els = {
+            path: document.getElementById("live-path"), medp: document.getElementById("live-medp"), area: document.getElementById("live-area"),
+            dot: document.getElementById("live-dot"), ret: document.getElementById("live-ret"), med: document.getElementById("live-med"),
+            clock: document.getElementById("live-clock"), pay: document.getElementById("live-pay"),
+          };
+          const days = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+          const sig = (x) => 1 / (1 + Math.exp(-x));
+          function frame(p) {
+            const f = p * N, k = Math.max(1, Math.floor(f));
+            const lerp = (a) => a[Math.min(N, Math.floor(f))] + (a[Math.min(N, Math.floor(f) + 1)] - a[Math.min(N, Math.floor(f))]) * (f - Math.floor(f));
+            els.path.setAttribute("d", path(etf, k));
+            els.medp.setAttribute("d", path(med, k));
+            els.area.setAttribute("d", path(etf, k) + ` L${X(k).toFixed(1)} 180 L0 180 Z`);
+            const ev = lerp(etf), mv = lerp(med);
+            els.dot.setAttribute("cx", X(f).toFixed(1));
+            els.dot.setAttribute("cy", Y(ev).toFixed(1));
+            els.ret.textContent = KS.pct(ev);
+            els.med.textContent = KS.pct(mv);
+            // Week clock: 6.5 market hours a day.
+            const hrs = p * END * 5 * 6.5;
+            const d = Math.min(4, Math.floor(hrs / 6.5));
+            const mins = Math.round(9.5 * 60 + (hrs - d * 6.5) * 60);
+            const hh = Math.floor(mins / 60), mm = mins % 60;
+            els.clock.textContent = `${days[d]} ${((hh + 11) % 12) + 1}:${String(mm).padStart(2, "0")} ${hh >= 12 ? "PM" : "AM"} ET`;
+            els.pay.textContent = KS.money(5 + Math.max(0, ev - mv) * 3.2);
+            H.forEach(([t, , c]) => {
+              const cv = c * (ev / 3.12);
+              document.getElementById("live-hp-" + t).textContent = KS.money(KS.S[t][2] * (1 + cv / 100));
+              document.getElementById("live-hc-" + t).textContent = KS.arrow(cv);
+            });
+            // Continuous ranks: each row's slot = how many rows sit above it.
+            const vals = series.map((s) => lerp(s));
+            const at = (q) => {
+              const g = Math.max(0, Math.min(N, q * N)), a = Math.floor(g), b = Math.min(N, a + 1);
+              // Rank on a smoothed value plus a fading seed order, so near-ties
+              // early in the week don't flicker rows back and forth.
+              const bias = [-0.5, 0.9, 0.6, 0.3, 0, -0.9];
+              const v = series.map((s, i) => {
+                let m = 0;
+                for (let k = 0; k < 6; k++) m += s[Math.max(0, Math.min(N, Math.round(g) - k))] / 6;
+                return m + bias[i] * Math.pow(1 - q, 2);
+              });
+              const order = v.map((x, i) => i).sort((i, j) => v[j] - v[i]);
+              const r = []; order.forEach((i, k) => (r[i] = k)); return r;
+            };
+            const K = 12, acc = new Array(series.length).fill(0);
+            for (let k = 0; k < K; k++) at(p - k * 0.003).forEach((r, i) => (acc[i] += r / K));
+            vals.forEach((v, i) => {
+              const el = document.getElementById("live-tr" + i);
+              el.style.transform = `translateY(${(acc[i] * 48).toFixed(2)}px)`;
+              document.getElementById("live-tv" + i).textContent = KS.pct(v);
+              document.getElementById("live-tv" + i).style.color = i === 4 ? "#8A6100" : v >= vals[4] ? "#007A03" : "#D4183D";
+            });
+          }
+          frame(0);
+          const tl = gsap.timeline({ paused: true });
+          tl.fromTo("#live-track", { x: 0 }, { x: -1700, duration: 19, ease: "none" }, 0);
+          tl.fromTo("#live .page > .eyebrow, #live .hd, #live .by", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: "power3.out" }, 0.15);
+          tl.fromTo("#live-chart, #live-hold .hc, #live .tbl, #live .pay", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, stagger: 0.06, ease: "power3.out" }, 0.35);
+          const prog = { p: 0 };
+          tl.fromTo(prog, { p: 0 }, { p: 1, duration: 16.5, ease: "sine.inOut", onUpdate: () => frame(prog.p) }, 1.0);
+          tl.fromTo("#live-status", { opacity: 0.0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.4, ease: "back.out(2)" }, 7.5);
+          // Camera drifts across the chart, then settles on the live table.
+          tl.fromTo("#live-cam", { scale: 1, x: 0, y: 0 }, { scale: 1.16, x: -180, y: -150, duration: 8, ease: "sine.inOut" }, 1.0);
+          tl.to("#live-cam", { scale: 1.2, x: -560, y: -170, duration: 6, ease: "sine.inOut" }, 9.5);
+          window.__timelines["live"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

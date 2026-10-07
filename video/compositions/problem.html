@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+  <head><meta charset="UTF-8" /></head>
+  <body>
+    <template>
+      <style>
+        #problem { position: absolute; inset: 0; }
+        #problem .row { position: absolute; left: 0; right: 0; top: 190px; display: flex; justify-content: center; gap: 56px; perspective: 1600px; }
+        #problem .pane { width: 700px; height: 560px; border-radius: 36px; padding: 44px 48px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); display: flex; flex-direction: column; }
+        #problem .pane .eyebrow { font-size: 18px; color: rgba(247,245,240,0.55); }
+        #problem .pane h3 { font-size: 58px; margin-top: 14px; color: #F7F5F0; }
+        #problem .pane .say { font-size: 27px; color: rgba(247,245,240,0.72); margin-top: 14px; line-height: 1.35; }
+        #problem .viz { margin-top: auto; height: 210px; border-radius: 22px; background: rgba(0,0,0,0.35); border: 1px solid rgba(255,255,255,0.08); position: relative; overflow: hidden; }
+        #problem .q { position: absolute; left: 0; right: 0; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; text-align: center; }
+        #problem .q .display { font-size: 104px; width: 1500px; color: #F7F5F0; }
+        #problem .q i { color: #00C805; }
+        #problem .lg { position: absolute; left: 24px; right: 200px; top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        #problem .lg .r { display: flex; align-items: center; gap: 14px; height: 50px; padding: 0 16px; border-radius: 14px; background: rgba(255,255,255,0.06); color: #F7F5F0; font-size: 22px; font-family: var(--f-clash); font-weight: 500; }
+        #problem .lg .av { width: 30px; height: 30px; border-radius: 50%; }
+        #problem .lg .pts { margin-left: auto; font-family: var(--f-mono); font-size: 20px; color: rgba(247,245,240,0.7); }
+        #problem .x { position: absolute; right: 22px; top: 20px; font-family: var(--f-clash); font-weight: 600; font-size: 19px; padding: 8px 16px; border-radius: 999px; background: rgba(212,24,61,0.16); color: #FF6B7D; }
+      </style>
+      <div id="problem" data-composition-id="problem" data-width="1920" data-height="1080">
+        <div class="scene dark">
+          <div class="wash"></div>
+          <div class="grid"></div>
+          <div class="row" id="problem-row">
+            <div class="pane" id="problem-a">
+              <div class="eyebrow">Investing apps</div>
+              <h3 class="heading">Built for going it alone.</h3>
+              <div class="say">You, a chart, and silence. Being right earns you nothing extra.</div>
+              <div class="viz">
+                <svg width="604" height="210" viewBox="0 0 604 210" style="position:absolute;left:0;top:0">
+                  <path id="problem-line" d="M20 150 L80 140 L130 158 L190 120 L240 132 L300 96 L350 110 L410 80 L460 98 L520 70 L584 84" fill="none" stroke="rgba(247,245,240,0.55)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <div class="x">1 player</div>
+              </div>
+            </div>
+            <div class="pane" id="problem-b">
+              <div class="eyebrow">Fantasy leagues</div>
+              <h3 class="heading">Social, and fun.</h3>
+              <div class="say">But you never own the players, and the picks aren't real assets.</div>
+              <div class="viz">
+                <div class="lg">
+                  <div class="r"><span class="av" style="background:#7B62F6"></span>Sam's XI<span class="pts">212 pts</span></div>
+                  <div class="r"><span class="av" style="background:#00C805"></span>You<span class="pts">198 pts</span></div>
+                  <div class="r"><span class="av" style="background:#E86A00"></span>Ade FC<span class="pts">176 pts</span></div>
+                </div>
+                <div class="x">Own nothing</div>
+              </div>
+            </div>
+          </div>
+          <div class="q"><div class="display" id="problem-q">What if your picks were <i>real</i>, and the league <i>paid out</i>?</div></div>
+        </div>
+      </div>
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+          const line = document.getElementById("problem-line");
+          const len = 640;
+          line.style.strokeDasharray = len;
+          tl.fromTo("#problem-a", { opacity: 0, y: 60, rotationY: 8 }, { opacity: 1, y: 0, rotationY: 0, duration: 0.9, ease: "power3.out" }, 0.4);
+          tl.fromTo(line, { strokeDashoffset: len }, { strokeDashoffset: 0, duration: 1.6, ease: "power2.out" }, 1.0);
+          tl.fromTo("#problem-b", { opacity: 0, y: 60, rotationY: -8 }, { opacity: 1, y: 0, rotationY: 0, duration: 0.9, ease: "power3.out" }, 2.6);
+          tl.fromTo("#problem-b .r", { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.5, stagger: 0.12, ease: "power2.out" }, 3.1);
+          // The two halves fold into one question.
+          tl.to("#problem-a", { x: 380, scale: 0.8, opacity: 0, filter: "blur(14px)", duration: 0.9, ease: "power3.inOut" }, 6.3);
+          tl.to("#problem-b", { x: -380, scale: 0.8, opacity: 0, filter: "blur(14px)", duration: 0.9, ease: "power3.inOut" }, 6.3);
+          tl.fromTo("#problem-q", { opacity: 0, scale: 0.9, filter: "blur(16px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: 1.0, ease: "power3.out" }, 6.8);
+          tl.fromTo("#problem-q", { y: 0 }, { y: -12, duration: 4.4, ease: "none", immediateRender: false }, 7.8);
+          window.__timelines["problem"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

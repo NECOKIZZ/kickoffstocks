@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Profit Markets by Kickoff: demo</title>
+    <link rel="stylesheet" href="assets/brand.css" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="assets/ks.js"></script>
+    <style>
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #050507; }
+      #root > div[data-composition-src] { position: absolute; inset: 0; will-change: opacity, transform, filter; }
+    </style>
+  </head>
+  <body>
+    <!-- 3:00 demo. Scenes overlap by 0.8s; the root timeline below runs each handoff.
+         Script and timecodes: SCRIPT.md. -->
+    <div id="root" data-composition-id="root" data-width="1920" data-height="1080" data-duration="180">
+      <div id="el-hook" data-composition-id="hook" data-composition-src="compositions/hook.html" data-start="0" data-duration="8.8" data-track-index="1"></div>
+      <div id="el-problem" data-composition-id="problem" data-composition-src="compositions/problem.html" data-start="8" data-duration="12.8" data-track-index="2"></div>
+      <div id="el-brand" data-composition-id="brand" data-composition-src="compositions/brand.html" data-start="20" data-duration="11.8" data-track-index="1"></div>
+      <div id="el-how" data-composition-id="how" data-composition-src="compositions/how.html" data-start="31" data-duration="12.8" data-track-index="2"></div>
+      <div id="el-connect" data-composition-id="connect" data-composition-src="compositions/connect.html" data-start="43" data-duration="10.8" data-track-index="1"></div>
+      <div id="el-build" data-composition-id="build" data-composition-src="compositions/build.html" data-start="53" data-duration="24.8" data-track-index="2"></div>
+      <div id="el-live" data-composition-id="live" data-composition-src="compositions/live.html" data-start="77" data-duration="19.8" data-track-index="1"></div>
+      <div id="el-yield" data-composition-id="yield" data-composition-src="compositions/yield.html" data-start="96" data-duration="15.8" data-track-index="2"></div>
+      <div id="el-agents" data-composition-id="agents" data-composition-src="compositions/agents.html" data-start="111" data-duration="21.8" data-track-index="1"></div>
+      <div id="el-settle" data-composition-id="settle" data-composition-src="compositions/settle.html" data-start="132" data-duration="18.8" data-track-index="2"></div>
+      <div id="el-revenue" data-composition-id="revenue" data-composition-src="compositions/revenue.html" data-start="150" data-duration="18.8" data-track-index="1"></div>
+      <div id="el-close" data-composition-id="close" data-composition-src="compositions/close.html" data-start="168" data-duration="12" data-track-index="2"></div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const D = 0.8;
+      // Primary handoff: blur crossfade (calm, premium). Incoming is on top, so
+      // only the incoming slot needs to fade; the outgoing one softens behind it.
+      function blur(out, inn, T) {
+        tl.fromTo(inn, { opacity: 0, scale: 1.02, filter: "blur(14px)" }, { opacity: 1, scale: 1, filter: "blur(0px)", duration: D, ease: "power2.inOut" }, T);
+        tl.fromTo(out, { scale: 1, filter: "blur(0px)" }, { scale: 0.985, filter: "blur(10px)", duration: D, ease: "power2.inOut", immediateRender: false }, T);
+      }
+      // Accent: zoom through (the brand reveal).
+      function zoom(out, inn, T) {
+        tl.fromTo(out, { scale: 1, opacity: 1, filter: "blur(0px)" }, { scale: 1.35, opacity: 0, filter: "blur(16px)", duration: D, ease: "power3.in", immediateRender: false }, T);
+        tl.fromTo(inn, { scale: 0.82, opacity: 0, filter: "blur(10px)" }, { scale: 1, opacity: 1, filter: "blur(0px)", duration: 1.0, ease: "power3.out" }, T + 0.15);
+      }
+      // Accent: vertical push (into the app, a new section).
+      function push(out, inn, T) {
+        tl.fromTo(out, { yPercent: 0 }, { yPercent: -100, duration: D + 0.2, ease: "power3.inOut", immediateRender: false }, T);
+        tl.fromTo(inn, { yPercent: 100, opacity: 1 }, { yPercent: 0, duration: D + 0.2, ease: "power3.inOut" }, T);
+      }
+      blur("#el-hook", "#el-problem", 8);
+      zoom("#el-problem", "#el-brand", 20);
+      blur("#el-brand", "#el-how", 31);
+      push("#el-how", "#el-connect", 43);
+      blur("#el-connect", "#el-build", 53);
+      blur("#el-build", "#el-live", 77);
+      blur("#el-live", "#el-yield", 96);
+      push("#el-yield", "#el-agents", 111);
+      blur("#el-agents", "#el-settle", 132);
+      blur("#el-settle", "#el-revenue", 150);
+      blur("#el-revenue", "#el-close", 168);
+      window.__timelines["root"] = tl;
+    </script>
+  </body>
+</html>
