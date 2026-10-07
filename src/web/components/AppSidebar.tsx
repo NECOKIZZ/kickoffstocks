@@ -1,13 +1,13 @@
 "use client";
 
 // The app's sidebar (laptops and up): a card floating off the left edge with
-// the lockup and the theme button, the pages in two groups, then Getting
-// started and the wallet button at the bottom. Phones get a top bar with the
+// the lockup, the pages in two groups, then Getting started, the theme
+// button and the wallet button at the bottom. Phones get a top bar with the
 // drawer.
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Bot, CirclePlus, Flag, Medal, Trophy, Wallet } from "lucide-react";
+import { BookOpen, Bot, CirclePlus, Flag, Medal, SunMoon, Trophy, Wallet } from "lucide-react";
 import { MobileNav } from "../../ui/brand/MobileNav";
 import { ProfitMark } from "../../ui/brand/ProfitMark";
 import { ThemeToggle } from "../../ui/brand/ThemeToggle";
@@ -60,9 +60,8 @@ export function AppSidebar() {
     <aside className="fixed bottom-3 left-3 top-3 z-40 hidden w-[244px] flex-col rounded-[24px] border border-line bg-bg shadow-card lg:flex">
       <div className="flex items-center justify-between px-5 pb-6 pt-5">
         <Link href="/" aria-label="Profit Markets home">
-          <ProfitMark size={21} />
+          <ProfitMark size={22} />
         </Link>
-        <ThemeToggle />
       </div>
       <nav className="flex-1 space-y-6 overflow-y-auto px-3">
         {GROUPS.map((g) => (
@@ -84,6 +83,11 @@ export function AppSidebar() {
             {count}/5
           </span>
         </button>
+        <div className="flex items-center gap-3 px-3 py-1.5">
+          <SunMoon size={17} strokeWidth={1.8} className="text-muted" />
+          <span className="flex-1 font-clash text-[14px] font-medium text-muted">Theme</span>
+          <ThemeToggle />
+        </div>
       </div>
       <div className="px-4 pb-4 pt-2 [&_a]:block [&_button]:w-full [&>div>div]:w-full">
         <ConnectButton size="md" dropUp />
