@@ -5,7 +5,8 @@
 // "Download PDF" serves public/pitch/Profit-Markets-Pitch.pdf, printed from
 // this page by scripts/pitch-pdf.mjs; regenerate it after editing a slide.
 //
-// Market and "why now" figures are sourced on each slide. Revenue at scale is
+// Slides alternate dark and light by number. Market, "why now" and idle-stock
+// figures are sourced on each slide. Revenue at scale is
 // an illustrative model and the SOM is a target, both labelled as such.
 // Traction lists what is built, never testnet volume.
 
@@ -17,16 +18,15 @@ const SITE = "stocks.kickoff.cash";
 const PDF = "/pitch/Profit-Markets-Pitch.pdf";
 const DATE = "October 2026";
 
-type Tone = "dark" | "light" | "cover";
 const cols = (n: number, sm = 1) => ({ "--n": n, "--n-sm": sm }) as React.CSSProperties;
 
-function Slide({ n, tone = "dark", sources, notes, label, children }: { n: number; tone?: Tone; sources?: string; notes?: string[]; label: string; children: React.ReactNode }) {
+function Slide({ n, cover = false, sources, notes, label, children }: { n: number; cover?: boolean; sources?: string; notes?: string[]; label: string; children: React.ReactNode }) {
   return (
     <div>
       <div className="pd-frame">
-        <section aria-label={label} className={`pd-slide ${tone === "light" ? "pd-light" : tone === "cover" ? "pd-cover" : ""}`}>
+        <section aria-label={label} className={`pd-slide ${cover ? "pd-cover" : n % 2 ? "pd-light" : ""}`}>
           {children}
-          {tone !== "cover" && (
+          {!cover && (
             <div className="pd-foot">
               <span className="pd-foot-src">{sources ? `Sources: ${sources}` : ""}</span>
               <span className="pd-num">{n}</span>
@@ -310,6 +310,79 @@ function MarketCircles() {
   );
 }
 
+/** Tokenized stock value: the sliver used in DeFi against the rest. */
+function IdleBar() {
+  const used = (247.8 / 2900) * 1000;
+  return (
+    <svg className="pd-svg" viewBox="0 0 1000 96" role="img" aria-label="$247.8M of about $2.9B in tokenized stocks is used in DeFi; the rest sits in wallets">
+      <text x="0" y="16" fontSize="15" fontWeight="500" className="pd-ink">
+        In DeFi · $247.8M
+      </text>
+      <text x="1000" y="16" textAnchor="end" fontSize="15" className="pd-sub">
+        Sitting in wallets · about $2.65B
+      </text>
+      <rect x="0" y="30" width="1000" height="40" rx="6" className="pd-tint" />
+      <rect x="0" y="30" width={used} height="40" rx="6" className="pd-ink" />
+      <text x="0" y="92" fontSize="13" className="pd-faint">
+        Tokenized stocks that can move between wallets, about $2.9B
+      </text>
+    </svg>
+  );
+}
+
+/** The loop: build, publish, buy across the basket, come back next week. */
+function FlowLoop() {
+  const nodes = ["Creators buy 3–10 stocks", "The ETF goes public", "Backers and agents buy it", "One order, every stock in it"];
+  const w = 214;
+  const gap = (1000 - nodes.length * w) / (nodes.length - 1);
+  return (
+    <svg
+      className="pd-svg"
+      viewBox="0 0 1000 132"
+      role="img"
+      aria-label="Creators buy stocks, the ETF goes public, backers and agents buy it, one order trades every stock in it, and weekly rounds bring creators back"
+    >
+      <defs>
+        <marker id="pd-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L10 5 L0 10 Z" className="pd-faint" />
+        </marker>
+      </defs>
+      {nodes.map((t, i) => {
+        const x = i * (w + gap);
+        return (
+          <g key={t}>
+            <rect x={x} y="0" width={w} height="56" rx="10" className={i === nodes.length - 1 ? "pd-ink" : "pd-tint"} />
+            <text x={x + w / 2} y="33" textAnchor="middle" fontSize="15" fontWeight="500" className={i === nodes.length - 1 ? "pd-on-ink" : "pd-ink"}>
+              {t}
+            </text>
+            {i < nodes.length - 1 && <line x1={x + w + 6} x2={x + w + gap - 6} y1="28" y2="28" className="pd-stroke-ink" strokeWidth="1.5" opacity="0.5" markerEnd="url(#pd-arrow)" />}
+          </g>
+        );
+      })}
+      <path d={`M${1000 - w / 2} 60 V92 H${w / 2} V64`} fill="none" className="pd-stroke-ink" strokeWidth="1.5" strokeDasharray="5 5" opacity="0.5" markerEnd="url(#pd-arrow)" />
+      <text x="500" y="120" textAnchor="middle" fontSize="14" className="pd-sub">
+        Every week: a new round, a reason to re-weight
+      </text>
+    </svg>
+  );
+}
+
+function Tools({ title, items }: { title: string; items: [string, string][] }) {
+  return (
+    <div className="pd-card">
+      <div className="pd-step">{title.toUpperCase()}</div>
+      <ul className="pd-tools">
+        {items.map(([name, what]) => (
+          <li key={name}>
+            <span className="pd-mono">{name}</span>
+            <span>{what}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 /* ---------- The deck ---------- */
 
 export function PitchPage() {
@@ -350,7 +423,7 @@ export function PitchPage() {
       <main className="pd-deck" data-notes={notes ? "on" : "off"}>
         <Slide
           n={next()}
-          tone="cover"
+          cover
           label="Cover"
           notes={[
             "Profit Markets is Kickoff’s second product on Robinhood Chain. Anyone can build an ETF from real Robinhood Stock Tokens, enter it in a weekly round, and win if it beats the median of every ETF in the round.",
@@ -363,7 +436,7 @@ export function PitchPage() {
           </div>
           <div className="pd-spacer" />
           <h1 className="pd-cover-h1">
-            Gamified ETFs
+            Gamified ETFs{" "}
             <br />
             on Robinhood Chain.
           </h1>
@@ -379,27 +452,59 @@ export function PitchPage() {
           n={next()}
           label="The problem"
           notes={[
-            "Retail investors already act like fund managers: they build baskets, argue about them and follow each other’s picks. None of it is locked, scored or paid, so there is no way to tell skill from noise and no reward for being right.",
+            "Robinhood put real stocks on-chain, but a Stock Token can still only be held, sold or borrowed against. The new rails exist; almost nothing is built that gives the asset a new job.",
+            "Meanwhile the people who read markets well have no direct way to earn from it. Income follows audience: newsletters, followers, paid groups. And because portfolios are posted rather than locked, nobody can tell skill from luck.",
           ]}
         >
           <Eyebrow>The problem</Eyebrow>
           <H1>
-            Retail investing has
+            Stocks went on-chain.{" "}
             <br />
-            no scoreboard.
+            Then they sat still.
           </H1>
           <div className="pd-spacer" />
-          <div className="pd-cols" style={cols(4)}>
-            <Ruled title="Picks without proof">Anyone can post a portfolio. Nobody has to lock it, so nobody can prove it.</Ruled>
-            <Ruled title="Talk without stakes">Group chats argue about stocks all week. Nothing is settled on Friday.</Ruled>
-            <Ruled title="Funds built top down">An ETF takes a fund company and months. The crowd’s best ideas never become one.</Ruled>
-            <Ruled title="Agents with no arena">AI agents can pick stocks, but there’s nowhere to measure them against people.</Ruled>
+          <div className="pd-cols" style={cols(3)}>
+            <Ruled step="01" title="Idle assets">
+              Over 90% of tokenized stock value is used nowhere on-chain. You can hold it, sell it, or borrow against it.
+            </Ruled>
+            <Ruled step="02" title="Unpaid knowledge">
+              People who read markets well earn from followers, not from being right. A quiet expert with a great record earns nothing.
+            </Ruled>
+            <Ruled step="03" title="Unprovable records">
+              Portfolios get posted, never locked. Without a locked, priced record, skill and luck look exactly the same.
+            </Ruled>
           </div>
         </Slide>
 
         <Slide
           n={next()}
-          tone="light"
+          label="What idle costs"
+          sources="Token Terminal via BeInCrypto (tokenized stocks in DeFi, Sept 2026); rwa.xyz (distributed value of tokenized stocks, mid-Sept 2026); Binance Research via BeInCrypto (DeFi use mix); BeInCrypto Research and rwa.xyz (weekly transfers, 2026)"
+          notes={[
+            "Of roughly $2.9B in tokenized stocks that can move freely between wallets, only $247.8M is deposited in DeFi at all. Roughly two-thirds of that is in liquidity pools and about a quarter in lending, so only around 2% of the value is lent out.",
+            "Across tokenized assets more broadly, 56% of those worth over $100,000 recorded zero on-chain transfers in a week. The asset class is growing fast, but mostly as something people hold.",
+          ]}
+        >
+          <Eyebrow>What idle costs</Eyebrow>
+          <H1>
+            About $2.9B in stocks on-chain,{" "}
+            <br />
+            mostly doing nothing.
+          </H1>
+          <div className="pd-spacer" />
+          <div className="pd-hide-sm">
+            <IdleBar />
+          </div>
+          <div style={{ height: "2.6cqw" }} />
+          <div className="pd-cols" style={cols(3)}>
+            <Stat value="8.5%">of tokenized stock value is deposited in DeFi at all: $247.8M</Stat>
+            <Stat value="~2%">is lent out. Lending is about a quarter of that DeFi use; the rest is pools</Stat>
+            <Stat value="56%">of tokenized assets over $100k made zero on-chain transfers in a week</Stat>
+          </div>
+        </Slide>
+
+        <Slide
+          n={next()}
           label="Why now"
           sources="The Block and CertiK (Robinhood Chain mainnet, July 2026); rwa.xyz (tokenized stocks); ETFGI via Advisor Perspectives (US ETF flows, Jan to Jul 2026); JPMorgan via Benzinga (retail share of US equity volume)"
           notes={[
@@ -409,7 +514,7 @@ export function PitchPage() {
         >
           <Eyebrow>Why now</Eyebrow>
           <H1>
-            Stocks just became
+            Stocks just became{" "}
             <br />
             programmable.
           </H1>
@@ -437,11 +542,11 @@ export function PitchPage() {
         >
           <Eyebrow>The solution</Eyebrow>
           <H1>
-            Build an ETF. Lock it.
+            Build an ETF. Lock it.{" "}
             <br />
             Beat the median.
           </H1>
-          <p className="pd-lede">A weekly round where every ETF is a real basket of tokenized stocks, scored on real prices.</p>
+          <p className="pd-lede">A new job for tokenized stocks: compete. Every ETF is a real basket, scored on real prices, every week.</p>
           <div className="pd-spacer" />
           <div className="pd-cols" style={cols(3)}>
             <Ruled step="01" title="Build">
@@ -458,7 +563,43 @@ export function PitchPage() {
 
         <Slide
           n={next()}
-          tone="light"
+          label="A new approach"
+          notes={[
+            "This is the first time a stock can compete. The holder keeps ownership, price exposure and dividends the whole time; the round only adds a way to earn on top, and the basket comes back win or lose.",
+            "It also turns knowledge into income directly. Winners are paid from the tickets below MEDIAN, so the better half of the field earns, and creators add 10% of their backers’ winnings and up to 2% on every buy of their ETF.",
+          ]}
+        >
+          <Eyebrow>A new approach</Eyebrow>
+          <H1>Stocks that compete.</H1>
+          <div className="pd-spacer" />
+          <table className="pd-table pd-vs">
+            <thead>
+              <tr>
+                <th></th>
+                <th className="pd-hide-sm">Today</th>
+                <th>With Profit Markets</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                ["A Stock Token", "Held, sold or borrowed against", "Competes every week, and still earns its price moves and dividends"],
+                ["Stock knowledge", "Paid through followers", "Paid for accuracy: winnings, a share of backers’ wins, buy fees"],
+                ["A track record", "Screenshots and claims", "Locked, priced and public on-chain"],
+                ["An ETF", "An issuer, lawyers and months", "Anyone, one week, $5"],
+                ["A trading agent", "Trades alone, unmeasured", "Ranked against people every week"],
+              ].map(([what, today, us]) => (
+                <tr key={what}>
+                  <td>{what}</td>
+                  <td className="pd-hide-sm">{today}</td>
+                  <td>{us}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Slide>
+
+        <Slide
+          n={next()}
           label="How a round works"
           notes={[
             "Rounds follow the US market week and run themselves: a keeper locks entries at Monday’s open, takes prices at Friday’s close, settles, and opens next week’s round.",
@@ -510,7 +651,7 @@ export function PitchPage() {
         >
           <Eyebrow>Scoring</Eyebrow>
           <H1>
-            Half the field wins.
+            Half the field wins.{" "}
             <br />
             The better half.
           </H1>
@@ -532,7 +673,6 @@ export function PitchPage() {
 
         <Slide
           n={next()}
-          tone="light"
           label="Product"
           notes={[
             `Everything here runs today on Robinhood Chain testnet at ${SITE}, against a deployed escrow contract, with real Robinhood quotes and Chainlink feeds.`,
@@ -564,7 +704,7 @@ export function PitchPage() {
             <div>
               <Eyebrow>Built to be trusted</Eyebrow>
               <H1>
-                Peer to peer.
+                Peer to peer.{" "}
                 <br />
                 Checkable by anyone.
               </H1>
@@ -584,34 +724,83 @@ export function PitchPage() {
 
         <Slide
           n={next()}
-          tone="light"
           label="AI agents"
           notes={[
-            "The MCP server has nine tools: get_rules, list_stocks, get_round, get_my_entries, and planners to create an ETF, back one, buy a basket or an ETF, and claim. Planners return transactions; the user’s wallet signs every one.",
-            "Agents and people play in the same rounds against the same MEDIAN. That gives agent builders a public weekly benchmark with real money behind it.",
+            "Any MCP client connects to /api/mcp: Claude, ChatGPT, Cursor or a custom agent. The same actions are available over a REST API, with a plain-language guide at /agent.md and a ready-made Claude skill.",
+            "Read tools return live data: every Stock Token with its price and move since the round started, the round’s standings against MEDIAN and what a $5 ticket would pay right now. Plan tools return ready-to-sign transactions. The agent never holds keys: the user’s wallet signs every move.",
+            "Agents and people play in the same rounds against the same MEDIAN, which makes the league a public, weekly benchmark for trading agents with real money behind it.",
           ]}
         >
-          <div className="pd-split">
-            <div>
-              <Eyebrow>AI agents</Eyebrow>
-              <H1>
-                Agents compete on
-                <br />
-                the same scoreboard.
-              </H1>
-              <p className="pd-lede">Bring Claude, ChatGPT or your own agent. It builds and backs ETFs; your wallet signs.</p>
-            </div>
-            <div className="pd-card" style={{ padding: "0.8cqw 2cqw" }}>
-              <Checks
-                items={[
-                  "MCP server with nine tools, live at /api/mcp",
-                  "Reads the rules, the stocks, the round and your entries",
-                  "Prepares create, back, buy and claim transactions",
-                  "Never holds keys: every move is signed in your wallet",
-                ]}
-              />
-            </div>
+          <Eyebrow>AI agents</Eyebrow>
+          <H1>
+            Agents get the whole league,{" "}
+            <br />
+            through one connection.
+          </H1>
+          <p className="pd-lede" style={{ maxWidth: "70cqw" }}>
+            Any MCP client connects to <span className="pd-mono">/api/mcp</span>. Agents read live data and prepare moves; the user’s wallet signs every one.
+          </p>
+          <div className="pd-spacer" />
+          <div className="pd-cols" style={cols(2)}>
+            <Tools
+              title="Read · live data"
+              items={[
+                ["get_rules", "Contracts, ticket size, basket limits, how winners are decided"],
+                ["list_stocks", "Every Stock Token with its live price and move this round"],
+                ["get_round", "Standings, MEDIAN, and what a $5 ticket pays right now"],
+                ["get_my_entries", "A wallet’s entries, status and what it can claim"],
+              ]}
+            />
+            <Tools
+              title="Act · the wallet signs"
+              items={[
+                ["plan_create_etf", "Build and lock an ETF with a $5 ticket"],
+                ["plan_back_team", "Back any ETF in the round"],
+                ["plan_buy_basket", "Buy the stocks through 0x, split by weight"],
+                ["plan_buy_etf", "Buy a creator’s ETF; the creator earns the fee"],
+                ["plan_claim", "Collect winnings and the locked basket"],
+              ]}
+            />
           </div>
+          <div style={{ height: "1.6cqw" }} />
+          <div className="pd-pills">
+            {["MCP server", "REST API", "/agent.md guide", "Claude skill", "No keys held"].map((p) => (
+              <span key={p} className="pd-pill">
+                {p}
+              </span>
+            ))}
+          </div>
+        </Slide>
+
+        <Slide
+          n={next()}
+          label="Liquidity and volume"
+          notes={[
+            "Every ETF begins with someone buying 3 to 10 Stock Tokens to lock. At mainnet, Buy the ETF lets anyone copy a basket with one USDG amount, split across its stocks through 0x, so a single decision becomes trades in several markets, including smaller names that rarely see flow.",
+            "Rounds reset every week, which gives creators a reason to re-weight and re-enter every week, and agents add steady, programmatic flow on top. Tickets bring USDG into Robinhood Earn while they wait.",
+            "We don’t make markets ourselves. We bring buyers and order flow, which is what draws market makers and liquidity providers to a pool. This is the mechanism; it can only be measured once buying switches on at mainnet.",
+          ]}
+        >
+          <Eyebrow>What it does for tokenized stocks</Eyebrow>
+          <H1>
+            Every round brings new demand{" "}
+            <br />
+            and volume to Stock Tokens.
+          </H1>
+          <div className="pd-spacer" />
+          <div className="pd-hide-sm">
+            <FlowLoop />
+          </div>
+          <div style={{ height: "2.2cqw" }} />
+          <div className="pd-cols" style={cols(4, 1)}>
+            <Ruled title="Demand">Every ETF starts with buying 3 to 10 Stock Tokens to lock.</Ruled>
+            <Ruled title="Long-tail volume">One ETF buy becomes trades in every stock in the basket, not just the top names.</Ruled>
+            <Ruled title="Weekly turnover">A new round every week is a reason to re-weight every week.</Ruled>
+            <Ruled title="Agent flow">Agents trade on a schedule, adding steady, programmatic volume.</Ruled>
+          </div>
+          <p className="pd-small" style={{ marginTop: "1.2cqw" }}>
+            We don’t make markets; we bring buyers and order flow, which draws liquidity. Buy flows switch on at mainnet.
+          </p>
         </Slide>
 
         <Slide
@@ -637,7 +826,6 @@ export function PitchPage() {
 
         <Slide
           n={next()}
-          tone="light"
           label="Business model"
           notes={[
             "The take applies only to losing tickets, so revenue grows with volume, not with which way the market moves. Draws and voided rounds pay nothing.",
@@ -704,7 +892,32 @@ export function PitchPage() {
 
         <Slide
           n={next()}
-          tone="light"
+          label="What compounds"
+          notes={[
+            "Every round leaves a permanent record: who held what, at which weights, locked before the week moved, and how it did on Chainlink prices. That record cannot be edited or cherry-picked afterwards.",
+            "With volume, it becomes an asset in its own right: verified reputations for creators and agents, a weekly read of what informed retail is positioning for, and baskets good enough to offer as indexes. This is long-term value that depends on volume; today the history is already open through the API.",
+          ]}
+        >
+          <Eyebrow>What compounds</Eyebrow>
+          <H1>
+            Every week adds to a dataset{" "}
+            <br />
+            nobody else has.
+          </H1>
+          <div className="pd-spacer" />
+          <div className="pd-cols" style={cols(4, 1)}>
+            <Card title="Verified track records">Every creator and agent, week by week, locked and priced. Impossible to fake.</Card>
+            <Card title="Crowd signal">What thousands of people choose to hold, and at what weights, before the week moves.</Card>
+            <Card title="Agent benchmark">A recurring, public test for trading agents, with real stakes.</Card>
+            <Card title="Index products">The best creators’ baskets, offered as indexes people can follow.</Card>
+          </div>
+          <p className="pd-small" style={{ marginTop: "1.2cqw" }}>
+            Long-term value that grows with volume. Round history is already open through the API.
+          </p>
+        </Slide>
+
+        <Slide
+          n={next()}
           label="Competition"
           notes={[
             "Brokers give people stocks but no game. Prediction markets give people a game, but not on portfolios they built. Copy trading follows a person, off-chain and custodial. Thematic ETFs are built top down.",
@@ -762,7 +975,7 @@ export function PitchPage() {
           </div>
         </Slide>
 
-        <Slide n={next()} tone="light" label="Roadmap" notes={["Mainnet launches with ticket and round caps that rise as the contract earns a track record. The external audit comes first."]}>
+        <Slide n={next()} label="Roadmap" notes={["Mainnet launches with ticket and round caps that rise as the contract earns a track record. The external audit comes first."]}>
           <Eyebrow>Roadmap</Eyebrow>
           <H1>From testnet to mainnet</H1>
           <div className="pd-spacer" />
@@ -774,7 +987,7 @@ export function PitchPage() {
               External audit, Robinhood Earn for tickets, Buy the ETF through 0x, a launch with ticket caps.
             </Card>
             <Card step="THEN" title="Seasons and leagues">
-              Season prizes, private leagues for communities, agent rounds, more assets as Robinhood lists them.
+              Season prizes, private leagues, agent rounds, a crowd index and data products, more assets as Robinhood lists them.
             </Card>
           </div>
         </Slide>
@@ -783,7 +996,7 @@ export function PitchPage() {
           <ProfitMark tone="white" size={26} />
           <div className="pd-spacer" />
           <H1>
-            Gamified ETFs, owned by
+            Gamified ETFs, owned by{" "}
             <br />
             the people who build them.
           </H1>
