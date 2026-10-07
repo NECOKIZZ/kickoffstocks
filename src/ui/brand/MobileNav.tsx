@@ -11,7 +11,7 @@ import { useDarkMode } from "./ThemeToggle";
 /**
  * Phone navigation: a menu button that slides in a left drawer holding the
  * app tabs and the light/dark switch, so the top bar keeps only the guide,
- * balance and wallet. Hidden from sm up, where the tabs sit in the header.
+ * balance and wallet. Hidden from lg up, where the sidebar takes over.
  */
 export function MobileNav({ tabs }: { tabs: { label: string; href: string }[] }) {
   const [open, setOpen] = useState(false);
@@ -27,7 +27,7 @@ export function MobileNav({ tabs }: { tabs: { label: string; href: string }[] })
         onClick={() => setOpen(true)}
         aria-label="Open menu"
         aria-expanded={open}
-        className="sm:hidden flex items-center justify-center shrink-0 cursor-pointer size-8 -ml-1"
+        className="lg:hidden flex items-center justify-center shrink-0 cursor-pointer size-8 -ml-1"
         style={{ background: "none", border: "none", color: "var(--ink)" }}
       >
         <Menu size={20} />
@@ -64,7 +64,7 @@ function Drawer({
   }, [onClose]);
 
   return createPortal(
-    <div className="sm:hidden fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Menu">
+    <div className="lg:hidden fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Menu">
       <div
         onClick={onClose}
         className="absolute inset-0 transition-opacity duration-200"

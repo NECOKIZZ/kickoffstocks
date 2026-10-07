@@ -19,7 +19,7 @@ export const short = shortAddress;
 
 const faucetAbi = parseAbi(["function faucet()"]);
 
-function useTicketBalance(address?: `0x${string}`) {
+export function useTicketBalance(address?: `0x${string}`) {
   const { data: cfg } = useConfig();
   return useReadContract({
     address: cfg?.usdg,
@@ -31,7 +31,8 @@ function useTicketBalance(address?: `0x${string}`) {
   });
 }
 
-export function ConnectButton({ size = "sm" }: { size?: "sm" | "md" }) {
+/** `dropUp` opens the wallet menu above the chip (the sidebar keeps it at the bottom). */
+export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "md"; dropUp?: boolean }) {
   const { address, chainId, isConnected } = useConnection();
   const connectors = useConnectors();
   const { connect, isPending, error } = useConnect();
@@ -122,7 +123,7 @@ export function ConnectButton({ size = "sm" }: { size?: "sm" | "md" }) {
   }
 
   return (
-    <div ref={ref} className="relative flex items-center gap-2">
+    <div ref={ref} className="relative flex flex-wrap items-center gap-2">
       {tickets !== null && (
         <span className="hidden whitespace-nowrap text-[12.5px] font-semibold text-muted sm:inline" title={`${unit} in your wallet (tickets are paid in ${unit})`}>
           {tickets.toFixed(2)} {unit}
@@ -154,7 +155,7 @@ export function ConnectButton({ size = "sm" }: { size?: "sm" | "md" }) {
         <span className="t-num">{short(address)}</span>
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-[16px] border border-line bg-bg p-1.5 shadow-lift">
+        <div className={`absolute z-50 w-56 overflow-hidden rounded-[16px] border border-line bg-bg p-1.5 shadow-lift ${dropUp ? "bottom-full left-0 mb-2" : "right-0 top-full mt-2"}`}>
           <Link href="/me" className="block rounded-[10px] px-3 py-2 text-[14px] hover:bg-surface" onClick={() => setOpen(false)}>
             My entries
           </Link>

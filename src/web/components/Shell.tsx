@@ -1,20 +1,32 @@
-// Page frame: header, live ticker, content, footer.
+// App frame: the fixed sidebar (top bar on phones), the live ticker, the page,
+// a one-line legal note, and the Getting started checklist. No footer: the
+// app is a workspace; the marketing footer lives on the landing page.
 
-import { SiteHeader, AnnouncementBar } from "../../ui/components/SiteHeader";
-import { SiteFooter } from "../../ui/components/SiteFooter";
+import Link from "next/link";
+import { AnnouncementBar } from "../../ui/components/SiteHeader";
+import { AppSidebar, AppTopBar } from "./AppSidebar";
+import { GettingStarted } from "./GettingStarted";
 import { LiveTicker } from "./LiveTicker";
 
 export function Shell({ children, announce }: { children: React.ReactNode; announce?: React.ReactNode }) {
   return (
-    <>
+    <div className="min-h-screen lg:pl-[268px]">
+      <AppSidebar />
+      <AppTopBar />
       {announce && <AnnouncementBar>{announce}</AnnouncementBar>}
-      <SiteHeader />
       <LiveTicker />
-      <main className="min-h-[60vh]">{children}</main>
-      <div className="mt-16">
-        <SiteFooter />
+      <main className="min-h-[70vh]">{children}</main>
+      <div className="mx-auto mt-20 flex max-w-[1280px] flex-wrap items-center justify-between gap-3 border-t border-line px-4 py-6 text-[12px] text-muted md:px-6">
+        <p>Profit Markets by Kickoff, on Robinhood Chain. &ldquo;ETF&rdquo; means an on-chain basket of tokenized stocks, not a regulated fund. Not investment advice.</p>
+        <div className="flex gap-4">
+          <Link href="/rules" className="hover:text-ink">Rules</Link>
+          <Link href="/rules#risk" className="hover:text-ink">Risk</Link>
+          <a href="https://github.com/NECOKIZZ/kickoffstocks" className="hover:text-ink">GitHub</a>
+          <a href="https://kickoff.cash" className="hover:text-ink">Kickoff</a>
+        </div>
       </div>
-    </>
+      <GettingStarted />
+    </div>
   );
 }
 
