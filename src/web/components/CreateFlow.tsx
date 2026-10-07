@@ -14,7 +14,7 @@ import { WeightBar } from "../../ui/components/WeightBar";
 import { useConfig, usePlanRunner, useRound, useStocks } from "../hooks";
 import { post } from "../api";
 import { equalWeights } from "../weights";
-import { ConnectButton } from "./ConnectButton";
+import { ConnectButton, useTicketBalance } from "./ConnectButton";
 import { TxSteps } from "./TxSteps";
 
 type Filter = "all" | "stock" | "etf" | "crypto";
@@ -37,6 +37,7 @@ export function CreateFlow() {
   const [fee, setFee] = useState(1);
   const [faucet, setFaucet] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
   const [entered, setEntered] = useState<string | null>(null);
+  const [limitHit, setLimitHit] = useState(false);
 
   const rules = cfg?.rules ?? { minTokens: 3, minStocks: 3, maxCryptoPct: 20, maxTokens: 10, maxWeightPct: 50, minBasketUsd: 10, ticketUsd: 5, maxBuyFeePct: 2, driftPct: 5 };
   const live = useMemo(() => new Map(stocksData?.stocks.map((s) => [s.ticker, s]) ?? []), [stocksData]);
@@ -57,7 +58,11 @@ export function CreateFlow() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked]);
 
-  const toggle = (t: string) => setPicked((p) => (p.includes(t) ? p.filter((x) => x !== t) : p.length >= rules.maxTokens ? p : [...p, t]));
+  const toggle = (t: string) => {
+    if (!picked.includes(t) && picked.length >= rules.maxTokens) return setLimitHit(true);
+    setLimitHit(false);
+    setPicked((p) => (p.includes(t) ? p.filter((x) => x !== t) : [...p, t]));
+  };
   const total = picked.reduce((s, t) => s + (weights[t] ?? 0), 0);
   const isCrypto = (t: string) => stock(t).kind === "crypto";
   const stockCount = picked.filter((t) => !isCrypto(t)).length;
@@ -83,6 +88,27 @@ export function CreateFlow() {
   const basketOk = holdsAll && heldUsd >= rules.minBasketUsd;
   const open = round?.phase === "entries-open";
   const nameOk = name.trim().length > 0 && new TextEncoder().encode(name.trim()).length <= 32;
+  const { data: ticketBal } = useTicketBalance(address);
+  const hasTicket = ticketBal !== undefined && Number(formatUnits(ticketBal, cfg?.usdgDecimals ?? 6)) >= rules.ticketUsd;
+
+  // What each step still needs, in plain words.
+  const needStocks = Math.max(0, rules.minStocks - stockCount);
+  const weightProblems = [
+    total !== 100 && `The weights add up to ${total}%. They need to add up to exactly 100%.`,
+    picked.some((t) => (weights[t] ?? 0) > rules.maxWeightPct) && `No single pick can be more than ${rules.maxWeightPct}%.`,
+    picked.some((t) => !(weights[t] > 0)) && "Every pick needs a weight above 0%. Remove the ones you don't want.",
+    cryptoPct > rules.maxCryptoPct && `BTC and ETH together are ${cryptoPct}%. The most allowed is ${rules.maxCryptoPct}%.`,
+  ].filter(Boolean) as string[];
+  const missing = held.filter((h) => h.raw === 0n).map((h) => h.t);
+  const block2 = enoughStocks ? null : `Finish step 1 first: pick at least ${rules.minStocks} stocks or funds (you have ${stockCount}).`;
+  const block3 = block2 ? "Finish steps 1 and 2 first." : weightsOk ? null : "Finish step 2 first: fix the weights.";
+  const block4 =
+    block3 ?? (entered || basketOk || lockRunner.busy ? null : !isConnected ? "Connect your wallet in step 3 first." : `Finish step 3 first: you need some of every pick, worth at least $${rules.minBasketUsd} in total.`);
+  const lockProblems = [
+    !open && "Entries for this week are closed. The next week opens right after Friday's close.",
+    !nameOk && "Give your ETF a name (up to 32 characters).",
+    isConnected && ticketBal !== undefined && !hasTicket && `You need $${rules.ticketUsd} in USDG for the ticket. Claim free test USDG from Getting started in the sidebar.`,
+  ].filter(Boolean) as string[];
 
   async function getTestStocks() {
     if (!address) return;
@@ -107,7 +133,8 @@ export function CreateFlow() {
           n="1"
           title="Pick your stocks"
           done={enoughStocks}
-          hint={`${stockCount} stocks${picked.length > stockCount ? ` + ${picked.length - stockCount} crypto` : ""} · need ${rules.minStocks}+, ${rules.maxTokens} max`}
+          hint={`${stockCount} of ${rules.minStocks}+ stocks picked${picked.length > stockCount ? ` · ${picked.length - stockCount} crypto` : ""}`}
+          hintBad={picked.length > 0 && !enoughStocks}
         >
           <div className="mb-5 flex flex-wrap items-center gap-3">
             <input
@@ -142,9 +169,24 @@ export function CreateFlow() {
               );
             })}
           </div>
-          <p className="mt-4 text-[12px] text-muted">
-            At least {rules.minStocks} stocks or funds. BTC and ETH can add up to {rules.maxCryptoPct}% together, on top of them. Only tokens with a Chainlink price feed on
-            Robinhood Chain are listed: that&rsquo;s what scores your ETF on-chain.
+          {limitHit ? (
+            <StepNote>That&rsquo;s the maximum of {rules.maxTokens} assets. Tap a picked card to remove it, then add another.</StepNote>
+          ) : picked.length === 0 ? (
+            <p className="mt-4 text-[15px] text-muted">Tap the cards to pick them. You need at least {rules.minStocks} stocks or funds.</p>
+          ) : !enoughStocks ? (
+            <StepNote>
+              Pick {plural(needStocks, "more stock or fund", "more stocks or funds")} to continue.
+              {picked.length > stockCount ? " BTC and ETH don't count toward the 3." : ""}
+            </StepNote>
+          ) : (
+            <>
+              <StepNote ok>Great, {plural(stockCount, "stock", "stocks")} picked. You can add more, up to {rules.maxTokens}.</StepNote>
+              <NextButton to={2}>Next: set the weights ↓</NextButton>
+            </>
+          )}
+          <p className="mt-4 text-[13px] text-muted">
+            BTC and ETH can add up to {rules.maxCryptoPct}% together, on top of the stocks. Only tokens with a Chainlink price feed on Robinhood Chain are listed: that&rsquo;s what
+            scores your ETF on-chain.
           </p>
         </Panel>
 
@@ -154,7 +196,8 @@ export function CreateFlow() {
           title="Set the weights"
           done={weightsOk}
           hint={`total ${total}% · max ${rules.maxWeightPct}% each${cryptoPct ? ` · crypto ${cryptoPct}% of ${rules.maxCryptoPct}% max` : ""}`}
-          disabled={!enoughStocks}
+          hintBad={!!enoughStocks && !weightsOk}
+          blocked={block2}
         >
           <div className="space-y-3">
             {picked.map((t) => (
@@ -186,18 +229,23 @@ export function CreateFlow() {
           <div className="mt-5">
             <WeightBar holdings={holdings} legend={false} />
           </div>
-          <div className="mt-4 flex items-center justify-between text-[13px]">
-            <span className={total === 100 ? "text-up" : "text-down"}>
-              {total !== 100 ? `Adds up to ${total}%: needs 100%` : "Adds up to 100%"}
-            </span>
-            <button type="button" className="font-medium underline-offset-4 hover:underline" onClick={() => setPicked((p) => [...p])}>
-              Equal weights
+          <div className="mt-4 flex justify-end text-[14px]">
+            <button type="button" className="font-medium underline underline-offset-4" onClick={() => setPicked((p) => [...p])}>
+              Reset to equal weights
             </button>
           </div>
+          {block2 ? null : weightProblems.length ? (
+            weightProblems.map((m) => <StepNote key={m}>{m}</StepNote>)
+          ) : (
+            <>
+              <StepNote ok>Weights add up to 100%.</StepNote>
+              <NextButton to={3}>Next: get the stocks ↓</NextButton>
+            </>
+          )}
         </Panel>
 
         {/* 3. Buy */}
-        <Panel n="3" title="Buy the stocks" done={basketOk || !!entered} hint={holdsAll ? `you hold $${heldUsd.toFixed(2)} of them` : `at least $${rules.minBasketUsd}`} disabled={!weightsOk}>
+        <Panel n="3" title="Buy the stocks" done={basketOk || !!entered} hint={holdsAll ? `you hold $${heldUsd.toFixed(2)} of them` : `at least $${rules.minBasketUsd}`} blocked={block3}>
           <label className="block rounded-[20px] bg-surface p-5">
             <span className="text-[13px] text-muted">Spend</span>
             <span className="mt-1 flex items-baseline gap-2">
@@ -214,7 +262,7 @@ export function CreateFlow() {
               Split by weight: {picked.map((t) => `${t} $${((Number(amount) * (weights[t] ?? 0)) / 100).toFixed(2)}`).join(" · ")}
             </span>
           </label>
-          <p className="mt-3 text-[12px] text-muted">
+          <p className="mt-3 text-[13px] text-muted">
             Tip: spend a little over ${rules.minBasketUsd} (e.g. $12). Swap fees and price moves can push an exact ${rules.minBasketUsd} basket under the minimum.
           </p>
           <div className="mt-4">
@@ -229,7 +277,10 @@ export function CreateFlow() {
                 <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="grid h-12 w-full place-items-center btn-3d btn-accent text-[16px]">
                   Get test stocks from Robinhood&rsquo;s faucet ↗
                 </a>
-                <p className="text-[12px] text-muted">Testnet: the faucet sends 5 each of TSLA, AMZN, PLTR and AMD (plus NFLX, which has no price feed) every 24 hours. Test USDG for the ticket comes from the button on the league page.</p>
+                <p className="text-[13px] text-muted">
+                  Testnet: the faucet sends 5 each of TSLA, AMZN, PLTR and AMD every 24 hours. Test BTC and ETH are in your wallet menu; test USDG for the ticket is in Getting
+                  started.
+                </p>
               </div>
             ) : cfg?.buyEnabled ? (
               <button
@@ -246,6 +297,21 @@ export function CreateFlow() {
             {faucet.msg && <p className="mt-3 text-[13px] text-muted">{faucet.msg}</p>}
             <TxSteps plan={buyRunner.plan} states={buyRunner.states} hashes={buyRunner.hashes} error={buyRunner.error} />
           </div>
+          {!block3 && !isConnected && <p className="mt-4 text-[15px] text-muted">Connect your wallet to see which of these you already hold.</p>}
+          {!block3 && isConnected && bals && (
+            missing.length ? (
+              <StepNote>You don&rsquo;t hold any {missing.join(", ")} yet. Get {missing.length === 1 ? "it" : "them"} first: every pick must be in your wallet.</StepNote>
+            ) : heldUsd < rules.minBasketUsd ? (
+              <StepNote>
+                Your basket is worth ${heldUsd.toFixed(2)}. It needs to be worth at least ${rules.minBasketUsd}.
+              </StepNote>
+            ) : (
+              <>
+                <StepNote ok>You hold all of them: ${heldUsd.toFixed(2)} in total.</StepNote>
+                <NextButton to={4}>Next: name it and lock it ↓</NextButton>
+              </>
+            )
+          )}
           {isConnected && picked.length > 0 && (
             <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
               {held.map((h) => (
@@ -259,7 +325,7 @@ export function CreateFlow() {
         </Panel>
 
         {/* 4. Lock */}
-        <Panel n="4" title="Name it and lock it" done={!!entered} hint={open ? "entries open" : "entries closed"} disabled={!basketOk && !entered && !lockRunner.busy}>
+        <Panel n="4" title="Name it and lock it" done={!!entered} hint={open ? "entries open" : "entries closed"} blocked={block4}>
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block">
               <span className="text-[13px] text-muted">ETF name</span>
@@ -276,7 +342,7 @@ export function CreateFlow() {
               <input type="range" min={0} max={rules.maxBuyFeePct} step={0.1} value={fee} onChange={(e) => setFee(Number(e.target.value))} className="mt-4 w-full accent-[var(--ink)]" />
             </label>
           </div>
-          <ul className="mt-5 space-y-1.5 text-[13px] text-muted">
+          <ul className="mt-5 space-y-1.5 text-[14px] text-muted">
             <li>· Your whole balance of these {picked.length} assets (${heldUsd.toFixed(2)}) is locked until the round ends, then returned.</li>
             <li>· Plus a ${rules.ticketUsd} USDG ticket. Beat MEDIAN (the middle ETF) and you win a share of the tickets below it. Tie MEDIAN and your ticket comes back.</li>
             <li>· Same stocks and weights as an existing ETF? You join that team instead.</li>
@@ -292,7 +358,7 @@ export function CreateFlow() {
             ) : (
               <button
                 type="button"
-                disabled={!open || !nameOk || !basketOk || lockRunner.busy}
+                disabled={!open || !nameOk || !basketOk || lockRunner.busy || (ticketBal !== undefined && !hasTicket)}
                 onClick={() =>
                   lockRunner.run(
                     { action: "lock", tickers: picked, weightsPct: picked.map((t) => weights[t]), name: name.trim(), buyFeePct: fee },
@@ -304,6 +370,7 @@ export function CreateFlow() {
                 {lockRunner.busy ? "Working…" : !open ? "Entries are closed" : `Lock and enter · $${heldUsd.toFixed(2)} + $${rules.ticketUsd} ticket`}
               </button>
             )}
+            {!entered && isConnected && !lockRunner.busy && lockProblems.map((m) => <StepNote key={m}>{m}</StepNote>)}
             <TxSteps plan={lockRunner.plan} states={lockRunner.states} hashes={lockRunner.hashes} error={lockRunner.error} />
           </div>
         </Panel>
@@ -330,18 +397,53 @@ export function CreateFlow() {
   );
 }
 
-function Panel({ n, title, hint, done, disabled, children }: { n: string; title: string; hint?: string; done?: boolean; disabled?: boolean; children: React.ReactNode }) {
+/** A numbered step. `blocked` says, in red, what to finish first; the step's
+ *  controls stay visible but inactive until then. */
+function Panel({ n, title, hint, hintBad, done, blocked, children }: { n: string; title: string; hint?: string; hintBad?: boolean; done?: boolean; blocked?: string | null; children: React.ReactNode }) {
   return (
-    <section className={`rounded-[32px] border border-line p-5 transition md:p-7 ${disabled ? "pointer-events-none opacity-45" : ""}`} aria-disabled={disabled}>
-      <div className="mb-5 flex items-center justify-between gap-4">
+    <section id={`step-${n}`} className="scroll-mt-6 rounded-[32px] border border-line p-5 transition md:p-7" aria-disabled={!!blocked}>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <div className="flex items-center gap-3">
-          <span className={`t-num grid size-8 place-items-center rounded-full text-[13px] ${done ? "bg-brand-mint text-brand-ink" : "bg-surface"}`}>{done ? "✓" : n}</span>
-          <h2 className="t-heading text-[22px]">{title}</h2>
+          <span className={`t-num grid size-9 place-items-center rounded-full text-[14px] font-semibold ${done ? "bg-brand-mint text-brand-ink" : "bg-surface"}`}>{done ? "✓" : n}</span>
+          <h2 className={`t-heading text-[22px] ${blocked ? "text-muted" : ""}`}>{title}</h2>
         </div>
-        {hint && <span className="text-[13px] text-muted">{hint}</span>}
+        {hint && <span className={`text-[14px] ${hintBad ? "font-medium text-down" : "text-muted"}`}>{hint}</span>}
       </div>
-      {children}
+      {blocked && (
+        <p role="status" className="mb-5 flex items-start gap-2 rounded-[14px] px-4 py-3 text-[15px] leading-snug" style={{ background: "var(--down-bg)", color: "var(--down)" }}>
+          <span aria-hidden>🔒</span>
+          <span>{blocked}</span>
+        </p>
+      )}
+      <div className={blocked ? "pointer-events-none select-none opacity-40" : ""} inert={blocked ? true : undefined}>
+        {children}
+      </div>
     </section>
+  );
+}
+
+/** Red (or green) line under a step: what's missing, or that it's done. */
+function StepNote({ ok, children }: { ok?: boolean; children: React.ReactNode }) {
+  return (
+    <p
+      role={ok ? "status" : "alert"}
+      className="mt-4 flex items-start gap-2 rounded-[14px] px-4 py-3 text-[15px] leading-snug"
+      style={ok ? { background: "var(--up-bg)", color: "var(--up)" } : { background: "var(--down-bg)", color: "var(--down)" }}
+    >
+      <span aria-hidden>{ok ? "✓" : "!"}</span>
+      <span>{children}</span>
+    </p>
+  );
+}
+
+const plural = (k: number, one: string, many: string) => `${k} ${k === 1 ? one : many}`;
+const goTo = (n: number) => document.getElementById(`step-${n}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+
+function NextButton({ to, children }: { to: number; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={() => goTo(to)} className="btn-3d btn-accent mt-4 inline-flex h-11 items-center px-5 text-[15px]">
+      {children}
+    </button>
   );
 }
 
