@@ -6,9 +6,9 @@
 import { clientsFromEnv, escrowFromEnv, leagueChain } from "./chain";
 import { leagueEscrowAbi, readEntries, readRound, readTeamMeta, roundTokens } from "./escrow";
 import { buildSnapshot, type PriceSample, type Snapshot } from "./snapshot";
-import { FileStore } from "./store";
+import { leagueStore } from "./store";
 import { buildRoundView, type RoundView } from "./view";
-import { tickerOf } from "./registry";
+import { cryptoTokens, tickerOf } from "./registry";
 import { samplePrices } from "./prices";
 
 let liveCache: { at: number; source: string; sample: Map<string, PriceSample> } | null = null;
@@ -47,15 +47,14 @@ export async function loadRoundView(roundId?: bigint): Promise<RoundView | null>
     pub.getBlock(),
   ]);
   const tokens = roundTokens(entries);
-  const store = new FileStore();
-  const saved = (phase: "start" | "end") => store.loadSamples(id, phase).map((s) => s.sample);
+  const store = leagueStore();
+  const saved = async (phase: "start" | "end") => (await store.loadSamples(id, phase)).map((s) => s.sample);
 
   // Start prices: the saved start samples, else (entries still open) current prices.
   // Current prices: live quotes, else the latest saved end sample, else the start.
   const liveP = await livePrices();
   const live = liveP?.sample ?? null;
-  const startSamples = saved("start");
-  const endSamples = saved("end");
+  const [startSamples, endSamples] = await Promise.all([saved("start"), saved("end")]);
   const start: Map<string, Snapshot> = startSamples.length
     ? buildSnapshot(startSamples, tokens, 1).prices
     : live
@@ -69,5 +68,5 @@ export async function loadRoundView(roundId?: bigint): Promise<RoundView | null>
   const priceSource = endSamples.length ? "saved end samples" : liveP ? liveP.source : "saved start samples";
 
   const meta = await readTeamMeta(pub, escrow, id, entries.filter((e) => e.isCreator).map((e) => e.teamKey));
-  return buildRoundView({ info, entries, start, now, nowSec: Number(block.timestamp), seasonPot, tickerOf, priceSource, meta });
+  return buildRoundView({ info, entries, start, now, nowSec: Number(block.timestamp), seasonPot, tickerOf, priceSource, meta, cryptoTokens: cryptoTokens() });
 }

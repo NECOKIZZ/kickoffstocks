@@ -22,6 +22,7 @@ export const leagueEscrowAbi = parseAbi([
   "function unparkTickets(uint256 roundId)",
   "function setYieldVault(address vault)",
   "function yieldVault() view returns (address)",
+  "function owner() view returns (address)",
   "function entryCount(uint256 roundId) view returns (uint256)",
   "function entryAt(uint256 roundId, uint256 i) view returns ((address wallet, bytes32 teamKey, bool isCreator, bool claimed, uint128 payout))",
   "function basketOf(uint256 roundId, address wallet) view returns (address[] tokens, uint256[] amounts)",

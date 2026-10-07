@@ -1,11 +1,12 @@
 # Kickoff Stocks
 
-Kickoff's stock league on **Robinhood Chain**. Build an "ETF" from real Robinhood Stock Tokens, lock it with a $5 ticket, and **beat AVERAGE**.
+Kickoff's stock league on **Robinhood Chain**. Build an "ETF" from real Robinhood Stock Tokens, lock it with a $5 ticket, and **beat MEDIAN**.
 Built for the Colosseum **Crypto World's Fair** (Robinhood Chain track), as a new game mode of [Kickoff](https://kickoff.cash).
 
-- **Creators** lock a basket of 3–10 Robinhood Stock Tokens (≥ $10) plus a $5 USDG ticket. The locked basket *is* the ETF: its score is the real return of exactly what was locked, priced by Robinhood Chain's Chainlink feeds (which include reinvested dividends).
+- **Weekly rounds, run by themselves**: entries close Monday 9:30am New York (the open), the round ends Friday 4pm (the close), the keeper settles it and opens next week's entries. Nobody has to press anything.
+- **Creators** lock a basket of 3–10 Robinhood Stock Tokens (≥ $10), plus BTC and ETH up to 20% together, and a $5 USDG ticket. The locked basket *is* the ETF: its score is the real return of exactly what was locked, priced by Robinhood Chain's Chainlink feeds (which include reinvested dividends).
 - **Backers** put a $5 ticket on a creator's ETF, and/or (mainnet) **buy the ETF** in one go through 0x, with the creator earning their buy fee.
-- **AVERAGE** (from Fantasy Premier League): a ghost team at the round's median return. Above AVERAGE wins a share of the tickets below it, split by stake × accuracy. **On AVERAGE is a draw**: your ticket comes back. Below loses the ticket. Peer to peer: the platform never puts money in.
+- **MEDIAN** (like Fantasy Premier League's AVERAGE team, but it really is the median): a ghost team at the round's median return. Above MEDIAN wins a share of the tickets below it, split by stake × accuracy. **On MEDIAN is a draw**: your ticket comes back. Below loses the ticket. Peer to peer: the platform never puts money in.
 - **Tickets earn while you wait**: once entries close, the round's tickets are parked in a USDG savings vault (Robinhood Earn on mainnet) and the interest goes into the pot. Locked stocks never move.
 - **Bring your own agent**: an MCP server (`/api/mcp`) lets Claude, ChatGPT or your own agent read the league and prepare transactions; the user's wallet signs.
 
@@ -13,7 +14,7 @@ Built for the Colosseum **Crypto World's Fair** (Robinhood Chain track), as a ne
 
 ## How settlement works
 1. Each ETF's score is the buy-and-hold return of its locked basket: Chainlink prices averaged over several samples at the start and at the end. A stale feed, a paused oracle (corporate action) or a stalled chain voids the round.
-2. D = best return − this return. With `n` ETFs, `k = n//2 + 1`, `m` = the k-th smallest D. An ETF wins if D < m (above AVERAGE); an ETF exactly on AVERAGE draws.
+2. D = best return − this return. With `n` ETFs, `k = n//2 + 1`, `m` = the k-th smallest D. An ETF wins if D < m (above MEDIAN); an ETF exactly on MEDIAN draws.
 3. Accuracy `a = (1 / (1 + D/m))^6`. The pot (losing tickets minus a 10% take, plus ticket interest) is split by team stake × a, under a 100× gain cap.
 4. Inside a team, winnings split by stake. The creator takes 10% of their backers' winnings.
 5. The take is split 5% platform, 5% season pot. The season pot tops up thin pots.
@@ -27,11 +28,13 @@ Built for the Colosseum **Crypto World's Fair** (Robinhood Chain track), as a ne
 ## Status
 | Piece | Where | State |
 |---|---|---|
-| Settlement engine (with AVERAGE + ticket yield) | `src/engine/league.ts` | ✅ tested |
-| League contract (+ savings vault, TestUSDG) | `contracts/src/` | ✅ 42 Foundry tests + a mainnet fork test with real Stock Tokens |
+| Settlement engine (with MEDIAN + ticket yield) | `src/engine/league.ts` | ✅ tested |
+| League contract (+ savings vault, TestUSDG, test BTC/ETH) | `contracts/src/` | ✅ 44 Foundry tests, including a mainnet fork test with real Stock Tokens |
 | Prices | `src/rh/feeds.ts` (Chainlink), `src/rh/rhApi.ts` (Robinhood quotes) | ✅ live-checked |
 | Buy the ETF | `src/rh/zeroEx.ts` (0x Swap API v2, creator fee) | ✅ unit-tested; needs a 0x key |
 | Keeper + verifiable settlement | `scripts/keeper.mts`, `scripts/verify.mts` | ✅ end to end on a local chain |
+| Weekly schedule (Mon open → Fri close, runs itself) | `scripts/keeper.mts watch`, `src/league/schedule.ts` | ✅ tested on a local chain |
+| Crypto slice (BTC, ETH ≤ 20%) | `src/ui/data/stocks.ts`, `scripts/add-crypto.mts` | ✅ tested |
 | Web app (Kickoff design) | `app/`, `src/ui/`, `src/web/` | ✅ |
 | BYO agents | `/api/mcp`, `/agent.md`, `skills/kickoff-stocks/` | ✅ |
 

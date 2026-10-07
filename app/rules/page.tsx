@@ -15,7 +15,7 @@ function H({ id, children }: { id?: string; children: React.ReactNode }) {
 const EXAMPLE = [
   ["A", "+3.0%", "wins", "1.00", "$15.76", "$12.45"],
   ["B", "+2.0%", "wins", "0.09", "$5.94", "$5.65"],
-  ["C", "+1.0%", "draw (on AVERAGE)", "—", "$5.00", "$5.00"],
+  ["C", "+1.0%", "draw (on MEDIAN)", "—", "$5.00", "$5.00"],
   ["D", "−1.0%", "loses", "—", "$0", "$0"],
   ["E", "−2.0%", "loses", "—", "$0", "$0"],
 ];
@@ -30,13 +30,14 @@ export default function Rules() {
         <div className="grid gap-12 lg:grid-cols-[1fr_340px]">
           <article className="max-w-[68ch] text-[16px] leading-relaxed text-ink/85 [&_li]:mt-2 [&_p]:mt-4 [&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-5">
             <H>A round</H>
-            <p>Each round has an entry window, then a running period. When entries close, the start prices are taken. When the round ends, the end prices are taken and the ETFs are ranked by return.</p>
+            <p>Rounds run every week on the US stock market&rsquo;s clock (New York time). Entries open as soon as the last round is settled on Friday after the close, and close on <b>Monday at 9:30am</b>, the open: that&rsquo;s when the start prices are taken. The round ends on <b>Friday at 4pm</b>, the close: the end prices are taken, the ETFs are ranked by return, winners are paid and baskets go back to their owners. Then the next week&rsquo;s entries open.</p>
             <p>Prices come from Robinhood Chain&rsquo;s Chainlink feeds, one per Stock Token, readable on-chain by anyone. A feed quotes one token&rsquo;s value, which includes reinvested dividends, so returns are total returns. Several samples are averaged at the start and at the end, so one odd tick can&rsquo;t decide a round. A stale feed, a paused oracle (a corporate action in progress) or a stalled chain voids the round and refunds everyone. Short demo rounds may use Robinhood&rsquo;s own quote API instead; the round&rsquo;s published inputs say which.</p>
 
             <H>Creators</H>
             <ul>
               <li>Pick at least 3 stocks or funds (up to 10 assets in all), none above 50%, worth at least $10 in total.</li>
-              <li>Only Robinhood Stock Tokens with a Chainlink feed can be picked: 35 stocks and funds.</li>
+              <li>Only tokens with a Chainlink feed on Robinhood Chain can be picked: 35 Robinhood Stock Tokens, plus BTC (as WBTC) and ETH (as WETH).</li>
+              <li>Crypto is a side slice: BTC and ETH together can be at most 20% of the basket, and they don&rsquo;t count toward the 3 stocks.</li>
               <li>Lock the basket in the league contract with a $5 USDG ticket, and give the ETF a name.</li>
               <li>The basket comes back to you when the round ends, win or lose. Only the ticket is at stake.</li>
               <li>Same stocks at the same weights (to 1%) as an existing ETF? You join that team. The first creator is its captain.</li>
@@ -51,17 +52,17 @@ export default function Rules() {
             </ul>
 
             <H>Who wins</H>
-            <p>ETFs are ranked by return. Every round has a ghost team, <b>AVERAGE</b>, borrowed from Fantasy Premier League: its return is the median return of the round (the middle ETF, or halfway between the two middle ones).</p>
+            <p>ETFs are ranked by return. Every round has a ghost team, <b>MEDIAN</b> (like Fantasy Premier League&rsquo;s AVERAGE team, but it really is the median): its return is the median return of the round (the middle ETF, or halfway between the two middle ones).</p>
             <ul>
-              <li><b>Above AVERAGE:</b> you win a share of the pot.</li>
-              <li><b>On AVERAGE:</b> a draw. Your ticket comes back, no gain, no loss. In a round with an odd number of ETFs, the middle one always draws.</li>
-              <li><b>Below AVERAGE:</b> your ticket goes into the pot.</li>
+              <li><b>Above MEDIAN:</b> you win a share of the pot.</li>
+              <li><b>On MEDIAN:</b> a draw. Your ticket comes back, no gain, no loss. In a round with an odd number of ETFs, the middle one always draws.</li>
+              <li><b>Below MEDIAN:</b> your ticket goes into the pot.</li>
             </ul>
             <p>Why the median and not the mean: one wild ETF can drag a mean up or down and decide everyone&rsquo;s result; the median only moves if half the league moves. If at least half the ETFs tie for the best return, they all win. A round needs at least 4 ETFs; otherwise everyone is refunded.</p>
 
             <H>How the pot is split</H>
             <p>The losing tickets form the pot. 10% is taken: 5% for the platform, 5% for the season pot (which tops up thin rounds). While the round runs, all its tickets sit in a savings vault (Robinhood Earn on mainnet) and the interest is added to the pot. The rest goes to the winning teams, by team size × accuracy. Accuracy is how close an ETF came to the best return: the best ETF scores 1, and it drops steeply with distance. Inside a team, every ticket gets the same share, and the creator takes 10% of their backers&rsquo; winnings. A team can win at most 100× what it staked.</p>
-            <p>Example: 5 ETFs, each with its creator and 3 backers ($20 per team, $100 in tickets). AVERAGE is +1.0%, ETF C&rsquo;s return.</p>
+            <p>Example: 5 ETFs, each with its creator and 3 backers ($20 per team, $100 in tickets). MEDIAN is +1.0%, ETF C&rsquo;s return.</p>
             <div className="mt-4 overflow-x-auto rounded-[20px] border border-line">
               <table className="w-full min-w-[520px] text-left text-[14px]">
                 <thead className="text-[12px] text-muted">

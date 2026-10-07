@@ -27,29 +27,38 @@ LEAGUE_CHAIN=testnet npx pnpm deploy:league --broadcast  # prints ESCROW_ADDRESS
 ```
 Put `ESCROW_ADDRESS` in `.env.local`, commit `deployments.json` (no secrets in it), and tell Claude the address.
 
-## 3. Host it on stocks.kickoff.cash (Render free tier)
-`render.yaml` runs the app and the keeper (`keeper watch`) in one free web service.
-1. Render → **New → Blueprint** → pick `NECOKIZZ/kickoffstocks` (and this branch, until it's merged to `main`).
-2. When asked, paste `KEEPER_PRIVATE_KEY`. Everything else is filled in. Never the deployer key.
+## 3. One-time: add BTC and ETH (Cloud Shell, 2 min)
+Allowlisting tokens needs the owner (deployer) key, so this is the one command you run yourself:
+```
+cd ~/kickoffstocks && git pull && cd contracts && forge build && cd ..
+LEAGUE_CHAIN=testnet npx pnpm add:crypto              # dry run
+LEAGUE_CHAIN=testnet npx pnpm add:crypto --broadcast  # deploys test BTC + ETH faucet tokens, allowlists them
+cat deployments.json                                  # paste this to Claude (no secrets in it)
+```
+
+## 4. Host it on stocks.kickoff.cash (Render free tier + Supabase)
+`render.yaml` runs the app and the keeper in one free web service. The keeper runs the league by itself, every week:
+it opens the round, entries close **Monday 9:30am New York**, it samples prices at the open and at **Friday 4pm**,
+settles (winners paid, baskets back) and opens the next week. Nobody runs anything.
+1. **Supabase** → New project (free) → Connect → copy the **Session pooler** string and add `?sslmode=require` at the end.
+   It stores price samples and settlement inputs, so a round survives restarts and redeploys (Render's free tier has no disk).
+2. **Render** → New → **Blueprint** → `NECOKIZZ/kickoffstocks`, branch `main`. When asked, paste `KEEPER_PRIVATE_KEY`
+   and `DATABASE_URL` (the Supabase string). Everything else is filled in. Never the deployer key.
 3. Settings → Custom Domains → add `stocks.kickoff.cash`, then a CNAME `stocks` → `kickoff-stocks.onrender.com` where kickoff.cash's DNS lives.
 4. In Kickoff, add a "Stocks" link to the nav.
 
-Free-tier limits: the keeper pings the site to keep it awake; `data/` is wiped on each deploy or restart, so **don't redeploy during a round** and record the "verify a round" part soon after it settles.
+Within a minute of starting, the keeper opens the first weekly round (entries close Mon 12 Oct 9:30am New York).
+Render logs show what it does. Keep the keeper wallet topped up with testnet ETH (it pays gas for every round).
 
-## 4. Demo rounds (Thu–Fri, Mon as backup: stock prices don't move on weekends)
-A round needs **4+ ETFs** with different baskets. Each wallet can take 5 TSLA, AMZN, PLTR, AMD (and NFLX) a day from Robinhood's faucet, so use 4+ wallets, or ask Claude for a script that splits one wallet's faucet tokens across demo wallets.
-```
-npx pnpm keeper open --entry-min 30 --run-min 60   # from Cloud Shell; Render's keeper does the rest
-```
-Use `robinhood` prices for short demo rounds (Chainlink feeds only move on 0.5% changes). Run during US market hours (Mon–Fri) so prices move. Tickets: the wallet chip's **Get test USDG**.
+For the submission video, the local demo (`docs/LOCAL.md`) shows a settled round with MEDIAN and a draw without waiting a week.
 Try an agent too: add `https://stocks.kickoff.cash/api/mcp` as a connector in Claude and ask it to back the top ETF.
 
 ## 5. Optional: mainnet
 - `ZEROEX_API_KEY` from https://dashboard.0x.org (free) for "Buy the ETF".
 - `YIELD_VAULT`: the Robinhood Earn (Steakhouse / Morpho) USDG vault address on Robinhood Chain. Claude couldn't confirm it: copy it from the Morpho app, never from memory.
-- A little ETH + USDG on Robinhood Chain. `LEAGUE_CHAIN=mainnet npx pnpm deploy:league --broadcast`.
+- A little ETH + USDG on Robinhood Chain. `LEAGUE_CHAIN=mainnet npx pnpm deploy:league --broadcast` (BTC and ETH are allowlisted with the stocks).
 
 ## 6. Submit (by Mon night PT)
-- [ ] Video: landing → create an ETF → back a team → an agent backing a team via MCP → results with AVERAGE and a draw → verify a round.
+- [ ] Video: landing → create an ETF → back a team → an agent backing a team via MCP → results with MEDIAN and a draw → verify a round.
 - [ ] Colosseum project: description says Kickoff now has a Stocks mode; links to both repos, the live site, the video.
 - [ ] Make `NECOKIZZ/kickoffstocks` public (it is now) and keep `main` green.

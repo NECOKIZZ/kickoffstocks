@@ -2,7 +2,7 @@
 name: kickoff-stocks
 description: |
   Use when the user wants to play Kickoff Stocks, Kickoff's weekly stock league on Robinhood
-  Chain: see this round's ETFs and standings against AVERAGE, build an ETF from Robinhood Stock
+  Chain: see this round's ETFs and standings against MEDIAN, build an ETF from Robinhood Stock
   Tokens and enter it, back a creator's team with a $5 USDG ticket, buy a creator's ETF (mainnet;
   the creator earns a small fee), check entries, or claim. Uses the Kickoff Stocks MCP server (or
   its REST API) for plans; the user's own wallet signs them.
@@ -17,13 +17,14 @@ metadata:
 # Kickoff Stocks skill
 
 Kickoff Stocks is a weekly game on Robinhood Chain. Creators build an on-chain "ETF": a basket of
-3 to 10 Robinhood Stock Tokens worth at least $10, locked in the league contract for the round,
-plus a $5 USDG ticket. When the round ends, ETFs are ranked by return against **AVERAGE**, the
+3 to 10 Robinhood Stock Tokens worth at least $10 (BTC and ETH may add up to 20%), locked in the league contract for the round
+(Monday 9:30am to Friday 4pm New York),
+plus a $5 USDG ticket. When the round ends, ETFs are ranked by return against **MEDIAN**, the
 median ETF's return:
 
-- above AVERAGE: wins a share of the tickets below it (by team stake × accuracy);
-- on AVERAGE: a draw, the ticket comes back;
-- below AVERAGE: the ticket goes into the pot.
+- above MEDIAN: wins a share of the tickets below it (by team stake × accuracy);
+- on MEDIAN: a draw, the ticket comes back;
+- below MEDIAN: the ticket goes into the pot.
 
 Backers can join a creator's team with their own $5 ticket and/or (mainnet) buy the creator's ETF
 into their wallet through 0x (the creator earns a 0–2% fee). Locked stocks always come back.
