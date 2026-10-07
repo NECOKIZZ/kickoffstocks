@@ -37,7 +37,7 @@ it settles and opens the next week. Week 1: entries close Mon 12 Oct, settles Fr
 Healthy logs at start: `data in Postgres, prices from chainlink` then `store: OK`.
 
 Still to do:
-- [ ] Render → Settings → Custom Domains → `stocks.kickoff.cash`; CNAME `stocks` → `kickoff-stocks.onrender.com`.
+- [x] Render → Settings → Custom Domains → `stocks.kickoff.cash`; CNAME `stocks` → `kickoff-stocks.onrender.com`.
 - [ ] Merge the Kickoff PR that adds the **Stocks ↗** nav link (NECOKIZZ/kickoff#25) once the domain works.
 - [ ] Get 4+ ETFs into week 1 before Monday's open (fewer refunds everyone).
 - [ ] Keep the keeper wallet (`0x5e4b…af5F`) topped up with testnet ETH.

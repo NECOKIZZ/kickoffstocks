@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ProfitMark } from "../../ui/brand/ProfitMark";
 
-const SITE = "kickoff-stocks.onrender.com";
+const SITE = "stocks.kickoff.cash";
 const PDF = "/pitch/Profit-Markets-Pitch.pdf";
 const DATE = "October 2026";
 
