@@ -62,6 +62,16 @@ function glow(c: string, l: string): React.CSSProperties {
   };
 }
 
+/** The Kickoff mark, white, for the card's top-left pill. */
+function KickoffGlyph({ px }: { px: number }) {
+  return (
+    <svg width={px} height={px * (502 / 500)} viewBox="0 0 500 502" aria-label="Kickoff">
+      <circle cx="400" cy="100" r="100" fill={CARD.white} />
+      <path d="M150 0L500 502H327.5L150 251.5V500H0V0H150Z" fill={CARD.white} />
+    </svg>
+  );
+}
+
 function LogoBadge({ stock, px, logoPx, ring }: { stock: StockInfo; px: number; logoPx: number; ring?: boolean }) {
   return (
     <div
@@ -154,8 +164,12 @@ export function StockCard({ stock, size = "big", price, changePct, weightPct, sh
       <div className="absolute inset-0 flex flex-col" style={{ padding: big ? 15 : 10 }}>
         <div className="flex items-center justify-between">
           <div className="flex" style={{ gap: 5 }}>
-            <div style={{ fontSize: big ? 8 : 7, fontWeight: 700, letterSpacing: "0.12em", color: CARD.white, padding: big ? "5px 9px" : "4px 7px", borderRadius: 999, background: "rgba(255,255,255,.16)" }}>
-              {stock.kind === "etf" ? "FUND" : stock.kind === "crypto" ? "CRYPTO" : "STOCK TOKEN"}
+            <div
+              className="flex items-center"
+              style={{ gap: 5, fontSize: big ? 8 : 7, fontWeight: 700, letterSpacing: "0.12em", color: CARD.white, padding: big ? "5px 9px" : "4px 7px", borderRadius: 999, background: "rgba(255,255,255,.16)" }}
+            >
+              <KickoffGlyph px={big ? 11 : 9} />
+              {stock.kind === "etf" ? "FUND" : stock.kind === "crypto" ? "CRYPTO" : null}
             </div>
             {big && showWeight && weightPct !== undefined && (
               <div style={{ fontFamily: mono, fontSize: 8, fontWeight: 600, color: CARD.text, padding: "5px 8px", borderRadius: 999, background: CARD.white }}>{weightPct}%</div>

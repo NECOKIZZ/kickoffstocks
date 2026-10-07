@@ -6,7 +6,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Logo } from "../brand/Logo";
+import { ProfitMark } from "../brand/ProfitMark";
 import { MobileNav } from "../brand/MobileNav";
 import { NavUnderlineItem } from "../brand/NavUnderline";
 import { ThemeToggle } from "../brand/ThemeToggle";
@@ -25,19 +25,9 @@ export function AnnouncementBar({ children }: { children: React.ReactNode }) {
   return <div className="bg-brand-ink py-2.5 text-center font-clash text-[13px] text-brand-paper/80">{children}</div>;
 }
 
-/** The Kickoff mark plus the product tag. */
-export function StocksMark({ size = 26, white = false }: { size?: number; white?: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-2">
-      <Logo size={size} variant={white ? "white" : "mono"} />
-      <span
-        className="rounded-[6px] px-1.5 py-0.5 font-clash text-[11px] font-bold uppercase tracking-[0.14em]"
-        style={{ background: "var(--ui-accent)", color: "var(--ui-accent-contrast)" }}
-      >
-        Stocks
-      </span>
-    </span>
-  );
+/** The Kickoff × Profit Markets lockup. */
+export function StocksMark({ size = 24, white = false }: { size?: number; white?: boolean }) {
+  return <ProfitMark size={size} tone={white ? "white" : "mono"} />;
 }
 
 export function SiteHeader() {
