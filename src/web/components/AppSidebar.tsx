@@ -1,17 +1,17 @@
 "use client";
 
-// The app's fixed left sidebar (laptops and up): the lockup, the wallet,
-// the pages in two groups, then Getting started, theme and the network, and
-// Build your ETF at the bottom. Phones get a slim top bar with the drawer.
+// The app's sidebar (laptops and up): a card floating off the left edge with
+// the lockup and the theme button, the pages in two groups, then Getting
+// started and the wallet button at the bottom. Phones get a top bar with the
+// drawer.
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { BookOpen, Bot, CirclePlus, Flag, Medal, Moon, Sun, Trophy, Wallet } from "lucide-react";
-import { Button3D } from "../../ui/brand/Button3D";
+import { usePathname } from "next/navigation";
+import { BookOpen, Bot, CirclePlus, Flag, Medal, Trophy, Wallet } from "lucide-react";
 import { MobileNav } from "../../ui/brand/MobileNav";
 import { ProfitMark } from "../../ui/brand/ProfitMark";
-import { useDarkMode } from "../../ui/brand/ThemeToggle";
-import { ChainChip, ConnectButton } from "./ConnectButton";
+import { ThemeToggle } from "../../ui/brand/ThemeToggle";
+import { ConnectButton } from "./ConnectButton";
 import { openGettingStarted, useGettingStarted } from "./GettingStarted";
 
 const GROUPS = [
@@ -55,23 +55,16 @@ function NavItem({ href, label, icon: Icon, active }: { href: string; label: str
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [dark, toggle] = useDarkMode();
   const { count } = useGettingStarted();
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[260px] flex-col border-r border-line bg-surface lg:flex">
-      <div className="flex items-center justify-between px-5 pb-5 pt-6">
+    <aside className="fixed bottom-3 left-3 top-3 z-40 hidden w-[244px] flex-col rounded-[24px] border border-line bg-bg shadow-card lg:flex">
+      <div className="flex items-center justify-between px-5 pb-6 pt-5">
         <Link href="/" aria-label="Profit Markets home">
-          <ProfitMark size={22} />
+          <ProfitMark size={21} />
         </Link>
+        <ThemeToggle />
       </div>
-      <div className="px-4">
-        <div className="rounded-[16px] border border-line bg-bg p-3">
-          <p className="t-label mb-2.5 text-muted">Wallet</p>
-          <ConnectButton />
-        </div>
-      </div>
-      <nav className="mt-6 flex-1 space-y-6 overflow-y-auto px-4">
+      <nav className="flex-1 space-y-6 overflow-y-auto px-3">
         {GROUPS.map((g) => (
           <div key={g.label}>
             <p className="t-label mb-2 px-3 text-muted">{g.label}</p>
@@ -83,26 +76,17 @@ export function AppSidebar() {
           </div>
         ))}
       </nav>
-      <div className="space-y-1 px-4 pb-3">
-        <button type="button" onClick={openGettingStarted} className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left font-clash text-[14px] font-medium text-muted hover:text-ink">
+      <div className="px-3 pb-2">
+        <button type="button" onClick={openGettingStarted} className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left font-clash text-[14px] font-medium text-muted hover:bg-surface hover:text-ink">
           <Flag size={17} strokeWidth={1.8} />
           <span className="flex-1">Getting started</span>
-          <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: count === 5 ? "var(--up-bg)" : "var(--bg)", color: count === 5 ? "var(--up)" : "var(--muted)" }}>
+          <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: count === 5 ? "var(--up-bg)" : "var(--surface)", color: count === 5 ? "var(--up)" : "var(--muted)" }}>
             {count}/5
           </span>
         </button>
-        <button type="button" onClick={toggle} className="flex w-full items-center gap-3 rounded-[12px] px-3 py-2.5 text-left font-clash text-[14px] font-medium text-muted hover:text-ink">
-          {dark ? <Sun size={17} strokeWidth={1.8} /> : <Moon size={17} strokeWidth={1.8} />}
-          {dark ? "Light mode" : "Dark mode"}
-        </button>
-        <div className="px-3 pb-2 pt-1 [&>span]:!inline-flex">
-          <ChainChip />
-        </div>
       </div>
-      <div className="border-t border-line p-4">
-        <Button3D color="green" size="md" className="w-full" onClick={() => router.push("/create")}>
-          Build your ETF
-        </Button3D>
+      <div className="px-4 pb-4 pt-2 [&_a]:block [&_button]:w-full [&>div>div]:w-full">
+        <ConnectButton size="md" dropUp />
       </div>
     </aside>
   );

@@ -10,7 +10,7 @@ import { LiveTicker } from "./LiveTicker";
 
 export function Shell({ children, announce }: { children: React.ReactNode; announce?: React.ReactNode }) {
   return (
-    <div className="min-h-screen lg:pl-[260px]">
+    <div className="min-h-screen lg:pl-[268px]">
       <AppSidebar />
       <AppTopBar />
       {announce && <AnnouncementBar>{announce}</AnnouncementBar>}
