@@ -2,7 +2,7 @@
 
 import { Identity } from "../../ui/brand/Avatar";
 import Link from "next/link";
-import { useAgentWallets, useRound, useStocks } from "../hooks";
+import { useRound, useStocks } from "../hooks";
 import { EtfHand } from "../../ui/components/EtfHand";
 import { WeightBar } from "../../ui/components/WeightBar";
 import { StockCard, fmtPrice } from "../../ui/components/StockCard";
@@ -14,7 +14,6 @@ import { Container } from "./Shell";
 
 export function EtfPage({ teamKey, roundId }: { teamKey: string; roundId?: string }) {
   const { data: r, isLoading, error } = useRound(roundId);
-  const agents = useAgentWallets();
   const { data: stocks } = useStocks();
   if (isLoading) return <Container className="py-16"><div className="h-96 animate-pulse rounded-[32px] bg-surface" /></Container>;
   const t = r?.teams.find((x) => x.teamKey.toLowerCase() === teamKey.toLowerCase());
@@ -49,7 +48,7 @@ export function EtfPage({ teamKey, roundId }: { teamKey: string; roundId?: strin
               <div>
                 <h1 className="t-heading text-[40px] md:text-[52px]">{teamName(t)}</h1>
                 <p className="mt-2 text-[14px] text-muted">
-                  by <Identity address={t.captain} size={20} agent={agents.has(t.captain.toLowerCase())} className="align-middle text-ink" /> · {t.members + 1} {t.members ? "tickets" : "ticket"} on the team · buy fee {t.buyFeeBps / 100}%
+                  by <Identity address={t.captain} className="align-middle text-ink" /> · {t.members + 1} {t.members ? "tickets" : "ticket"} on the team · buy fee {t.buyFeeBps / 100}%
                 </p>
                 <div className="mt-6 text-[13px] text-muted">Return so far</div>
                 <Change pct={t.returnPct} className="text-[40px] font-medium" />

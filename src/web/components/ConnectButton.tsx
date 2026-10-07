@@ -1,7 +1,7 @@
 "use client";
 
 // Connect: injected wallets (MetaMask, Rabby, Robinhood Wallet…), in Kickoff's
-// style: a 3D accent button, then a wallet chip with your avatar, address and
+// style: a 3D accent button, then a wallet chip with your address and
 // ticket balance. On testnet the chip offers free test USDG (TestUSDG's
 // faucet) when you're low. A wallet on another chain gets a switch button.
 
@@ -12,8 +12,8 @@ import { erc20Abi, formatUnits, parseAbi } from "viem";
 import { useConnection, useDisconnect, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button3D } from "../../ui/brand/Button3D";
-import { WalletAvatar, shortAddress } from "../../ui/brand/Avatar";
-import { useAgentWallets, useConfig } from "../hooks";
+import { shortAddress } from "../../ui/brand/Avatar";
+import { useConfig } from "../hooks";
 import { ConnectModal, walletErrorMessage } from "./ConnectModal";
 
 export const short = shortAddress;
@@ -41,7 +41,6 @@ export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "
   const { switchChainAsync } = useSwitchChain();
   const { data: cfg } = useConfig();
   const qc = useQueryClient();
-  const agents = useAgentWallets();
   const { data: bal, refetch } = useTicketBalance(address);
   const { writeContractAsync, isPending: topping } = useWriteContract();
   const [note, setNote] = useState<string | null>(null);
@@ -156,11 +155,11 @@ export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "
       )}
       <button
         type="button"
-        className="inline-flex h-9 items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-3 text-[13px] font-semibold text-ink transition hover:brightness-95"
+        className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-surface px-4 text-[14px] font-semibold text-ink transition hover:brightness-95"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
-        <WalletAvatar address={address} size={26} agent={agents.has(address.toLowerCase())} />
+        <span className="size-2 rounded-full" style={{ background: "var(--color-kickoff-green)" }} aria-hidden />
         <span className="t-num">{short(address)}</span>
       </button>
       {note && (
