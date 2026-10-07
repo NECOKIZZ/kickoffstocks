@@ -100,22 +100,13 @@ export function CardStack({
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute"
-                style={{ inset: "8% -10% -14%", background: s.color, filter: "blur(60px)", opacity: 0.55, zIndex: -1, transition: "background 1s ease" }}
+                style={{ inset: "12% -2% -4%", background: s.color, filter: "blur(70px)", opacity: 0.38, zIndex: -1, transition: "background 1s ease" }}
               />
             )}
             <StockCard stock={s} size="big" price={prices[s.ticker]} changePct={changes[s.ticker]} />
           </div>
         );
       })}
-      <div className="absolute flex gap-1.5" style={{ left: 0, bottom: -34 }} aria-hidden="true">
-        {stocks.map((s, i) => (
-          <span
-            key={s.ticker}
-            className="h-1 rounded-full"
-            style={{ width: i === front ? 22 : 8, background: i === front ? "var(--color-kickoff-green)" : "rgba(255,255,255,0.22)", transition: "width .5s ease, background .5s ease" }}
-          />
-        ))}
-      </div>
     </div>
   );
 }
