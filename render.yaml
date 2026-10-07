@@ -13,7 +13,7 @@ services:
     buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
     # The keeper restarts itself if it ever exits; the app is the main process.
     startCommand: sh -c "(while true; do pnpm keeper watch; sleep 30; done) & exec pnpm start"
-    healthCheckPath: /api/rounds/current
+    healthCheckPath: /api/config
     envVars:
       - key: NODE_VERSION
         value: "22"
