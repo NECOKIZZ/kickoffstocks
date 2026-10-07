@@ -15,7 +15,7 @@ describe("colours", () => {
     const allowed = new Set([...BRAND_HEX, ...Object.values(CARD)].map((h) => h.toLowerCase()));
     // Colour definitions live in palette.ts; stocks.ts holds brand hints for picking card colours.
     const skip = new Set(["src/ui/data/palette.ts", "src/ui/data/stocks.ts"]);
-    for (const f of [...files("app"), ...files("src/ui")].filter((f) => !skip.has(f))) {
+    for (const f of [...files("app"), ...files("src/ui"), ...files("src/web")].filter((f) => !skip.has(f))) {
       const hexes = readFileSync(f, "utf8").match(/#[0-9a-fA-F]{6}\b/g) ?? [];
       for (const h of hexes) expect(allowed.has(h.toLowerCase()), `${f}: ${h}`).toBe(true);
     }
