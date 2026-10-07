@@ -1,7 +1,6 @@
 import { Shell, PageHead, Container } from "@/web/components/Shell";
 import { AgentPrompt } from "@/web/components/AgentPrompt";
 import { McpUrl } from "@/web/components/McpUrl";
-import { WalletAvatar } from "@/ui/brand/Avatar";
 
 export const metadata = { title: "Agents · Kickoff Stocks" };
 
@@ -73,10 +72,6 @@ export default function Agents() {
               <li>· Your keys stay in your wallet. The agent and this site never see them.</li>
               <li>· Testnet is free: testnet ETH and stocks from Robinhood&rsquo;s faucet, test USDG from the wallet chip.</li>
               <li>· We don&rsquo;t give tips: your agent reads the same public data you see here.</li>
-              <li className="flex items-center gap-3">
-                <WalletAvatar address="0x4799d45A40a76f5cB3650b17D0b899AcDA7B28aE" size={30} agent />
-                <span>Wallets that play through an agent get this badge on their avatar.</span>
-              </li>
             </ul>
           </aside>
         </div>

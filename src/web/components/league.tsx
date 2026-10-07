@@ -10,7 +10,7 @@ import type { LeagueEntry } from "../../ui/components/LeagueRow";
 import { LeagueTable } from "../../ui/components/LeagueRow";
 import { RoundPill } from "../../ui/components/RoundPill";
 import type { RoundView, TeamView } from "../api";
-import { useAgentWallets, useRound } from "../hooks";
+import { useRound } from "../hooks";
 
 /** A USD value with 18 decimals (basket values). */
 export const usd = (wei: string | bigint, dp = 2) => (Number(BigInt(wei) / 10n ** 12n) / 1e6).toFixed(dp);
@@ -54,7 +54,6 @@ export function RoundStats({ r }: { r: RoundView }) {
 
 export function LeagueBoard({ limit, query = "", roundId }: { limit?: number; query?: string; roundId?: string }) {
   const { data: r, error, isLoading } = useRound(roundId);
-  const agents = useAgentWallets();
   if (isLoading) return <div className="h-64 animate-pulse rounded-[24px] bg-surface" />;
   if (error || !r)
     return (
@@ -64,7 +63,7 @@ export function LeagueBoard({ limit, query = "", roundId }: { limit?: number; qu
     );
   const q = query.trim().toLowerCase();
   const teams = r.teams.filter((t) => !q || teamName(t).toLowerCase().includes(q) || t.holdings.some((h) => h.ticker?.toLowerCase().includes(q)));
-  const entries = teams.slice(0, limit).map((t) => ({ ...toEntry(t, r.stake), creatorIsAgent: agents.has(t.captain.toLowerCase()), href: `/etf/${t.teamKey}${roundId ? `?round=${roundId}` : ""}` }));
+  const entries = teams.slice(0, limit).map((t) => ({ ...toEntry(t, r.stake), href: `/etf/${t.teamKey}${roundId ? `?round=${roundId}` : ""}` }));
   if (!r.teams.length)
     return (
       <div className="rounded-[24px] bg-surface p-8 text-muted">
