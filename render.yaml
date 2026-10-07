@@ -1,0 +1,33 @@
+# Render Blueprint: the app and the keeper in one free web service.
+# Free instances have no persistent disk: data/ (price samples, settlement
+# inputs) lasts until the next deploy or restart, so don't redeploy mid-round.
+services:
+  - type: web
+    name: kickoff-stocks
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm build
+    startCommand: sh -c "pnpm keeper watch & exec pnpm start"
+    healthCheckPath: /api/rounds/current
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: LEAGUE_CHAIN
+        value: testnet
+      - key: RH_RPC_URL
+        value: https://rpc.testnet.chain.robinhood.com
+      - key: PRICE_RPC_URL
+        value: https://rpc.mainnet.chain.robinhood.com
+      - key: LEAGUE_PRICE_SOURCE
+        value: robinhood
+      - key: ESCROW_ADDRESS
+        value: "0xcd17bd5ac4d7c709bbf92399a4d2af34d2b3a8cf"
+      - key: KEEPER_ADDRESS
+        value: "0x5e4b82207f7D9c96DC44732AbDC9Fe1ED93baf5F"
+      - key: LEAGUE_DATA_DIR
+        value: data
+      - key: PUBLIC_ORIGIN
+        value: https://stocks.kickoff.cash
+      - key: KEEPER_PRIVATE_KEY
+        sync: false
