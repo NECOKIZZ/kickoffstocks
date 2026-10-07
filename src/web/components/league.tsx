@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 // Turning API round data into the UI components' shapes.
 
 import { STOCKS } from "../../ui/data/stocks";
@@ -63,6 +65,15 @@ export function LeagueBoard({ limit, query = "", roundId }: { limit?: number; qu
   const q = query.trim().toLowerCase();
   const teams = r.teams.filter((t) => !q || teamName(t).toLowerCase().includes(q) || t.holdings.some((h) => h.ticker?.toLowerCase().includes(q)));
   const entries = teams.slice(0, limit).map((t) => ({ ...toEntry(t, r.stake), creatorIsAgent: agents.has(t.captain.toLowerCase()), href: `/etf/${t.teamKey}${roundId ? `?round=${roundId}` : ""}` }));
+  if (!r.teams.length)
+    return (
+      <div className="rounded-[24px] bg-surface p-8 text-muted">
+        No ETFs yet this round.{" "}
+        <Link href="/create" className="font-medium text-ink underline">
+          Build the first one →
+        </Link>
+      </div>
+    );
   if (!entries.length) return <div className="rounded-[24px] bg-surface p-8 text-muted">No ETFs match.</div>;
   const winners = r.teams.filter((t) => t.winningNow).length || Math.floor(r.teams.length / 2);
   return <LeagueTable entries={entries} cutAfter={q ? -1 : winners} medianPct={r.medianPct} />;
