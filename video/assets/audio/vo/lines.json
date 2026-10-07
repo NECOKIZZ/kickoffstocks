@@ -1,0 +1,74 @@
+[
+ {
+  "id": "01-hook",
+  "start": 0.4,
+  "end": 8.0,
+  "text": "Everyone has a stock pick. Your group chat is full of them. But nobody ever gets paid for being right."
+ },
+ {
+  "id": "02-problem",
+  "start": 8.6,
+  "end": 20.0,
+  "text": "Investing apps are built for going it alone. Games are social, but you never own what you play with. So we asked: what if your picks were real, and the league paid out?"
+ },
+ {
+  "id": "03-brand",
+  "start": 20.5,
+  "end": 31.0,
+  "text": "Meet Profit Markets, by Kickoff: gamified ETFs on Robinhood Chain, made of real Stock Tokens. Build an ETF. Beat the median. Get paid Friday."
+ },
+ {
+  "id": "04-how",
+  "start": 31.6,
+  "end": 43.0,
+  "text": "It takes three steps. Pick three to ten real stocks, plus up to twenty percent in Bitcoin and Ether. Lock your basket with a five dollar ticket. Then finish above the median to win."
+ },
+ {
+  "id": "05-connect",
+  "start": 43.8,
+  "end": 53.0,
+  "text": "Connect any wallet. Robinhood Wallet, MetaMask, or Rabby. No account, no custody. Every move is a transaction you sign yourself."
+ },
+ {
+  "id": "06-build",
+  "start": 53.8,
+  "end": 77.0,
+  "text": "Let's build one. I'm going all in on AI chips: Nvidia, AMD, TSMC, and Micron. Set the weights, name it, and lock. The basket goes into the league contract as real Stock Tokens, priced by Chainlink, and it comes back to you when the round ends. Win or lose, you only ever risk the ticket."
+ },
+ {
+  "id": "07-live",
+  "start": 77.8,
+  "end": 96.0,
+  "text": "Now the week runs on the market's clock. Entries close at Monday's open, and scoring ends at Friday's close. Every ETF is ranked by how much it gains, live, so you always know where you stand: winning, drawing, or behind."
+ },
+ {
+  "id": "08-yield",
+  "start": 96.8,
+  "end": 111.0,
+  "text": "And your ticket never sits idle. Once entries close, every ticket goes into a USDG savings vault, Robinhood Earn on mainnet, and the interest goes straight into the winners' pot. Your stocks never move."
+ },
+ {
+  "id": "09-agents",
+  "start": 111.8,
+  "end": 132.0,
+  "text": "Prefer to delegate? Bring your own agent. Our MCP server lets Claude, ChatGPT, or any custom agent read the league, build an ETF, and back a team. The agent prepares every transaction, and your wallet still signs. We never hold a key, and we never run your agent."
+ },
+ {
+  "id": "10-settle",
+  "start": 132.8,
+  "end": 150.0,
+  "text": "Friday, four p.m. The keeper settles the round. ETFs above the median split the tickets below it, sized by stake and accuracy. Exactly on the median is a draw: your ticket comes back. Every input is hashed on-chain, so anyone can verify it."
+ },
+ {
+  "id": "11-revenue",
+  "start": 150.8,
+  "end": 168.0,
+  "text": "How we make money: a ten percent take on losing tickets. Five percent to the platform, and five to a season pot that tops up thin rounds. Creators earn ten percent of their backers' winnings. It's peer to peer. We never bet against our players."
+ },
+ {
+  "id": "12-close",
+  "start": 168.8,
+  "end": 179.2,
+  "text": "Profit Markets. Real stocks, real stakes, live on Robinhood Chain testnet today. Build an ETF. Beat the median. Get paid Friday."
+ }
+]

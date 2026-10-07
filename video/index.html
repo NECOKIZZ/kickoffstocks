@@ -28,6 +28,19 @@
       <div id="el-settle" data-composition-id="settle" data-composition-src="compositions/settle.html" data-start="132" data-duration="18.8" data-track-index="2"></div>
       <div id="el-revenue" data-composition-id="revenue" data-composition-src="compositions/revenue.html" data-start="150" data-duration="18.8" data-track-index="1"></div>
       <div id="el-close" data-composition-id="close" data-composition-src="compositions/close.html" data-start="168" data-duration="12" data-track-index="2"></div>
+      <!-- Sound, layered over the picture. Voiceover: one line per scene, placed at
+           the scene timecodes (assets/audio/vo/lines.json, made with `hyperframes tts`).
+           Music: a quiet bed, faded in and out, held well under the voice. -->
+      <audio id="voiceover" src="assets/audio/voiceover.mp3" data-start="0" data-duration="180" data-track-index="10" data-volume="1"></audio>
+      <audio
+        id="music"
+        src="assets/audio/music.mp3"
+        data-start="0"
+        data-duration="180"
+        data-track-index="11"
+        data-volume="0.14"
+        data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":2,"v":0.14},{"t":176,"v":0.14},{"t":180,"v":0}]}]}'
+      ></audio>
     </div>
     <script>
       const tl = gsap.timeline({ paused: true });
