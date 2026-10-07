@@ -1,19 +1,20 @@
 "use client";
 
 // Connect: injected wallets (MetaMask, Rabby, Robinhood Wallet…), in Kickoff's
-// style: a 3D accent button, then a wallet chip with your avatar, address and
+// style: a 3D accent button, then a wallet chip with your address and
 // ticket balance. On testnet the chip offers free test USDG (TestUSDG's
 // faucet) when you're low. A wallet on another chain gets a switch button.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { STOCKS } from "../../ui/data/stocks";
 import { erc20Abi, formatUnits, parseAbi } from "viem";
-import { useConnect, useConnection, useConnectors, useDisconnect, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
+import { useConnection, useDisconnect, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button3D } from "../../ui/brand/Button3D";
-import { WalletAvatar, shortAddress } from "../../ui/brand/Avatar";
-import { useAgentWallets, useConfig } from "../hooks";
+import { shortAddress } from "../../ui/brand/Avatar";
+import { useConfig } from "../hooks";
+import { ConnectModal, walletErrorMessage } from "./ConnectModal";
 
 export const short = shortAddress;
 
@@ -34,13 +35,12 @@ export function useTicketBalance(address?: `0x${string}`) {
 /** `dropUp` opens the wallet menu above the chip (the sidebar keeps it at the bottom). */
 export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "md"; dropUp?: boolean }) {
   const { address, chainId, isConnected } = useConnection();
-  const connectors = useConnectors();
-  const { connect, isPending, error } = useConnect();
+  const [picker, setPicker] = useState(false);
+  const closePicker = useCallback(() => setPicker(false), []);
   const { disconnect } = useDisconnect();
-  const { switchChain } = useSwitchChain();
+  const { switchChainAsync } = useSwitchChain();
   const { data: cfg } = useConfig();
   const qc = useQueryClient();
-  const agents = useAgentWallets();
   const { data: bal, refetch } = useTicketBalance(address);
   const { writeContractAsync, isPending: topping } = useWriteContract();
   const [note, setNote] = useState<string | null>(null);
@@ -58,35 +58,43 @@ export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "
   if (!mounted)
     return (
       <Button3D size={btnSize} color="accent">
-        Connect
+        Connect wallet
       </Button3D>
     );
 
-  if (!isConnected || !address) {
-    const hasInjected = typeof window !== "undefined" && "ethereum" in window;
-    if (!hasInjected)
-      return (
-        <a href="https://metamask.io/download/" target="_blank" rel="noreferrer">
-          <Button3D size={btnSize} color="accent">
-            Get a wallet ↗
-          </Button3D>
-        </a>
-      );
+  if (!isConnected || !address)
     return (
-      <span className="relative inline-flex flex-col items-end">
-        <Button3D size={btnSize} color="accent" disabled={isPending} onClick={() => connect({ connector: connectors[0] })}>
-          {isPending ? "Connecting…" : "Connect"}
+      <>
+        <Button3D size={btnSize} color="accent" onClick={() => setPicker(true)}>
+          Connect wallet
         </Button3D>
-        {error && <span className="absolute top-full mt-2 whitespace-nowrap text-[12px] text-down">{error.message.split("\n")[0]}</span>}
-      </span>
+        <ConnectModal open={picker} onClose={closePicker} />
+      </>
     );
-  }
 
   if (cfg && chainId !== cfg.chainId)
     return (
-      <Button3D size={btnSize} color="purple" onClick={() => switchChain({ chainId: cfg.chainId as never })}>
-        Switch to {cfg.chain === "local" ? "local chain" : cfg.chainName}
-      </Button3D>
+      <span className="inline-flex max-w-full flex-col gap-2">
+        <Button3D
+          size={btnSize}
+          color="purple"
+          onClick={async () => {
+            setNote(null);
+            try {
+              await switchChainAsync({ chainId: cfg.chainId as never });
+            } catch (e) {
+              setNote(walletErrorMessage(e));
+            }
+          }}
+        >
+          Switch to {cfg.chain === "local" ? "the local chain" : cfg.chainName}
+        </Button3D>
+        {note && (
+          <span role="alert" className="max-w-[320px] break-words rounded-[12px] px-3 py-2 text-[13px] leading-snug" style={{ background: "var(--down-bg)", color: "var(--down)" }}>
+            {note}
+          </span>
+        )}
+      </span>
     );
 
   const decimals = cfg?.usdgDecimals ?? 6;
@@ -104,7 +112,7 @@ export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "
       setNote("Sent: test BTC + ETH on the way");
       setTimeout(() => qc.invalidateQueries(), 4000);
     } catch (e) {
-      setNote((e as { shortMessage?: string }).shortMessage ?? (e instanceof Error ? e.message.split("\n")[0] : String(e)));
+      setNote(walletErrorMessage(e));
     }
   }
 
@@ -118,7 +126,7 @@ export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "
         qc.invalidateQueries();
       }, 4000);
     } catch (e) {
-      setNote((e as { shortMessage?: string }).shortMessage ?? (e instanceof Error ? e.message.split("\n")[0] : String(e)));
+      setNote(walletErrorMessage(e));
     }
   }
 
@@ -147,13 +155,22 @@ export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "
       )}
       <button
         type="button"
-        className="inline-flex h-9 items-center gap-2 rounded-full border border-line bg-surface py-1 pl-1 pr-3 text-[13px] font-semibold text-ink transition hover:brightness-95"
+        className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-surface px-4 text-[14px] font-semibold text-ink transition hover:brightness-95"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
-        <WalletAvatar address={address} size={26} agent={agents.has(address.toLowerCase())} />
+        <span className="size-2 rounded-full" style={{ background: "var(--color-kickoff-green)" }} aria-hidden />
         <span className="t-num">{short(address)}</span>
       </button>
+      {note && (
+        <span
+          role={note.startsWith("Sent") ? "status" : "alert"}
+          className="w-full max-w-[320px] break-words rounded-[12px] px-3 py-2 text-[13px] leading-snug"
+          style={note.startsWith("Sent") ? { background: "var(--up-bg)", color: "var(--up)" } : { background: "var(--down-bg)", color: "var(--down)" }}
+        >
+          {note}
+        </span>
+      )}
       {open && (
         <div className={`absolute z-50 w-56 overflow-hidden rounded-[16px] border border-line bg-bg p-1.5 shadow-lift ${dropUp ? "bottom-full left-0 mb-2" : "right-0 top-full mt-2"}`}>
           <Link href="/me" className="block rounded-[10px] px-3 py-2 text-[14px] hover:bg-surface" onClick={() => setOpen(false)}>

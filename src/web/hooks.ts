@@ -3,6 +3,7 @@
 // Data hooks for pages: config, stocks, the live round (polled), my entries,
 // and running a plan's transactions from the connected wallet.
 
+import { walletErrorMessage } from "./components/ConnectModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { useConnection, usePublicClient, useSendTransaction, useSwitchChain } from "wagmi";
@@ -85,8 +86,7 @@ export function usePlanRunner() {
         await qc.invalidateQueries();
         opts?.onDone?.(p);
       } catch (e) {
-        const msg = e instanceof Error ? (e as { shortMessage?: string }).shortMessage ?? e.message : String(e);
-        setError(msg);
+        setError(walletErrorMessage(e));
         setStates((x) => x.map((v) => (v === "signing" || v === "confirming" ? "failed" : v)));
       } finally {
         setBusy(false);

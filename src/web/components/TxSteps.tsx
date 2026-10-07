@@ -41,7 +41,11 @@ export function TxSteps({ plan, states, hashes, error }: { plan: PlanResponse | 
           );
         })}
       </ol>
-      {error && <p className="mt-3 text-[13px] text-down">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-3 break-words rounded-[12px] px-3 py-2 text-[14px] leading-snug" style={{ background: "var(--down-bg)", color: "var(--down)" }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
