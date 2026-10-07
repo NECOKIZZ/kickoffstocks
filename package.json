@@ -21,13 +21,15 @@
     "keeper": "tsx --env-file-if-exists=.env.local scripts/keeper.mts",
     "deploy:league": "tsx --env-file-if-exists=.env.local scripts/deploy.mts",
     "local-demo": "tsx scripts/local-demo.mts",
-    "verify": "tsx --env-file-if-exists=.env.local scripts/verify.mts"
+    "verify": "tsx --env-file-if-exists=.env.local scripts/verify.mts",
+    "add:crypto": "tsx --env-file-if-exists=.env.local scripts/add-crypto.mts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
     "@tanstack/react-query": "^5.104.1",
     "lucide-react": "^1.52.0",
     "next": "^16.2.10",
+    "postgres": "^3.4.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "viem": "^2.55.8",

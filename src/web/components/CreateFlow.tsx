@@ -17,7 +17,7 @@ import { equalWeights } from "../weights";
 import { ConnectButton } from "./ConnectButton";
 import { TxSteps } from "./TxSteps";
 
-type Filter = "all" | "stock" | "etf";
+type Filter = "all" | "stock" | "etf" | "crypto";
 
 export function CreateFlow() {
   const { data: cfg } = useConfig();
@@ -38,7 +38,7 @@ export function CreateFlow() {
   const [faucet, setFaucet] = useState<{ busy: boolean; msg: string | null }>({ busy: false, msg: null });
   const [entered, setEntered] = useState<string | null>(null);
 
-  const rules = cfg?.rules ?? { minTokens: 3, minStocks: 3, maxTokens: 10, maxWeightPct: 50, minBasketUsd: 10, ticketUsd: 5, maxBuyFeePct: 2, driftPct: 5 };
+  const rules = cfg?.rules ?? { minTokens: 3, minStocks: 3, maxCryptoPct: 20, maxTokens: 10, maxWeightPct: 50, minBasketUsd: 10, ticketUsd: 5, maxBuyFeePct: 2, driftPct: 5 };
   const live = useMemo(() => new Map(stocksData?.stocks.map((s) => [s.ticker, s]) ?? []), [stocksData]);
   const available = STOCKS.filter((s) => !stocksData || live.has(s.ticker));
   const shown = available.filter(
@@ -53,15 +53,18 @@ export function CreateFlow() {
   }, []);
   // Equal weights whenever the selection changes.
   useEffect(() => {
-    setWeights(equalWeights(picked));
+    setWeights(equalWeights(picked.map((t) => ({ ticker: t, crypto: stock(t).kind === "crypto" })), rules.maxCryptoPct));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [picked]);
 
   const toggle = (t: string) => setPicked((p) => (p.includes(t) ? p.filter((x) => x !== t) : p.length >= rules.maxTokens ? p : [...p, t]));
   const total = picked.reduce((s, t) => s + (weights[t] ?? 0), 0);
-  const stockCount = picked.length;
+  const isCrypto = (t: string) => stock(t).kind === "crypto";
+  const stockCount = picked.filter((t) => !isCrypto(t)).length;
+  const cryptoPct = picked.reduce((s, t) => s + (isCrypto(t) ? (weights[t] ?? 0) : 0), 0);
   const enoughStocks = stockCount >= rules.minStocks;
-  const weightsOk = enoughStocks && total === 100 && picked.every((t) => (weights[t] ?? 0) > 0 && weights[t] <= rules.maxWeightPct);
+  const weightsOk =
+    enoughStocks && total === 100 && cryptoPct <= rules.maxCryptoPct && picked.every((t) => (weights[t] ?? 0) > 0 && weights[t] <= rules.maxWeightPct);
   const holdings = picked.map((t) => ({ stock: stock(t), weightPct: weights[t] ?? 0 }));
 
   // Wallet balances of the picked stocks (this chain's addresses).
@@ -73,7 +76,7 @@ export function CreateFlow() {
   const held = picked.map((t, i) => {
     const raw = (bals?.[i]?.result as bigint | undefined) ?? 0n;
     const price = live.get(t)?.price ?? stock(t).price;
-    return { t, raw, usd: Number(formatUnits(raw, 18)) * price };
+    return { t, raw, usd: Number(formatUnits(raw, live.get(t)?.decimals ?? stock(t).decimals)) * price };
   });
   const heldUsd = held.reduce((s, h) => s + h.usd, 0);
   const holdsAll = picked.length > 0 && held.every((h) => h.raw > 0n);
@@ -104,7 +107,7 @@ export function CreateFlow() {
           n="1"
           title="Pick your stocks"
           done={enoughStocks}
-          hint={`${stockCount} picked · need ${rules.minStocks}+, ${rules.maxTokens} max`}
+          hint={`${stockCount} stocks${picked.length > stockCount ? ` + ${picked.length - stockCount} crypto` : ""} · need ${rules.minStocks}+, ${rules.maxTokens} max`}
         >
           <div className="mb-5 flex flex-wrap items-center gap-3">
             <input
@@ -115,9 +118,9 @@ export function CreateFlow() {
               className="h-10 w-full rounded-full border border-line bg-bg px-4 text-[14px] outline-none focus:border-ink/40 sm:w-64"
             />
             <div className="flex gap-1 rounded-full bg-surface p-1 text-[13px]">
-              {(["all", "stock", "etf"] as Filter[]).map((f) => (
+              {(["all", "stock", "etf", "crypto"] as Filter[]).map((f) => (
                 <button key={f} type="button" onClick={() => setFilter(f)} className={`h-8 rounded-full px-3 ${filter === f ? "bg-bg font-medium shadow-card" : "text-muted"}`}>
-                  {f === "all" ? "All" : f === "stock" ? "Stocks" : "Funds"}
+                  {f === "all" ? "All" : f === "stock" ? "Stocks" : f === "etf" ? "Funds" : "Crypto"}
                 </button>
               ))}
             </div>
@@ -140,7 +143,8 @@ export function CreateFlow() {
             })}
           </div>
           <p className="mt-4 text-[12px] text-muted">
-            At least {rules.minStocks} stocks or funds. Only Robinhood Stock Tokens with a Chainlink price feed are listed: that&rsquo;s what scores your ETF on-chain.
+            At least {rules.minStocks} stocks or funds. BTC and ETH can add up to {rules.maxCryptoPct}% together, on top of them. Only tokens with a Chainlink price feed on
+            Robinhood Chain are listed: that&rsquo;s what scores your ETF on-chain.
           </p>
         </Panel>
 
@@ -149,7 +153,7 @@ export function CreateFlow() {
           n="2"
           title="Set the weights"
           done={weightsOk}
-          hint={`total ${total}% · max ${rules.maxWeightPct}% each`}
+          hint={`total ${total}% · max ${rules.maxWeightPct}% each${cryptoPct ? ` · crypto ${cryptoPct}% of ${rules.maxCryptoPct}% max` : ""}`}
           disabled={!enoughStocks}
         >
           <div className="space-y-3">
@@ -274,7 +278,7 @@ export function CreateFlow() {
           </div>
           <ul className="mt-5 space-y-1.5 text-[13px] text-muted">
             <li>· Your whole balance of these {picked.length} assets (${heldUsd.toFixed(2)}) is locked until the round ends, then returned.</li>
-            <li>· Plus a ${rules.ticketUsd} USDG ticket. Beat AVERAGE (the middle ETF) and you win a share of the tickets below it. Tie AVERAGE and your ticket comes back.</li>
+            <li>· Plus a ${rules.ticketUsd} USDG ticket. Beat MEDIAN (the middle ETF) and you win a share of the tickets below it. Tie MEDIAN and your ticket comes back.</li>
             <li>· Same stocks and weights as an existing ETF? You join that team instead.</li>
             <li>· If prices move your weights more than {rules.driftPct} points away before the round starts, the entry is refunded.</li>
           </ul>

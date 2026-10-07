@@ -50,7 +50,7 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
             <div className="mt-1 text-[13px] text-muted">one ticket on {teamName(t)}</div>
           </div>
           <dl className="mt-4 space-y-2 text-[14px]">
-            <Row k="If the round ended now" v={t.drawingNow ? "ticket back (tied with AVERAGE)" : t.winningNow && pay > stake ? `${usdg(pay)} USDG back` : "ticket lost (below AVERAGE)"} />
+            <Row k="If the round ended now" v={t.drawingNow ? "ticket back (tied with MEDIAN)" : t.winningNow && pay > stake ? `${usdg(pay)} USDG back` : "ticket lost (below MEDIAN)"} />
             <Row k="Creator's cut of your winnings" v="10%" />
             <Row k="Entries close" v={new Date(r.entryClose * 1000).toUTCString().slice(5, 22) + " UTC"} />
           </dl>

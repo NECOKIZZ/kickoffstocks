@@ -13,7 +13,7 @@ describe("MCP server", () => {
     expect(tools.map((t) => t.name).sort()).toEqual(
       ["get_my_entries", "get_round", "get_rules", "list_stocks", "plan_back_team", "plan_buy_basket", "plan_buy_etf", "plan_claim", "plan_create_etf"].sort(),
     );
-    expect(client.getInstructions()).toMatch(/AVERAGE/);
+    expect(client.getInstructions()).toMatch(/MEDIAN/);
     const r = await client.callTool({ name: "plan_back_team", arguments: { wallet: "not-a-wallet", team_key: "0x00" } });
     expect(r.isError).toBe(true);
     await client.close();

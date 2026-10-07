@@ -46,7 +46,7 @@ export function SiteFooter() {
             </span>
           </div>
           <p className="font-clash text-[0.8rem] leading-[1.7] text-white/30">
-            Kickoff&rsquo;s stock league on Robinhood Chain. Build an ETF from real Robinhood Stock Tokens and beat AVERAGE.
+            Kickoff&rsquo;s stock league on Robinhood Chain. Build an ETF from real Robinhood Stock Tokens and beat MEDIAN.
           </p>
           <p className="mt-6 font-clash text-[0.72rem] text-white/20">
             © 2026 kickoff.cash · &ldquo;ETF&rdquo; means an on-chain basket of tokenized stocks, not a regulated fund. Capital is at risk.

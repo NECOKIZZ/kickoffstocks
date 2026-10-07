@@ -5,6 +5,6 @@ import { agentWallets } from "@/league/agents";
 
 export const dynamic = "force-dynamic";
 
-export function GET() {
-  return NextResponse.json({ wallets: agentWallets() });
+export async function GET() {
+  return NextResponse.json({ wallets: await agentWallets() });
 }

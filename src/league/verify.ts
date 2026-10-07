@@ -14,7 +14,7 @@ interface PublishedInputs {
   seasonPot: string;
   bonus?: string;
   params: Record<string, unknown> & { capMultiple: string };
-  rules: { minTokens: number; maxWeightBps: number; minValue: string };
+  rules: { minTokens: number; maxWeightBps: number; minValue: string; cryptoTokens?: string[]; maxCryptoBps?: number };
   prices: { start: SnapRow[]; end: SnapRow[]; problems: string[] };
   entries: {
     index: number;

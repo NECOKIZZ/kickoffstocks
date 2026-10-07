@@ -86,7 +86,7 @@ function Hero() {
       <div className="relative flex w-full flex-col items-center px-6 text-center" style={{ zIndex: 2, paddingTop: "6vh" }}>
         <Reveal duration={1000}>
           <p style={{ fontFamily: FRAUNCES, color: "rgba(255,255,255,0.85)", fontSize: "clamp(1.1rem, 2.4vw, 1.9rem)", fontStyle: "italic", lineHeight: 1.2, marginBottom: "0.35em" }}>
-            Beat AVERAGE, <span style={{ color: "#FFFFFF", fontStyle: "normal", fontWeight: 600 }}>keep the stack.</span>
+            Beat MEDIAN, <span style={{ color: "#FFFFFF", fontStyle: "normal", fontWeight: 600 }}>keep the stack.</span>
           </p>
         </Reveal>
         <h1 className="leading-none" style={{ fontFamily: FRAUNCES, color: "#FFFFFF", fontSize: "clamp(3.2rem, 8vw, 7.5rem)", fontWeight: 700, letterSpacing: "-0.025em" }}>
@@ -94,7 +94,7 @@ function Hero() {
         </h1>
         <Reveal delay={500}>
           <p className="mx-auto mt-6 max-w-[46ch]" style={{ fontFamily: CLASH, color: "rgba(255,255,255,0.8)", fontSize: "clamp(0.95rem, 1.6vw, 1.1rem)", lineHeight: 1.6 }}>
-            Build an ETF from real Robinhood Stock Tokens, lock it with a $5 ticket, and finish above AVERAGE to take a share of the tickets below it.
+            Build an ETF from real Robinhood Stock Tokens, lock it with a $5 ticket, and finish above MEDIAN to take a share of the tickets below it.
           </p>
         </Reveal>
       </div>
@@ -166,7 +166,7 @@ function RoundPot() {
             {r ? (
               <>
                 in round {r.id}&rsquo;s tickets,{" "}
-                <span style={{ color: "var(--color-kickoff-green)" }}>{r.teams.length} ETFs chasing AVERAGE</span>
+                <span style={{ color: "var(--color-kickoff-green)" }}>{r.teams.length} ETFs chasing MEDIAN</span>
               </>
             ) : (
               <>
@@ -190,16 +190,16 @@ function RoundPot() {
 const HOW_STEPS = [
   { title: "Pick 3 to 10 stocks", body: "Real Robinhood Stock Tokens: NVIDIA, Tesla, Apple, the S&P 500 and 30 more. Set the weights, give your ETF a name." },
   { title: "Lock it with a $5 ticket", body: "Your basket (at least $10) sits in the league contract for the round, still yours. It comes back when the round ends." },
-  { title: "Beat AVERAGE", body: "ETFs are ranked by return. AVERAGE is the middle team. Finish above it and you split the tickets below it. Tie it and your ticket comes back." },
+  { title: "Beat MEDIAN", body: "ETFs are ranked by return. MEDIAN is the middle team. Finish above it and you split the tickets below it. Tie it and your ticket comes back." },
   { title: "Your money keeps working", body: "Tickets earn interest in a savings vault while the round runs, and it all goes into the pot. Your stocks keep their dividends." },
 ];
 
-/** Ranked ETFs with the AVERAGE ghost line: the mechanic at a glance. */
-function AverageLadder() {
+/** Ranked ETFs with the MEDIAN ghost line: the mechanic at a glance. */
+function MedianLadder() {
   const rows = [
     { name: "AI Chips Max", ret: 4.2 },
     { name: "Everyday Giants", ret: 2.1 },
-    { name: "AVERAGE", ret: 1.3, ghost: true },
+    { name: "MEDIAN", ret: 1.3, ghost: true },
     { name: "Steady Index", ret: 1.3, draw: true },
     { name: "Fintech Rails", ret: 0.4 },
     { name: "Speed & Chips", ret: -1.9 },
@@ -212,7 +212,7 @@ function AverageLadder() {
           r.ghost ? (
             <li key={r.name} className="flex items-center gap-3 py-1">
               <span className="h-px flex-1 border-t-2 border-dashed" style={{ borderColor: "var(--color-new-purple)" }} />
-              <span style={{ fontFamily: CLASH, fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.16em", color: "var(--color-new-purple)" }}>AVERAGE {r.ret.toFixed(1)}%</span>
+              <span style={{ fontFamily: CLASH, fontSize: "0.72rem", fontWeight: 700, letterSpacing: "0.16em", color: "var(--color-new-purple)" }}>MEDIAN {r.ret.toFixed(1)}%</span>
               <span className="h-px flex-1 border-t-2 border-dashed" style={{ borderColor: "var(--color-new-purple)" }} />
             </li>
           ) : (
@@ -264,7 +264,7 @@ function HowItWorks() {
           <div className="flex flex-col items-center gap-8">
             <Reveal from="right" className="w-full">
               <div className="flex justify-center">
-                <AverageLadder />
+                <MedianLadder />
               </div>
             </Reveal>
             <Button3D color="purple" size="lg" onClick={() => router.push("/create")}>
@@ -288,7 +288,7 @@ function Statement() {
           </p>
         </Reveal>
         <h2 style={{ fontFamily: FRAUNCES, fontSize: "clamp(2.6rem, 6.5vw, 5.5rem)", fontWeight: 700, color: "var(--color-ink)", letterSpacing: "-0.03em", lineHeight: 1.05 }}>
-          <RevealWords text="Beat AVERAGE." stagger={120} />
+          <RevealWords text="Beat MEDIAN." stagger={120} />
           <br />
           <span style={{ color: "rgba(17,18,16,0.35)" }}>
             <RevealWords text="Not the whole market." delay={400} stagger={100} />
@@ -296,7 +296,7 @@ function Statement() {
         </h2>
         <Reveal delay={700}>
           <p className="mx-auto" style={{ fontFamily: FRAUNCES, fontStyle: "italic", fontSize: "clamp(1.05rem, 2vw, 1.4rem)", color: "rgba(17,18,16,0.55)", marginTop: "2.6rem", maxWidth: 560, lineHeight: 1.55 }}>
-            Half the league wins every round. The closer you are to the best ETF, the bigger your share. Land right on AVERAGE and your ticket comes home.
+            Half the league wins every round. The closer you are to the best ETF, the bigger your share. Land right on MEDIAN and your ticket comes home.
           </p>
         </Reveal>
       </div>

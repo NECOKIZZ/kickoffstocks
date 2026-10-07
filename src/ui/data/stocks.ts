@@ -9,10 +9,16 @@
 // Testnet: Robinhood's faucet hands out TSLA, AMZN, PLTR, AMD (and NFLX,
 // which has no feed). There are no Chainlink feeds on testnet, so testnet
 // rounds are priced by the same stocks' MAINNET feeds.
+//
+// Crypto slice: BTC (as WBTC) and ETH (as WETH), each with a Chainlink USD
+// feed on Robinhood Chain. Together at most 20% of a basket, and they don't
+// count toward its 3 stocks. On testnet they're our own faucet tokens
+// (scripts/add-crypto.mts, recorded in deployments.json).
 
 import { assignCardColors } from "./palette";
+import deployments from "../../../deployments.json";
 
-export type AssetKind = "stock" | "etf";
+export type AssetKind = "stock" | "etf" | "crypto";
 
 export interface StockInfo {
   /** Token symbol: Robinhood Stock Tokens use the plain ticker. */
@@ -35,9 +41,13 @@ export interface StockInfo {
   colorLight: string;
   /** Company logo (saved under public/logos). */
   logo?: string;
+  /** Token decimals (Stock Tokens and WETH: 18, WBTC: 8). */
+  decimals: number;
 }
 
-type Raw = Omit<StockInfo, "symbol" | "color" | "colorLight" | "logo">;
+type Raw = Omit<StockInfo, "symbol" | "color" | "colorLight" | "logo" | "decimals"> & { symbol?: string; decimals?: number };
+
+const testnetCrypto = ((deployments as { testnet?: { crypto?: Record<string, string> } }).testnet?.crypto ?? {}) as Record<string, string | undefined>;
 
 const s = (ticker: string, name: string, kind: AssetKind, price: number, address: string, feed: string, brand: string, testnet?: string): Raw => ({
   ticker,
@@ -87,13 +97,17 @@ const RAW: Raw[] = [
   s("SGOV", "iShares 0-3 Month Treasury Bond", "etf", 101.19, "0x92FD66527192E3e61d4DDd13322Aa222DE86F9B5", "0xa0DF4ee0fFf975306345875E3548Fcc519577A11", "#2E7D32"),
   s("SLV", "iShares Silver Trust", "etf", 55.31, "0x411eFb0E7f985935DAec3D4C3ebaEa0d0AD7D89f", "0x209b73908e92Ae021826eD79609845451Ecba2ce", "#A8A9AD"),
   s("USO", "United States Oil Fund", "etf", 144.08, "0xa30FA36Db767ad9eD3f7a60fC79526fB4d56D344", "0x75a9c76Ef439e2C7c2E5a34Ab105EcFe3766431c", "#1F1F1F"),
+  // Crypto slice (feeds: WBTC / USD and ETH / USD, 7 Oct 2026).
+  { ...s("BTC", "Bitcoin", "crypto", 84209.58, "0x6bac06600D220Ac5Ac281AD1f504D2Cf0F90F6e6", "0x62107b0d3adA75fc1697fD342d99eed947a3aA5E", "#F7931A", testnetCrypto.BTC), symbol: "WBTC", decimals: 8 },
+  { ...s("ETH", "Ether", "crypto", 2610.07, "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73", "0x78F3556b67E17Df817D51Ef5a990cDaF09E8d3A9", "#627EEA", testnetCrypto.ETH), symbol: "WETH" },
 ];
 
 const COLORS = assignCardColors(RAW.map((r) => ({ key: r.ticker, brand: r.brand })));
 
 export const STOCKS: StockInfo[] = RAW.map((r) => ({
   ...r,
-  symbol: r.ticker,
+  symbol: r.symbol ?? r.ticker,
+  decimals: r.decimals ?? 18,
   color: COLORS[r.ticker].c,
   colorLight: COLORS[r.ticker].l,
   logo: `/logos/${r.ticker}.png`,

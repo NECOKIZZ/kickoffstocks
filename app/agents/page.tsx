@@ -5,10 +5,10 @@ import { WalletAvatar } from "@/ui/brand/Avatar";
 
 export const metadata = { title: "Agents · Kickoff Stocks" };
 
-const ASKS = ["What's happening in this round?", "Back the ETF above AVERAGE with $5", "Build me an AI chips ETF", "Did I win? Claim it for me"];
+const ASKS = ["What's happening in this round?", "Back the ETF above MEDIAN with $5", "Build me an AI chips ETF", "Did I win? Claim it for me"];
 
 const TOOLS: [string, string][] = [
-  ["get_round", "ETFs ranked by return, AVERAGE, who's winning or drawing, odds per ticket"],
+  ["get_round", "ETFs ranked by return, MEDIAN, who's winning or drawing, odds per ticket"],
   ["list_stocks", "the Robinhood Stock Tokens a basket can hold, with live prices"],
   ["get_my_entries", "a wallet's entries and what it can claim"],
   ["get_rules", "chain, contracts, ticket size, basket limits"],
@@ -23,7 +23,7 @@ const ENDPOINTS: [string, string, string][] = [
   ["GET", "/agent.md", "the guide agents follow"],
   ["GET", "/api/config", "chain, league contract, USDG, rules"],
   ["GET", "/api/stocks", "league stocks with this chain's addresses and live prices"],
-  ["GET", "/api/rounds/current", "ETFs ranked by return, AVERAGE, odds per ticket"],
+  ["GET", "/api/rounds/current", "ETFs ranked by return, MEDIAN, odds per ticket"],
   ["GET", "/api/me?wallet=0x…", "a wallet's entries and what it can claim"],
   ["POST", "/api/plan", "exact transactions for back · lock · buy-basket · buy-etf · claim"],
 ];

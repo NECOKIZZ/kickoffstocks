@@ -2,27 +2,20 @@
 // server for a plan on a wallet's behalf, the wallet is noted here, and its
 // avatar gets the agent badge. Cosmetic only: it changes nothing in the game.
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { leagueStore } from "./store";
 
-const file = () => join(process.env.LEAGUE_DATA_DIR ?? "data", "agent-wallets.json");
-
-export function agentWallets(): string[] {
+export async function agentWallets(): Promise<string[]> {
   try {
-    return existsSync(file()) ? (JSON.parse(readFileSync(file(), "utf8")) as string[]) : [];
+    return await leagueStore().agentWallets();
   } catch {
     return [];
   }
 }
 
-export function noteAgentWallet(wallet: string) {
-  const w = wallet.toLowerCase();
-  const all = agentWallets();
-  if (all.includes(w)) return;
+export async function noteAgentWallet(wallet: string) {
   try {
-    mkdirSync(dirname(file()), { recursive: true });
-    writeFileSync(file(), JSON.stringify([...all, w]));
+    await leagueStore().addAgentWallet(wallet.toLowerCase());
   } catch {
-    // read-only disk (e.g. serverless): the badge is cosmetic, so skip it
+    // read-only disk or no database: the badge is cosmetic, so skip it
   }
 }
