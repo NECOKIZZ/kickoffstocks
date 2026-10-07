@@ -199,7 +199,7 @@ async function watch() {
   }
   const weekly = !flag("no-schedule") && process.env.LEAGUE_SCHEDULE !== "off";
   let lastOpened = 0;
-  log(`watching for rounds${weekly ? " (weekly schedule on)" : ""}…`);
+  log(`watching for rounds${weekly ? " (weekly schedule on)" : ""}: data in ${process.env.DATABASE_URL ? "Postgres" : `files (${process.env.LEAGUE_DATA_DIR ?? "data"}/, lost on redeploy without a disk)`}, prices from ${priceSourceFromEnv()}…`);
   for (;;) {
     let wait = 60_000;
     try {
