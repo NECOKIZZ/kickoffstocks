@@ -53,8 +53,6 @@ function until(target: number, now: number) {
   return d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m` : `${m}m ${s % 60}s`;
 }
 
-const usd = (x: number) => `$${x.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
-
 function Eyebrow({ children, color = "var(--color-new-purple)" }: { children: React.ReactNode; color?: string }) {
   return (
     <p className="inline-flex items-center gap-2" style={{ fontFamily: CLASH, fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color }}>
@@ -100,36 +98,35 @@ function Navbar() {
   };
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
-      <nav
-        className="mx-auto flex max-w-[1240px] items-center justify-between gap-4 rounded-[20px] px-4 py-2.5 sm:px-5"
-        style={{
-          background: scrolled ? "rgba(8,8,8,0.9)" : "transparent",
-          border: `1px solid ${scrolled ? "rgba(255,255,255,0.1)" : "transparent"}`,
-          backdropFilter: scrolled ? "blur(22px) saturate(1.4)" : "none",
-          WebkitBackdropFilter: scrolled ? "blur(22px) saturate(1.4)" : "none",
-          transition: "background .4s ease, border-color .4s ease",
-        }}
-      >
+    <header
+      className="fixed inset-x-0 top-0 z-50"
+      style={{
+        background: scrolled ? "rgba(0,0,0,0.94)" : "transparent",
+        borderBottom: `1px solid ${scrolled ? "rgba(255,255,255,0.08)" : "transparent"}`,
+        backdropFilter: scrolled ? "blur(20px) saturate(1.4)" : "none",
+        WebkitBackdropFilter: scrolled ? "blur(20px) saturate(1.4)" : "none",
+        transition: "background .4s ease, border-color .4s ease",
+      }}
+    >
+      <nav className="mx-auto flex max-w-[1240px] items-center justify-between gap-4 px-5 py-3.5 sm:px-8">
         <a href="#top" onClick={go("top")} aria-label="Profit Markets, top of page">
           <ProfitMark tone="white" size={24} />
         </a>
-        <div className="hidden items-center rounded-full p-1 lg:flex" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="hidden items-center gap-9 lg:flex">
           {SECTIONS.map((s) => (
             <a
               key={s.id}
               href={`#${s.id}`}
               onClick={go(s.id)}
-              className="rounded-full px-4 py-1.5 transition-colors"
-              style={{
-                fontFamily: CLASH,
-                fontSize: "0.84rem",
-                fontWeight: 500,
-                color: active === s.id ? "#111210" : "rgba(255,255,255,0.72)",
-                background: active === s.id ? "#FFFFFF" : "transparent",
-              }}
+              className="relative py-1 transition-colors hover:text-white"
+              style={{ fontFamily: CLASH, fontSize: "0.86rem", fontWeight: 500, color: active === s.id ? "#FFFFFF" : "rgba(255,255,255,0.6)" }}
             >
               {s.label}
+              <span
+                aria-hidden
+                className="absolute -bottom-1 left-0 h-px w-full origin-left"
+                style={{ background: "#FFFFFF", transform: `scaleX(${active === s.id ? 1 : 0})`, transition: "transform .4s cubic-bezier(0.22, 1, 0.36, 1)" }}
+              />
             </a>
           ))}
         </div>
@@ -145,115 +142,57 @@ function Navbar() {
 
 const HERO_CARDS = ["NVDA", "TSLA", "BTC", "AAPL", "AMZN", "ETH", "META"];
 
-function HeroStats() {
-  const { data: r } = useRound();
-  const now = useNow();
-  const pot = r ? Number(BigInt(r.pot) + BigInt(r.ticketYield ?? "0")) / 1e6 : null;
-  const closing = !r || r.phase === "entries-open";
-  const target = r ? (closing ? r.entryClose : r.end) : null;
-  const cells = [
-    { k: "In the pot", v: pot === null ? "—" : usd(pot) },
-    { k: "ETFs this week", v: r ? String(r.teams.length) : "—" },
-    { k: closing ? "Entries close in" : "Round ends in", v: target && now ? until(target, now) : "—" },
-  ];
-  return (
-    <div className="mt-12 grid w-full max-w-[560px] grid-cols-3 overflow-hidden rounded-[20px]" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)" }}>
-      {cells.map((c, i) => (
-        <div key={c.k} className="min-w-0 px-3 py-4 sm:px-5" style={{ borderLeft: i ? "1px solid rgba(255,255,255,0.08)" : undefined }}>
-          <p style={{ fontFamily: CLASH, fontSize: "0.66rem", letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.45)" }}>{c.k}</p>
-          <p className="t-num mt-1.5 whitespace-nowrap" style={{ fontSize: "clamp(0.92rem, 2vw, 1.35rem)", fontWeight: 600, color: "#FFFFFF" }}>
-            {c.v}
-          </p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function Hero() {
   const router = useRouter();
-  const { data: r } = useRound();
   const { prices, changes } = useLive();
   const cards = HERO_CARDS.map((t) => byTicker(t)!).filter(Boolean);
   return (
-    <section id="top" className="relative overflow-hidden" style={{ background: "#000000", minHeight: "100svh" }}>
-      {/* glows */}
-      <div aria-hidden className="glow-drift pointer-events-none absolute rounded-full" style={{ width: 720, height: 720, left: "-12%", top: "-22%", background: "var(--color-new-purple)", filter: "blur(170px)", opacity: 0.42 }} />
-      <div aria-hidden className="glow-drift-2 pointer-events-none absolute rounded-full" style={{ width: 560, height: 560, right: "-6%", bottom: "-18%", background: "var(--color-kickoff-green)", filter: "blur(170px)", opacity: 0.22 }} />
+    <section id="top" className="relative overflow-hidden" style={{ background: "#000000" }}>
+      <div aria-hidden className="glow-drift pointer-events-none absolute rounded-full" style={{ width: 760, height: 760, left: "-14%", top: "-30%", background: "var(--color-new-purple)", filter: "blur(180px)", opacity: 0.38 }} />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          backgroundImage: "linear-gradient(rgba(255,255,255,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.045) 1px, transparent 1px)",
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "72px 72px",
-          maskImage: "radial-gradient(ellipse 70% 60% at 60% 45%, black 20%, transparent 75%)",
-          WebkitMaskImage: "radial-gradient(ellipse 70% 60% at 60% 45%, black 20%, transparent 75%)",
+          maskImage: "radial-gradient(ellipse 60% 55% at 65% 50%, black 15%, transparent 72%)",
+          WebkitMaskImage: "radial-gradient(ellipse 60% 55% at 65% 50%, black 15%, transparent 72%)",
         }}
       />
 
-      <div className="relative mx-auto grid max-w-[1240px] grid-cols-[minmax(0,1fr)] items-center gap-16 px-5 pb-28 pt-36 sm:px-8 lg:min-h-[100svh] lg:grid-cols-[1.05fr_1fr] lg:pb-24 lg:pt-28">
+      <div className="relative mx-auto grid max-w-[1240px] grid-cols-[minmax(0,1fr)] items-center gap-14 px-5 pb-24 pt-32 sm:px-8 lg:h-[100svh] lg:max-h-[960px] lg:min-h-[640px] lg:grid-cols-[1.1fr_1fr] lg:py-0">
         <div>
-          <Reveal duration={900}>
-            <span
-              className="inline-flex items-center gap-2.5 rounded-full py-1.5 pl-2 pr-4"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", fontFamily: CLASH, fontSize: "0.8rem", color: "rgba(255,255,255,0.8)" }}
-            >
-              <span className="relative flex h-5 w-5 items-center justify-center rounded-full" style={{ background: "rgba(0,200,5,0.16)" }}>
-                <span className="live-dot h-2 w-2 rounded-full" style={{ background: "var(--color-kickoff-green)" }} />
-              </span>
-              {r ? `Week ${r.id} is open` : "Live"} · Robinhood Chain
-            </span>
-          </Reveal>
-          <h1 className="mt-7" style={{ fontFamily: FRAUNCES, color: "#FFFFFF", fontSize: "clamp(3.4rem, 8.4vw, 7.6rem)", fontWeight: 700, letterSpacing: "-0.045em", lineHeight: 0.9 }}>
-            <RevealWords text="Profit" delay={150} />
+          <h1 style={{ fontFamily: FRAUNCES, color: "#FFFFFF", fontSize: "clamp(3.6rem, 9vw, 8.4rem)", fontWeight: 700, letterSpacing: "-0.045em", lineHeight: 0.88 }}>
+            <RevealWords text="Profit" delay={150} stagger={160} />
             <br />
-            <span style={{ fontStyle: "italic", fontWeight: 400, color: "rgba(255,255,255,0.92)" }}>
-              <RevealWords text="Markets." delay={320} />
+            <span style={{ fontStyle: "italic", fontWeight: 400 }}>
+              <RevealWords text="Markets." delay={350} stagger={160} />
             </span>
           </h1>
-          <Reveal delay={450}>
-            <p className="mt-7" style={{ fontFamily: FRAUNCES, fontStyle: "italic", fontSize: "clamp(1.2rem, 2.2vw, 1.7rem)", color: "rgba(255,255,255,0.88)", lineHeight: 1.25 }}>
-              Build an ETF. <span style={{ color: "var(--color-kickoff-green)", fontStyle: "normal", fontWeight: 600 }}>Beat the median.</span> Get paid Friday.
+          <Reveal delay={700} duration={1200}>
+            <p className="mt-8 max-w-[26ch]" style={{ fontFamily: FRAUNCES, fontStyle: "italic", fontSize: "clamp(1.25rem, 2vw, 1.6rem)", color: "rgba(255,255,255,0.7)", lineHeight: 1.3 }}>
+              Build an ETF from real stocks. Beat the median. Get paid Friday.
             </p>
           </Reveal>
-          <Reveal delay={550}>
-            <p className="mt-5 max-w-[48ch]" style={{ fontFamily: CLASH, fontSize: "1rem", lineHeight: 1.65, color: "rgba(255,255,255,0.58)" }}>
-              Pick real Robinhood Stock Tokens, with a slice of BTC and ETH if you like, and lock them for the week with a $5 ticket. Finish above the MEDIAN ETF and you split the tickets
-              below it. Your stocks come back either way.
-            </p>
-          </Reveal>
-          <Reveal delay={650}>
-            <div className="mt-9 flex flex-wrap items-center gap-5">
+          <Reveal delay={900} duration={1200}>
+            <div className="mt-10">
               <Button3D color="green" size="lg" onClick={() => router.push("/create")}>
                 Build your ETF
               </Button3D>
-              <a
-                href="#how"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("how")?.scrollIntoView({ behavior: "smooth" });
-                }}
-                className="group inline-flex items-center gap-2"
-                style={{ fontFamily: CLASH, fontSize: "0.95rem", fontWeight: 500, color: "rgba(255,255,255,0.85)" }}
-              >
-                How it works
-                <span className="inline-block transition-transform group-hover:translate-y-0.5">↓</span>
-              </a>
             </div>
-          </Reveal>
-          <Reveal delay={750}>
-            <HeroStats />
           </Reveal>
         </div>
 
-        <div className="relative flex justify-center lg:justify-end">
-          <div className="hidden lg:block">
-            <CardStack stocks={cards} prices={prices} changes={changes} scale={1.22} />
+        <Reveal delay={400} duration={1400} from="none">
+          <div className="relative flex justify-center lg:justify-end">
+            <div className="hidden lg:block">
+              <CardStack stocks={cards} prices={prices} changes={changes} scale={1.15} />
+            </div>
+            <div className="lg:hidden">
+              <CardStack stocks={cards} prices={prices} changes={changes} scale={0.92} spread={0.5} />
+            </div>
           </div>
-          <div className="lg:hidden">
-            <CardStack stocks={cards} prices={prices} changes={changes} scale={0.92} spread={0.5} />
-          </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
