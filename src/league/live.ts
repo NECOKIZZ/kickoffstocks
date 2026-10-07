@@ -48,7 +48,14 @@ export async function loadRoundView(roundId?: bigint): Promise<RoundView | null>
   ]);
   const tokens = roundTokens(entries);
   const store = leagueStore();
-  const saved = async (phase: "start" | "end") => (await store.loadSamples(id, phase)).map((s) => s.sample);
+  // An unreachable store shouldn't take the page down: show live prices instead.
+  const saved = async (phase: "start" | "end") =>
+    (
+      await store.loadSamples(id, phase).catch((e) => {
+        console.error(`store: ${e instanceof Error ? e.message : e}`);
+        return [];
+      })
+    ).map((s) => s.sample);
 
   // Start prices: the saved start samples, else (entries still open) current prices.
   // Current prices: live quotes, else the latest saved end sample, else the start.
