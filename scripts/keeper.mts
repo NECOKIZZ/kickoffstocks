@@ -200,6 +200,13 @@ async function watch() {
   const weekly = !flag("no-schedule") && process.env.LEAGUE_SCHEDULE !== "off";
   let lastOpened = 0;
   log(`watching for rounds${weekly ? " (weekly schedule on)" : ""}: data in ${process.env.DATABASE_URL ? "Postgres" : `files (${process.env.LEAGUE_DATA_DIR ?? "data"}/, lost on redeploy without a disk)`}, prices from ${priceSourceFromEnv()}…`);
+  // Check the store now, not at Monday's open.
+  try {
+    await store.loadSamples(0n, "start");
+    log("store: OK");
+  } catch (e) {
+    log(`store: NOT REACHABLE (${e instanceof Error ? e.message : String(e)}): price samples can't be saved, fix DATABASE_URL`);
+  }
   for (;;) {
     let wait = 60_000;
     try {

@@ -146,6 +146,6 @@ export function leagueStore(): Store {
   if (shared) return shared;
   const url = process.env.DATABASE_URL;
   // prepare: false works through Supabase's transaction pooler too.
-  shared = url ? new PgStore(postgres(url, { max: 3, prepare: false, idle_timeout: 20, onnotice: () => {} })) : new FileStore();
+  shared = url ? new PgStore(postgres(url, { max: 3, prepare: false, idle_timeout: 20, connect_timeout: 10, onnotice: () => {} })) : new FileStore();
   return shared;
 }
