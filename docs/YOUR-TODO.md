@@ -27,31 +27,21 @@ LEAGUE_CHAIN=testnet npx pnpm deploy:league --broadcast  # prints ESCROW_ADDRESS
 ```
 Put `ESCROW_ADDRESS` in `.env.local`, commit `deployments.json` (no secrets in it), and tell Claude the address.
 
-## 3. One-time: add BTC and ETH (Cloud Shell, 2 min)
-Allowlisting tokens needs the owner (deployer) key, so this is the one command you run yourself:
-```
-cd ~/kickoffstocks && git pull && cd contracts && forge build && cd ..
-LEAGUE_CHAIN=testnet npx pnpm add:crypto              # dry run
-LEAGUE_CHAIN=testnet npx pnpm add:crypto --broadcast  # deploys test BTC + ETH faucet tokens, allowlists them
-cat deployments.json                                  # paste this to Claude (no secrets in it)
-```
+## 3. BTC and ETH on testnet ✅ done 7 Oct
+tWBTC `0x8B5AfDD4F8d7e2f409985b8AE48103E457B43167` and tWETH `0xc56976424df3B11a1FBcB1F728613998Df79f0d8`, allowlisted (`deployments.json`).
 
-## 4. Host it on stocks.kickoff.cash (Render free tier + Supabase)
-`render.yaml` runs the app and the keeper in one free web service. The keeper runs the league by itself, every week:
-it opens the round, entries close **Monday 9:30am New York**, it samples prices at the open and at **Friday 4pm**,
-settles (winners paid, baskets back) and opens the next week. Nobody runs anything.
-1. **Supabase** → New project (free) → Connect → copy the **Session pooler** string and add `?sslmode=require` at the end.
-   It stores price samples and settlement inputs, so a round survives restarts and redeploys (Render's free tier has no disk).
-2. **Render** → New → **Blueprint** → `NECOKIZZ/kickoffstocks`, branch `main`. When asked, paste `KEEPER_PRIVATE_KEY`
-   and `DATABASE_URL` (the Supabase string). Everything else is filled in. Never the deployer key.
-3. Settings → Custom Domains → add `stocks.kickoff.cash`, then a CNAME `stocks` → `kickoff-stocks.onrender.com` where kickoff.cash's DNS lives.
-4. In Kickoff, add a "Stocks" link to the nav.
+## 4. Hosting ✅ live on Render + Supabase (7 Oct)
+https://kickoff-stocks.onrender.com runs the app and the keeper (`render.yaml`); data in Supabase (`DATABASE_URL`).
+The keeper runs the league by itself every week: entries close Monday 9:30am New York, the round ends Friday 4pm,
+it settles and opens the next week. Week 1: entries close Mon 12 Oct, settles Fri 16 Oct.
+Healthy logs at start: `data in Postgres, prices from chainlink` then `store: OK`.
 
-Within a minute of starting, the keeper opens the first weekly round (entries close Mon 12 Oct 9:30am New York).
-Render logs show what it does. Keep the keeper wallet topped up with testnet ETH (it pays gas for every round).
-
-For the submission video, the local demo (`docs/LOCAL.md`) shows a settled round with MEDIAN and a draw without waiting a week.
-Try an agent too: add `https://stocks.kickoff.cash/api/mcp` as a connector in Claude and ask it to back the top ETF.
+Still to do:
+- [ ] Render → Settings → Custom Domains → `stocks.kickoff.cash`; CNAME `stocks` → `kickoff-stocks.onrender.com`.
+- [ ] Merge the Kickoff PR that adds the **Stocks ↗** nav link (NECOKIZZ/kickoff#25) once the domain works.
+- [ ] Get 4+ ETFs into week 1 before Monday's open (fewer refunds everyone).
+- [ ] Keep the keeper wallet (`0x5e4b…af5F`) topped up with testnet ETH.
+- [ ] Try a real wallet end to end: connect, Getting started, build an ETF.
 
 ## 5. Optional: mainnet
 - `ZEROEX_API_KEY` from https://dashboard.0x.org (free) for "Buy the ETF".
@@ -59,6 +49,8 @@ Try an agent too: add `https://stocks.kickoff.cash/api/mcp` as a connector in Cl
 - A little ETH + USDG on Robinhood Chain. `LEAGUE_CHAIN=mainnet npx pnpm deploy:league --broadcast` (BTC and ETH are allowlisted with the stocks).
 
 ## 6. Submit (by Mon night PT)
+Next session: the demo video (the local demo, `docs/LOCAL.md`, gives a settled week with MEDIAN and a draw), then ideas for a Solana Mobile (Seeker / dApp Store) version for Colosseum.
+
 - [ ] Video: landing → create an ETF → back a team → an agent backing a team via MCP → results with MEDIAN and a draw → verify a round.
 - [ ] Colosseum project: description says Kickoff now has a Stocks mode; links to both repos, the live site, the video.
 - [ ] Make `NECOKIZZ/kickoffstocks` public (it is now) and keep `main` green.
