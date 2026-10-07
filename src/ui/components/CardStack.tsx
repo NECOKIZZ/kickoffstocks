@@ -100,7 +100,7 @@ export function CardStack({
               <div
                 aria-hidden="true"
                 className="pointer-events-none absolute"
-                style={{ inset: "18% 4% 2%", background: s.color, filter: "blur(70px)", opacity: 0.22, zIndex: -1, transition: "background 1s ease" }}
+                style={{ inset: "12% -2% -4%", background: s.color, filter: "blur(70px)", opacity: 0.38, zIndex: -1, transition: "background 1s ease" }}
               />
             )}
             <StockCard stock={s} size="big" price={prices[s.ticker]} changePct={changes[s.ticker]} />
