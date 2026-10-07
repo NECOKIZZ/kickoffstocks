@@ -16,8 +16,9 @@
 //          Waits for the round, samples at start (then parks the tickets if a
 //          savings vault is set), samples at the end, unparks and settles.
 //   status <roundId>
-//   watch  [--samples 3] [--every-min 5] [--source …]
-//          Runs forever next to the app: runs `auto` on each new open round.
+//   watch  [--samples 3] [--every-min 5] [--source …] [--no-schedule]
+//          Runs forever next to the app: opens each week's round (entries close
+//          Monday 9:30am New York, ends Friday 4pm) and runs `auto` on it.
 //
 // Prices: LEAGUE_PRICE_SOURCE (or --source) chainlink (default, Robinhood
 // Chain's Chainlink feeds) or robinhood (Robinhood's quote API, for short
@@ -31,7 +32,9 @@ import { clientsFromEnv, escrowFromEnv, leagueChain } from "../src/league/chain"
 import { erc20Abi, leagueEscrowAbi, readEntries, readRound, roundTokens, submitSettlement } from "../src/league/escrow";
 import { buildSnapshot } from "../src/league/snapshot";
 import { settleRound } from "../src/league/settlement";
-import { FileStore, type Phase } from "../src/league/store";
+import { leagueStore, type Phase } from "../src/league/store";
+import { nextWeeklyRound } from "../src/league/schedule";
+import { cryptoTokens } from "../src/league/registry";
 import { priceSourceFromEnv, samplePrices, type PriceSource } from "../src/league/prices";
 
 const args = process.argv.slice(2);
@@ -41,16 +44,16 @@ const opt = (name: string, def?: string) => {
   return i >= 0 ? args[i + 1] : def;
 };
 const flag = (name: string) => args.includes(`--${name}`);
-const store = new FileStore();
+const store = leagueStore();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const log = (...a: unknown[]) => console.log(new Date().toISOString().slice(11, 19), ...a);
 
-async function open() {
+async function open(times?: { entryClose: number; end: number }) {
   const { pub, wallet, account, chain } = clientsFromEnv(true);
   const escrow = escrowFromEnv();
   const now = Math.floor(Date.now() / 1000);
-  const entryClose = now + Number(opt("entry-min", "60")) * 60;
-  const end = entryClose + Number(opt("run-min", "60")) * 60;
+  const entryClose = times?.entryClose ?? now + Number(opt("entry-min", "60")) * 60;
+  const end = times?.end ?? entryClose + Number(opt("run-min", "60")) * 60;
   const stakeToken = await pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "stakeToken" });
   const decimals = await pub.readContract({ address: stakeToken, abi: erc20Abi, functionName: "decimals" });
   const stake = parseUnits(opt("stake", "5")!, decimals);
@@ -73,7 +76,7 @@ async function sample(roundId: bigint, phase: Phase, source: PriceSource) {
   const at = leagueChain() === "local" ? Number((await clientsFromEnv().pub.getBlock()).timestamp) * 1000 : Date.now();
   const s = await samplePrices(source, at);
   const stale = [...s.values()].filter((p) => !p.trading).length;
-  const file = store.saveSample(roundId, phase, s, at);
+  const file = await store.saveSample(roundId, phase, s, at);
   log(`saved ${phase} sample from ${source} (${s.size} tokens${stale ? `, ${stale} not live` : ""}) → ${file}`);
 }
 
@@ -94,13 +97,12 @@ async function settle(roundId: bigint) {
   if (!dry && chainNow < info.end) throw new Error("round has not ended yet");
   const entries = await readEntries(pub, escrow, roundId);
   const tokens = roundTokens(entries);
-  const inWindow = (phase: Phase, from: number) =>
-    store
-      .loadSamples(roundId, phase)
+  const inWindow = async (phase: Phase, from: number) =>
+    (await store.loadSamples(roundId, phase))
       .filter((s) => s.at >= from && s.at <= from + windowMs)
       .map((s) => s.sample);
-  const startSamples = inWindow("start", info.entryClose * 1000);
-  const endSamples = inWindow("end", info.end * 1000);
+  const startSamples = await inWindow("start", info.entryClose * 1000);
+  const endSamples = await inWindow("end", info.end * 1000);
   const start = buildSnapshot(startSamples, tokens, minSamples);
   const end = buildSnapshot(endSamples, tokens, minSamples);
   const problems = [...start.problems, ...end.problems].map((p) => `${p.token}:${p.reason}`);
@@ -117,13 +119,14 @@ async function settle(roundId: bigint) {
     end: end.prices,
     priceProblems: problems,
     bonus: info.yield,
+    cryptoTokens: cryptoTokens(),
   });
   const decimals = await pub.readContract({ address: await pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "stakeToken" }), abi: erc20Abi, functionName: "decimals" });
   const fmt = (x: bigint) => formatUnits(x, decimals);
-  const file = store.saveInputs(roundId, s.inputs);
+  const file = await store.saveInputs(roundId, s.inputs);
   log(`round ${roundId}: ${entries.length} entries, ${s.teams.length} teams, void=${s.void ?? "no"}`);
   if (info.yield > 0n) log(`  ticket interest in the pot: ${fmt(info.yield)}`);
-  if (s.average !== null) log(`  AVERAGE ${(Number(s.average) / 1e10).toFixed(3)}%`);
+  if (s.median !== null) log(`  MEDIAN ${(Number(s.median) / 1e10).toFixed(3)}%`);
   for (const t of s.teams) log(`  ${t.isWinner ? "WIN " : t.isDraw ? "DRAW" : "    "} ${t.captain} ${(Number(t.ret) / 1e10).toFixed(3)}% (${t.members} on team)`);
   log(`  platform ${fmt(s.platformCut)}, season in ${fmt(s.seasonIn)}, season out ${fmt(s.seasonOut)}`);
   if (problems.length) log(`  price problems: ${problems.join(", ")}`);
@@ -170,7 +173,7 @@ async function auto(roundId: bigint) {
       await sleep(wait + 5_000);
     }
     // Resumable: samples already saved for this phase (before a restart) count.
-    const have = store.loadSamples(roundId, phase).length;
+    const have = (await store.loadSamples(roundId, phase)).length;
     for (let i = have; i < n; i++) {
       await sample(roundId, phase, source);
       if (i < n - 1) await sleep(every);
@@ -180,10 +183,13 @@ async function auto(roundId: bigint) {
   await settle(roundId);
 }
 
-// Runs next to the app (e.g. on Render): picks up the latest open round and
-// runs `auto` on it, so rounds only need `keeper open` from anywhere. On a host
-// that sleeps when idle (Render's free tier), it also pings the app's public
-// URL so the instance stays up while the keeper works.
+// Runs next to the app (e.g. on Render) and runs the weekly league by itself:
+// when there's no open round it opens the next one (entries close Monday
+// 9:30am New York, it ends Friday 4pm), then runs `auto` on it: samples at
+// the open, parks the tickets, samples at the close, settles, and so on every
+// week. LEAGUE_SCHEDULE=off (or --no-schedule) only runs rounds opened by hand.
+// On a host that sleeps when idle (Render's free tier), it also pings the
+// app's public URL so the instance stays up.
 async function watch() {
   const pingUrl = process.env.KEEPER_PING_URL ?? process.env.RENDER_EXTERNAL_URL;
   if (pingUrl) {
@@ -191,24 +197,29 @@ async function watch() {
     setInterval(ping, 10 * 60_000);
     log(`pinging ${pingUrl} every 10 min to stay awake`);
   }
-  const done = new Set<bigint>();
-  log("watching for rounds…");
+  const weekly = !flag("no-schedule") && process.env.LEAGUE_SCHEDULE !== "off";
+  let lastOpened = 0;
+  log(`watching for rounds${weekly ? " (weekly schedule on)" : ""}…`);
   for (;;) {
+    let wait = 60_000;
     try {
       const { pub } = clientsFromEnv();
       const latest = (await pub.readContract({ address: escrow(), abi: leagueEscrowAbi, functionName: "roundCount" })) as bigint;
-      if (latest > 0n && !done.has(latest)) {
-        const info = await readRound(pub, escrow(), latest);
-        if (info.status === "Open") {
-          log(`round ${latest}: running auto`);
-          await auto(latest);
-        }
-        done.add(latest);
+      const info = latest > 0n ? await readRound(pub, escrow(), latest) : null;
+      if (info?.status === "Open") {
+        log(`round ${latest}: running auto`);
+        await auto(latest);
+      } else if (weekly && Date.now() - lastOpened > 15 * 60_000) {
+        // (the 15-minute guard covers an RPC that hasn't caught up with the last open yet)
+        const r = nextWeeklyRound(Date.now());
+        await open({ entryClose: r.entryClose / 1000, end: r.end / 1000 });
+        lastOpened = Date.now();
       }
     } catch (e) {
-      log(`watch: ${e instanceof Error ? e.message : String(e)}`);
+      log(`watch: ${e instanceof Error ? e.message : String(e)} (retrying in 10 min)`);
+      wait = 10 * 60_000;
     }
-    await sleep(60_000);
+    await sleep(wait);
   }
 }
 const escrow = escrowFromEnv;
@@ -220,7 +231,7 @@ async function status(roundId: bigint) {
   log(`round ${roundId}: ${info.status}, ${entries.length} entries, stake ${info.stake} (base units)`);
   log(`  entries close ${new Date(info.entryClose * 1000).toISOString()}, ends ${new Date(info.end * 1000).toISOString()}`);
   if (info.parked || info.yield > 0n) log(`  tickets ${info.parked ? "parked in the savings vault" : "back"}; interest so far ${info.yield}`);
-  log(`  samples: start ${store.loadSamples(roundId, "start").length}, end ${store.loadSamples(roundId, "end").length}`);
+  log(`  samples: start ${(await store.loadSamples(roundId, "start")).length}, end ${(await store.loadSamples(roundId, "end")).length}`);
 }
 
 const sourceOpt = (): PriceSource => {
@@ -247,3 +258,4 @@ try {
   console.error(`error: ${e instanceof Error ? e.message : String(e)}`);
   process.exit(1);
 }
+process.exit(0); // don't wait for idle database connections to close

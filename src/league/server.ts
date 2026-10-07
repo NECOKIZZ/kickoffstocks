@@ -7,7 +7,7 @@ import { type AssetKind } from "../ui/data/stocks";
 import { chainFromEnv, clientsFromEnv, escrowFromEnv, leagueChain, rpcFromEnv } from "./chain";
 import { erc20Abi, leagueEscrowAbi, readEntries, readRound, readTeamMeta, type RoundInfo } from "./escrow";
 import { livePrices, loadRoundView } from "./live";
-import { FileStore } from "./store";
+import { leagueStore } from "./store";
 import { DEFAULT_RULES, DRIFT_BPS } from "./settlement";
 import { basketWeightsBps } from "../engine/league";
 import { planBack, planClaim, planClaimBasket, planLock, buyPlanSteps, normaliseWeights, type TxStep } from "./actions";
@@ -23,6 +23,8 @@ export interface PublicStock {
   name: string;
   kind: AssetKind;
   address: Address;
+  /** Token decimals (WBTC: 8, the rest: 18). */
+  decimals: number;
   logo: string | null;
   /** Mainnet Chainlink feed that scores this stock. */
   feed: Address;
@@ -40,7 +42,7 @@ async function roundStartPrices(): Promise<Map<string, number>> {
     const { pub } = clientsFromEnv();
     const id = await pub.readContract({ address: escrowFromEnv(), abi: leagueEscrowAbi, functionName: "roundCount" });
     if (id === 0n) return new Map();
-    const samples = new FileStore().loadSamples(id, "start");
+    const samples = await leagueStore().loadSamples(id, "start");
     if (!samples.length) return new Map();
     return new Map([...samples[0].sample.values()].map((p) => [p.token, Number(p.value) / 1e18]));
   } catch {
@@ -61,6 +63,7 @@ export async function chainStocks(): Promise<{ source: string; stocks: PublicSto
       name: s.name,
       kind: s.kind,
       address,
+      decimals: s.decimals,
       logo: s.logo ?? null,
       feed: s.feed,
       color: s.color,
@@ -110,6 +113,7 @@ export async function publicConfig() {
     rules: {
       minTokens: DEFAULT_RULES.minTokens,
       minStocks: DEFAULT_RULES.minTokens,
+      maxCryptoPct: DEFAULT_RULES.maxCryptoBps! / 100,
       maxTokens: 10,
       maxWeightPct: DEFAULT_RULES.maxWeightBps / 100,
       minBasketUsd: Number(DEFAULT_RULES.minValue / 10n ** 18n),
@@ -234,7 +238,7 @@ export async function makePlan(req: PlanRequest): Promise<Plan> {
       const info = await openRound(req.roundId);
       await notEntered(info.id);
       const picks = req.tickers.map(byTicker);
-      if (picks.length < DEFAULT_RULES.minTokens) throw new PlanError("a basket needs at least 3 stocks or funds");
+      if (picks.filter((p) => p.kind !== "crypto").length < DEFAULT_RULES.minTokens) throw new PlanError("a basket needs at least 3 stocks or funds (BTC and ETH don't count toward the 3)");
       if (picks.length > 10) throw new PlanError("a basket has at most 10 assets");
       if (new Set(picks.map((p) => p.ticker)).size !== picks.length) throw new PlanError("each stock once");
       const name = (req.name ?? "").trim();
@@ -243,17 +247,23 @@ export async function makePlan(req: PlanRequest): Promise<Plan> {
       if (feeBps < 0 || feeBps > 200) throw new PlanError("buy fee: 0% to 2%");
       const weights = normaliseWeights(req.weightsPct);
       if (weights.some((w) => w > DEFAULT_RULES.maxWeightBps)) throw new PlanError("no stock above 50%");
+      const cryptoBps = weights.reduce((s, w, i) => s + (picks[i].kind === "crypto" ? w : 0), 0);
+      if (cryptoBps > DEFAULT_RULES.maxCryptoBps!) throw new PlanError(`crypto is ${cryptoBps / 100}% of the basket; the cap is ${DEFAULT_RULES.maxCryptoBps! / 100}%`);
       const tokens = picks.map((p) => p.address);
       // Lock what the wallet holds (or the amounts given).
       const amounts = req.amounts?.length
         ? req.amounts.map((a) => BigInt(a))
         : await Promise.all(tokens.map((t) => pub.readContract({ address: t, abi: erc20Abi, functionName: "balanceOf", args: [wallet] })));
       if (amounts.some((a) => a === 0n)) throw new PlanError(`the wallet holds none of: ${picks.filter((_, i) => amounts[i] === 0n).map((p) => p.ticker).join(", ")}`);
-      const values = amounts.map((a, i) => (a * BigInt(Math.round(picks[i].price * 1e6))) / 10n ** 6n);
+      // USD values with 18 decimals, whatever the token's own decimals.
+      const values = amounts.map((a, i) => (a * 10n ** BigInt(18 - picks[i].decimals) * BigInt(Math.round(picks[i].price * 1e6))) / 10n ** 6n);
       const total = values.reduce((s, v) => s + v, 0n);
       const notes: string[] = [];
       if (total < DEFAULT_RULES.minValue) throw new PlanError(`basket is worth $${usd(total).toFixed(2)}; the minimum is $10`);
       const measured = basketWeightsBps(values);
+      const measuredCrypto = measured.reduce((s, w, i) => s + (picks[i].kind === "crypto" ? w : 0), 0);
+      if (measuredCrypto > DEFAULT_RULES.maxCryptoBps! + DRIFT_BPS / 2)
+        notes.push(`Crypto is ${(measuredCrypto / 100).toFixed(1)}% of the basket at current prices. Above ${(DEFAULT_RULES.maxCryptoBps! + DRIFT_BPS) / 100}% at round start refunds the entry.`);
       measured.forEach((m, i) => {
         if (Math.abs(m - weights[i]) > DRIFT_BPS / 2)
           notes.push(`${picks[i].ticker} is ${(m / 100).toFixed(1)}% of the basket at current prices but you declared ${(weights[i] / 100).toFixed(1)}%. More than ${DRIFT_BPS / 100} points apart at round start refunds the entry.`);
@@ -329,12 +339,12 @@ export async function loadLeaderboard() {
   const { pub } = clientsFromEnv();
   const escrow = escrowFromEnv();
   const count = Number(await pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "roundCount" }));
-  const store = new FileStore();
+  const store = leagueStore();
   const creators = new Map<string, CreatorRow & { wonWei: bigint }>();
   const backers = new Map<string, BackerRow & { netWei: bigint }>();
   let settled = 0;
   for (let id = 1; id <= count; id++) {
-    const inp = store.loadInputs(BigInt(id)) as null | {
+    const inp = (await store.loadInputs(BigInt(id))) as null | {
       stake: string;
       entries: { wallet: string; teamKey: string; isCreator: boolean; payout: string; status: { kind: string; captain?: boolean } }[];
       teams: { teamKey: string; captain: string; ret: string; members: number; isWinner: boolean; isDraw?: boolean }[];

@@ -10,7 +10,7 @@
 //
 // Needs `cd contracts && forge build` first (reads the compiled contracts).
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createPublicClient, createTestClient, createWalletClient, http, type Address, type Hex } from "viem";
 import { foundry } from "viem/chains";
 import { mnemonicToAccount } from "viem/accounts";
@@ -125,9 +125,9 @@ await enterRound(1n, R1, [[6, "Silicon Crown"], [7, "Silicon Crown"], [8, "Silic
 const MOVES: Record<string, number> = { NVDA: 2.4, TSLA: -1.8, AAPL: 0.8, META: 0.6, MSFT: 0.3, GOOGL: -0.4, AMD: 3.1, AMZN: 1.2, TSM: 0.9, COIN: -2.6, MSTR: -1.1, PLTR: 1.6, SPY: 0.2, QQQ: 0.5 };
 for (let i = 0; i < 3; i++) {
   const atStart = (r1Close + 60 + i * 300) * 1000;
-  store.saveSample(1n, "start", sampleAt(atStart, () => 1), atStart);
+  await store.saveSample(1n, "start", sampleAt(atStart, () => 1), atStart);
   const atEnd = (r1End + 60 + i * 300) * 1000;
-  store.saveSample(1n, "end", sampleAt(atEnd, (t) => 1 + MOVES[t] / 100), atEnd);
+  await store.saveSample(1n, "end", sampleAt(atEnd, (t) => 1 + MOVES[t] / 100), atEnd);
 }
 // Tickets earn interest in the savings vault while the round runs.
 await test.setNextBlockTimestamp({ timestamp: BigInt(r1Close + 1) });
@@ -141,11 +141,11 @@ await send(0, escrow, leagueEscrowAbi, "unparkTickets", [1n]);
   const info = await readRound(pub as never, escrow, 1n);
   const entries = await readEntries(pub as never, escrow, 1n);
   const tokens = Object.values(addr).map((a) => a.toLowerCase());
-  const start = buildSnapshot(store.loadSamples(1n, "start").map((x) => x.sample), tokens, 3);
-  const end = buildSnapshot(store.loadSamples(1n, "end").map((x) => x.sample), tokens, 3);
+  const start = buildSnapshot((await store.loadSamples(1n, "start")).map((x) => x.sample), tokens, 3);
+  const end = buildSnapshot((await store.loadSamples(1n, "end")).map((x) => x.sample), tokens, 3);
   const seasonPot = (await pub.readContract({ address: escrow, abi: leagueEscrowAbi, functionName: "seasonPot" })) as bigint;
   const s = settleRound({ roundId: 1n, stake: info.stake, capMultiple: info.capMultiple, maxBackers: info.maxBackers, seasonPot, entries, start: start.prices, end: end.prices, priceProblems: [], bonus: info.yield });
-  store.saveInputs(1n, s.inputs);
+  await store.saveInputs(1n, s.inputs);
   await submitSettlement(pub as never, w(0) as never, escrow, 1n, s, acct(0), foundry);
   const meta = await readTeamMeta(pub as never, escrow, 1n, s.teams.map((t) => t.teamKey));
   for (const t of s.teams) console.log(`  round 1 ${t.isWinner ? "WIN  " : t.isDraw ? "DRAW " : "     "}${meta.get(t.teamKey)?.name} ${(Number(t.ret) / 1e10).toFixed(2)}%`);
@@ -170,9 +170,11 @@ await enterRound(2n, R2, [[7, "AI Chips Max"], [8, "AI Chips Max"], [9, "AI Chip
 // Start samples at the snapshot prices; the app moves "now" prices over time.
 for (let i = 0; i < 3; i++) {
   const at = (r2Close + 60 + i * 300) * 1000;
-  store.saveSample(2n, "start", sampleAt(at, () => 1), at);
+  await store.saveSample(2n, "start", sampleAt(at, () => 1), at);
 }
 
 const info = { chainId: foundry.id, rpc: RPC, escrow, usdg, vault, roundId: "2", tokens: addr, creators: Object.fromEntries([...R1, ...R2].map(([n, who]) => [n, acct(who).address])) };
-writeFileSync("data/local-demo.json", JSON.stringify(info, null, 2));
-console.log(`escrow ${escrow}\nusdg ${usdg}\nround 1 settled, round 2 open (${R2.length} ETFs) → data/local-demo.json`);
+const dataDir = process.env.LEAGUE_DATA_DIR ?? "data";
+mkdirSync(dataDir, { recursive: true });
+writeFileSync(`${dataDir}/local-demo.json`, JSON.stringify(info, null, 2));
+console.log(`escrow ${escrow}\nusdg ${usdg}\nround 1 settled, round 2 open (${R2.length} ETFs) → ${dataDir}/local-demo.json`);

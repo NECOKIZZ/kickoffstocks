@@ -42,7 +42,7 @@ export function EtfPage({ teamKey, roundId }: { teamKey: string; roundId?: strin
             <div className="flex flex-wrap items-center gap-2">
               <RoundPill round={Number(r.id)} locksAt={r.entryClose * 1000} endsAt={r.end * 1000} />
               <Pill tone={t.winningNow ? "up" : "neutral"}>
-                #{t.rank} of {r.teams.length} · {t.winningNow ? "above AVERAGE" : t.drawingNow ? "on AVERAGE" : "below AVERAGE"}
+                #{t.rank} of {r.teams.length} · {t.winningNow ? "above MEDIAN" : t.drawingNow ? "on MEDIAN" : "below MEDIAN"}
               </Pill>
             </div>
             <div className="mt-6 flex flex-col gap-8 md:flex-row md:items-end md:justify-between">

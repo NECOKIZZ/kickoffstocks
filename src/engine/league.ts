@@ -1,13 +1,14 @@
 // Kickoff Stocks settlement engine.
 //
 // Weekly (or demo-length) rounds where on-chain stock baskets ("ETFs") are
-// ranked by the % growth of their stocks. Teams above AVERAGE (the median)
+// ranked by the % growth of their stocks. Teams above MEDIAN (the middle return)
 // win the ticket stakes below it, split by team stake × accuracy. Rules: see
 // docs/KICKOFF-STOCKS.md.
 //
 //   - One ETF = one team. Captain = the creator; others are backers.
-//   - AVERAGE (from FPL head-to-head leagues): a ghost team whose return is
-//     the median return of the round. Beat AVERAGE and you win, fall below it
+//   - MEDIAN (like the AVERAGE ghost team in FPL head-to-head leagues, but
+//     honestly named): a ghost team whose return is
+//     the median return of the round. Beat MEDIAN and you win, fall below it
 //     and you lose, tie it and you draw: your ticket comes back, no gain, no
 //     loss. In an odd round the middle team always draws; in an even round
 //     nobody draws unless the two middle teams tie.
@@ -76,7 +77,7 @@ export type LeagueVoidReason = "TooFewTeams" | "AllReturnsEqual";
 export interface TeamOutcome {
   d: bigint;          // best return − this return (RET_SCALE)
   isWinner: boolean;
-  isDraw: boolean;    // tied AVERAGE: ticket refunded
+  isDraw: boolean;    // tied MEDIAN: ticket refunded
   a: bigint;          // accuracy, SCALE fixed point
   teamStake: bigint;
   weight: bigint;     // teamStake × a
@@ -99,8 +100,8 @@ export interface LeagueResult {
   n: number;
   k: number;
   m: bigint;
-  /** AVERAGE's return: the median team return (RET_SCALE, rounded toward zero). */
-  average: bigint;
+  /** MEDIAN's return: the median team return (RET_SCALE, rounded toward zero). */
+  median: bigint;
   coalitionMode: boolean;
   totalStakes: bigint;
   losingStakes: bigint;
@@ -147,7 +148,7 @@ export function settleLeague(
     n,
     k: 0,
     m: 0n,
-    average: 0n,
+    median: 0n,
     coalitionMode: false,
     totalStakes,
     losingStakes: 0n,
@@ -180,10 +181,10 @@ export function settleLeague(
   const k = Math.floor(n / 2) + 1;
   const m = sorted[k - 1]; // > 0 whenever not in coalition mode
 
-  // AVERAGE = the median return. In doubled units, so an even round's
+  // MEDIAN = the median return. In doubled units, so an even round's
   // half-way median stays exact: 2·median = best·2 − (D_lo + D_hi).
   const medianTwiceD = n % 2 === 1 ? 2n * m : sorted[k - 2] + m;
-  const average = (2n * best - medianTwiceD) / 2n;
+  const median = (2n * best - medianTwiceD) / 2n;
 
   const out = base.teams;
   out.forEach((t, i) => {
@@ -282,7 +283,7 @@ export function settleLeague(
     ...base,
     k,
     m,
-    average,
+    median,
     coalitionMode,
     losingStakes,
     winningStakes,

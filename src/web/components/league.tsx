@@ -65,5 +65,5 @@ export function LeagueBoard({ limit, query = "", roundId }: { limit?: number; qu
   const entries = teams.slice(0, limit).map((t) => ({ ...toEntry(t, r.stake), creatorIsAgent: agents.has(t.captain.toLowerCase()), href: `/etf/${t.teamKey}${roundId ? `?round=${roundId}` : ""}` }));
   if (!entries.length) return <div className="rounded-[24px] bg-surface p-8 text-muted">No ETFs match.</div>;
   const winners = r.teams.filter((t) => t.winningNow).length || Math.floor(r.teams.length / 2);
-  return <LeagueTable entries={entries} cutAfter={q ? -1 : winners} averagePct={r.averagePct} />;
+  return <LeagueTable entries={entries} cutAfter={q ? -1 : winners} medianPct={r.medianPct} />;
 }

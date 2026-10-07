@@ -1,5 +1,5 @@
 // One ETF in the league table: rank, hand, name + creator, return, team,
-// odds, Back. The table draws AVERAGE (the median return) as a ghost line:
+// odds, Back. The table draws MEDIAN (the middle return) as a ghost line:
 // above it wins, on it draws (ticket back), below it loses.
 
 import Link from "next/link";
@@ -19,7 +19,7 @@ export interface LeagueEntry {
   team: number;
   /** Profit per $5 ticket if the round ended now (null: this ETF is losing now). */
   ifWins: number | null;
-  /** Right now: above AVERAGE, tied with it, or below. */
+  /** Right now: above MEDIAN, tied with it, or below. */
   status?: "win" | "draw" | "lose";
   href?: string;
 }
@@ -49,9 +49,9 @@ export function LeagueRow({ e, winning }: { e: LeagueEntry; winning: boolean }) 
             ticket now <span className="t-num text-ink">+${e.ifWins.toFixed(2)}</span>
           </>
         ) : status === "draw" ? (
-          <span className="text-brand-purple">on AVERAGE: ticket back</span>
+          <span className="text-brand-purple">on MEDIAN: ticket back</span>
         ) : (
-          "below AVERAGE"
+          "below MEDIAN"
         )}
       </span>
       <span className="btn-3d btn-ghost hidden h-8 px-4 text-[13px] md:inline-flex md:items-center">Back</span>
@@ -59,8 +59,8 @@ export function LeagueRow({ e, winning }: { e: LeagueEntry; winning: boolean }) 
   );
 }
 
-/** `cutAfter`: rows above AVERAGE (default: half); `averagePct`: AVERAGE's return, when known. */
-export function LeagueTable({ entries, cutAfter, averagePct }: { entries: LeagueEntry[]; cutAfter?: number; averagePct?: number | null }) {
+/** `cutAfter`: rows above MEDIAN (default: half); `medianPct`: MEDIAN's return, when known. */
+export function LeagueTable({ entries, cutAfter, medianPct }: { entries: LeagueEntry[]; cutAfter?: number; medianPct?: number | null }) {
   const cut = cutAfter ?? Math.floor(entries.length / 2);
   return (
     <div className="flex flex-col gap-1">
@@ -70,7 +70,7 @@ export function LeagueTable({ entries, cutAfter, averagePct }: { entries: League
           {i === cut - 1 && (
             <div className="my-2 flex items-center gap-3 px-4 font-clash text-[11px] font-bold uppercase tracking-[0.16em] text-accent">
               <span className="h-px flex-1 border-t-2 border-dashed border-accent/60" />
-              AVERAGE{averagePct !== undefined && averagePct !== null ? ` ${averagePct >= 0 ? "+" : ""}${averagePct.toFixed(2)}%` : ""} · beat it to win
+              MEDIAN{medianPct !== undefined && medianPct !== null ? ` ${medianPct >= 0 ? "+" : ""}${medianPct.toFixed(2)}%` : ""} · beat it to win
               <span className="h-px flex-1 border-t-2 border-dashed border-accent/60" />
             </div>
           )}
