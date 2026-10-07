@@ -7,7 +7,8 @@ One submission per team: submit this as a **new mode of Kickoff**, inside your K
 - [ ] On colosseum.com, confirm Kickoff is your registered project and every team member is registered.
 - [ ] Check the BNB Hack rules allow the same idea in another hackathon.
 
-## 2. Testnet deploy (Cloud Shell or any computer, 15 min)
+## 2. Testnet deploy ✅ done 7 Oct
+LeagueEscrow `0xcd17bd5ac4d7c709bbf92399a4d2af34d2b3a8cf` on Robinhood Chain testnet (46630); the rest is in `deployments.json`. Steps kept for redeploys:
 ```
 git clone https://github.com/NECOKIZZ/kickoffstocks.git && cd kickoffstocks
 npx pnpm install
@@ -33,7 +34,7 @@ Put `ESCROW_ADDRESS` in `.env.local`, commit `deployments.json` (no secrets in i
 - DNS: a CNAME `stocks` → the host, wherever kickoff.cash's DNS is managed.
 - In Kickoff, add a "Stocks" link to the nav (Claude can do this if you give push access to `NECOKIZZ/kickoff`).
 
-## 4. Demo rounds (Sat–Mon)
+## 4. Demo rounds (Thu–Fri, Mon as backup: stock prices don't move on weekends)
 A round needs **4+ ETFs** with different baskets. Each wallet can take 5 TSLA, AMZN, PLTR, AMD (and NFLX) a day from Robinhood's faucet, so use 4+ wallets, or ask Claude for a script that splits one wallet's faucet tokens across demo wallets.
 ```
 npx pnpm keeper open --entry-min 30 --run-min 60
