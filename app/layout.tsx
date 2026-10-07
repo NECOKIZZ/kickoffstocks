@@ -8,9 +8,9 @@ import { Providers } from "@/web/Providers";
 const archivo = Archivo({ subsets: ["latin"], weight: ["500", "700", "800", "900"], variable: "--font-archivo" });
 const jbMono = JetBrains_Mono({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-jbmono" });
 
-const TITLE = "Kickoff Stocks | Build an ETF, beat MEDIAN";
+const TITLE = "Profit Markets by Kickoff | Build an ETF, beat the median";
 const DESCRIPTION =
-  "Kickoff's stock league on Robinhood Chain. Build an ETF from real Robinhood Stock Tokens, lock it with a $5 ticket, and beat MEDIAN to win.";
+  "Kickoff's weekly stock league on Robinhood Chain. Build an ETF from real Robinhood Stock Tokens, lock it with a $5 ticket, and beat the median to get paid Friday.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.PUBLIC_ORIGIN ?? "https://stocks.kickoff.cash"),

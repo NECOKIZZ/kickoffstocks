@@ -332,3 +332,54 @@ html.js:not(.hydrated) .reveal-pending {
     min-height: min(100svh, 640px);
   }
 }
+
+/* ── Profit Markets landing ───────────────────────────────────────────── */
+.glow-drift {
+  animation: glow-drift 18s ease-in-out infinite alternate;
+}
+.glow-drift-2 {
+  animation: glow-drift-2 22s ease-in-out infinite alternate;
+}
+@keyframes glow-drift {
+  to {
+    transform: translate(12%, 10%) scale(1.15);
+  }
+}
+@keyframes glow-drift-2 {
+  to {
+    transform: translate(-14%, -8%) scale(0.9);
+  }
+}
+.live-dot {
+  animation: live-dot 2s ease-out infinite;
+}
+@keyframes live-dot {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 200, 5, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 9px rgba(0, 200, 5, 0);
+  }
+}
+.marquee-reverse {
+  animation-direction: reverse;
+}
+.caret {
+  animation: caret 1s steps(1) infinite;
+  color: var(--color-kickoff-green);
+}
+@keyframes caret {
+  50% {
+    opacity: 0;
+  }
+}
+.profit-tick path {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: profit-tick 1.1s 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes profit-tick {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
