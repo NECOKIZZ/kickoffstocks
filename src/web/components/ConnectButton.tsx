@@ -19,7 +19,7 @@ export const short = shortAddress;
 
 const faucetAbi = parseAbi(["function faucet()"]);
 
-function useTicketBalance(address?: `0x${string}`) {
+export function useTicketBalance(address?: `0x${string}`) {
   const { data: cfg } = useConfig();
   return useReadContract({
     address: cfg?.usdg,
