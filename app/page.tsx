@@ -1,5 +1,5 @@
-import { KickoffLanding } from "@/web/components/KickoffLanding";
+import { Landing } from "@/web/components/ProfitLanding";
 
 export default function Home() {
-  return <KickoffLanding />;
+  return <Landing />;
 }
