@@ -13,6 +13,7 @@ pnpm keeper unpark <roundId>                      # back, interest into the pot 
 pnpm keeper settle <roundId> --dry-run            # preview payouts, nothing sent
 pnpm keeper settle <roundId>                      # submit settlement
 pnpm keeper status <roundId>
+pnpm keeper watch [--samples 3 --every-min 5]     # runs forever next to the app: auto on each new open round
 ```
 **Price sources (`--source` or `LEAGUE_PRICE_SOURCE`):**
 - `chainlink` (default): Robinhood Chain's Chainlink feeds, verifiable on-chain. They move on a 0.5% deviation or the 24 h heartbeat, during US market hours (24/5). Use for real (weekly) rounds.
@@ -30,4 +31,4 @@ Testnet has no Chainlink feeds: testnet rounds read the same stocks' **mainnet**
 5. Runs the engine (AVERAGE, draws, pot + interest) and submits the payouts. Writes `data/rounds/<id>/inputs.json`, whose keccak hash goes on-chain, so anyone can recompute the result with `pnpm verify data/rounds/<id>/inputs.json <id>`.
 
 ## Hosting
-The app and the keeper share `data/` (price samples, settlement inputs). Run both on one small server with a disk (Railway or Render with a volume, or a VM), not on Vercel.
+The app and the keeper share `data/` (price samples, settlement inputs). Run both on one server, not on Vercel. `render.yaml` does this on Render's free tier (`keeper watch` next to `next start`); there `data/` is wiped on each deploy, so for weekly rounds use a paid instance with a disk.
