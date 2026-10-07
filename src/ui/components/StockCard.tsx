@@ -164,11 +164,8 @@ export function StockCard({ stock, size = "big", price, changePct, weightPct, sh
       <div className="absolute inset-0 flex flex-col" style={{ padding: big ? 15 : 10 }}>
         <div className="flex items-center justify-between">
           <div className="flex" style={{ gap: 5 }}>
-            <div
-              className="flex items-center"
-              style={{ gap: 5, fontSize: big ? 8 : 7, fontWeight: 700, letterSpacing: "0.12em", color: CARD.white, padding: big ? "5px 9px" : "4px 7px", borderRadius: 999, background: "rgba(255,255,255,.16)" }}
-            >
-              <KickoffGlyph px={big ? 11 : 9} />
+            <div className="flex items-center" style={{ gap: big ? 7 : 5, fontSize: big ? 11 : 9, fontWeight: 800, letterSpacing: "0.1em", color: CARD.white }}>
+              <KickoffGlyph px={big ? 20 : 15} />
               {stock.kind === "etf" ? "FUND" : stock.kind === "crypto" ? "CRYPTO" : null}
             </div>
             {big && showWeight && weightPct !== undefined && (
