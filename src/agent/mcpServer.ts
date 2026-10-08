@@ -103,7 +103,7 @@ export function buildMcpServer(origin: string): McpServer {
     {
       title: "Plan: create and enter an ETF",
       description:
-        "Approvals + the entry that locks the user's basket and a $5 ticket. The wallet must already hold the stocks (testnet: Robinhood's faucet; mainnet: plan_buy_basket first). " +
+        "Approvals + the entry that locks the user's basket and a $5 ticket. The wallet must already hold the stocks (plan_buy_basket first, or testnet: Robinhood's faucet). " +
         "3–10 tickers (at least 3 stocks/funds; BTC and ETH may add up to 20% together), weights in percent summing to 100, none above 50, name ≤ 32 bytes, buy fee 0–2%.",
       inputSchema: {
         wallet,
@@ -126,7 +126,7 @@ export function buildMcpServer(origin: string): McpServer {
     "plan_buy_basket",
     {
       title: "Plan: buy a basket",
-      description: "Mainnet only: 0x swaps that buy stocks with USDG, split by weight, into the user's wallet (to then lock with plan_create_etf).",
+      description: "Buys stocks with USDG, split by weight, into the user's wallet (to then lock with plan_create_etf). Mainnet: 0x swaps. Testnet: one swap on the league's swap desk at live prices, paid in test USDG.",
       inputSchema: { wallet, tickers: z.array(z.string()).min(1).max(10), weights_pct: z.array(z.number().positive()).min(1).max(10), usdg: z.number().min(1).max(10_000) },
     },
     async ({ wallet: w, tickers, weights_pct, usdg }) => plan({ action: "buy-basket", wallet: w, tickers, weightsPct: weights_pct, usdg }),
@@ -134,7 +134,7 @@ export function buildMcpServer(origin: string): McpServer {
 
   server.registerTool(
     "plan_buy_etf",
-    { title: "Plan: buy an ETF", description: "Mainnet only: buy the same basket as an ETF into the user's wallet; its creator earns their buy fee.", inputSchema: { wallet, team_key: z.string(), usdg: z.number().min(1).max(10_000) } },
+    { title: "Plan: buy an ETF", description: "Buy the same basket as an ETF into the user's wallet (0x on mainnet, the swap desk on testnet); its creator earns their buy fee.", inputSchema: { wallet, team_key: z.string(), usdg: z.number().min(1).max(10_000) } },
     async ({ wallet: w, team_key, usdg }) => plan({ action: "buy-etf", wallet: w, teamKey: team_key, usdg }),
   );
 

@@ -93,8 +93,11 @@ export function GettingStarted() {
   const steps: { title: string; body: string; action?: React.ReactNode }[] = [
     { title: "Connect a wallet", body: "MetaMask, Rabby or Robinhood Wallet, on Robinhood Chain. You sign everything yourself.", action: <ConnectButton /> },
     {
-      title: testnet ? "Get testnet ETH and stocks" : "Get ETH for gas",
-      body: testnet ? "Robinhood's faucet gives free ETH for gas and TSLA, AMZN, PLTR and AMD tokens, once a day." : "A little ETH on Robinhood Chain pays for transactions.",
+      title: testnet ? (cfg?.buyRoute === "test-desk" ? "Get testnet ETH" : "Get testnet ETH and stocks") : "Get ETH for gas",
+      body: testnet
+        ? cfg?.buyRoute === "test-desk"
+          ? "Robinhood's faucet gives free ETH for gas, once a day. The stocks you buy with test USDG, in one swap, when you build an ETF."
+          : "Robinhood's faucet gives free ETH for gas and TSLA, AMZN, PLTR and AMD tokens, once a day." : "A little ETH on Robinhood Chain pays for transactions.",
       action: cfg?.stockFaucet ? (
         <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="btn-3d btn-ghost inline-flex h-9 items-center px-4 text-[0.8rem]">
           Open faucet ↗

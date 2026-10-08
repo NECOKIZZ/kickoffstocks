@@ -10,8 +10,9 @@ import { livePrices, loadRoundView } from "./live";
 import { leagueStore } from "./store";
 import { DEFAULT_RULES, DRIFT_BPS } from "./settlement";
 import { basketWeightsBps } from "../engine/league";
-import { planBack, planClaim, planClaimBasket, planLock, buyPlanSteps, normaliseWeights, type TxStep } from "./actions";
+import { approveStep, planBack, planClaim, planClaimBasket, planLock, buyPlanSteps, normaliseWeights, swapStep, type TxStep } from "./actions";
 import { planBasketBuy } from "../rh/zeroEx";
+import { priceDeskBuy, QUOTE_TTL_S, randomNonce, signDeskBuy, testDeskAddress, testDeskEnabled } from "../rh/testDesk";
 import { USDG_DECIMALS, USDG_MAINNET } from "../rh/chains";
 import { chainStockList } from "./registry";
 
@@ -104,8 +105,9 @@ export async function publicConfig() {
     usdg,
     usdgDecimals: USDG_DECIMALS,
     currentRound,
-    /** Buying through 0x only works on Robinhood Chain mainnet. */
-    buyEnabled: c === "mainnet" && !!process.env.ZEROEX_API_KEY,
+    /** Buying: 0x on mainnet, the league's swap desk on testnet. */
+    buyEnabled: c === "mainnet" ? !!process.env.ZEROEX_API_KEY : c === "testnet" && testDeskEnabled(),
+    buyRoute: c === "mainnet" ? "0x" : c === "testnet" && testDeskEnabled() ? "test-desk" : null,
     /** Test USDG from the league's faucet (testnet and the local demo). */
     faucet: c !== "mainnet",
     /** Robinhood's faucet for testnet ETH and stock tokens. */
@@ -203,6 +205,54 @@ async function openRound(roundId?: string): Promise<RoundInfo> {
   return info;
 }
 
+/**
+ * Testnet "buy": one signed quote from the league's swap desk for the whole
+ * basket, at live prices. Steps: approve test USDG (if needed), then one swap.
+ */
+async function planDeskBuy(p: {
+  action: "buy-basket" | "buy-etf";
+  wallet: Address;
+  usdg: Address;
+  usdgTotal: bigint;
+  picks: PublicStock[];
+  weights: number[];
+  creator: Address;
+  feePct: number;
+  allowance: (token: Address, spender: Address) => Promise<bigint>;
+}): Promise<Plan> {
+  const desk = testDeskAddress()!;
+  const { pub, chain } = clientsFromEnv();
+  const priced = priceDeskBuy({
+    legs: p.picks.map((s, i) => ({ token: s.address, weightBps: p.weights[i], price: s.price, decimals: s.decimals })),
+    usdgTotal: p.usdgTotal,
+    feeBps: p.creator === p.wallet ? 0 : Math.round(p.feePct * 100),
+  });
+  const sym = (t: Address) => p.picks.find((s) => s.address === t)?.ticker ?? t;
+  const stock = await Promise.all(priced.legs.map((l) => pub.readContract({ address: l.token, abi: erc20Abi, functionName: "balanceOf", args: [desk] })));
+  const short = priced.legs.filter((l, i) => stock[i] < l.amountOut).map((l) => sym(l.token));
+  if (short.length) throw new PlanError(`the testnet swap desk is out of ${short.join(", ")} right now; try a smaller amount, or get them from Robinhood's faucet`);
+  const now = Number((await pub.getBlock()).timestamp);
+  const { data } = await signDeskBuy(chain.id, desk, {
+    taker: p.wallet,
+    tokens: priced.legs.map((l) => l.token),
+    amountsOut: priced.legs.map((l) => l.amountOut),
+    usdgIn: priced.usdgIn,
+    feeRecipient: p.creator,
+    fee: priced.fee,
+    deadline: BigInt(now + QUOTE_TTL_S),
+    nonce: randomNonce(),
+  });
+  const steps: TxStep[] = [];
+  if ((await p.allowance(p.usdg, desk)) < p.usdgTotal) steps.push(approveStep(p.usdg, desk, p.usdgTotal, "Allow the swap desk to spend your test USDG"));
+  steps.push(swapStep({ to: desk, data }, `Buy ${priced.legs.map((l) => sym(l.token)).join(", ")} with ${usdgAmt(p.usdgTotal).toFixed(2)} USDG, in one swap`));
+  const notes = [
+    `${usdgAmt(p.usdgTotal)} USDG split across ${priced.legs.length} stocks by weight, at live prices: ${priced.legs.map((l) => `${sym(l.token)} $${usdgAmt(l.amountIn).toFixed(2)}`).join(" · ")}.`,
+    `Testnet: the league's swap desk fills it (0x only runs on mainnet). The quote is good for ${QUOTE_TTL_S / 60} minutes.`,
+  ];
+  if (priced.fee > 0n) notes.push(`${p.feePct}% creator fee (${usdgAmt(priced.fee).toFixed(2)} USDG) goes to ${p.creator}.`);
+  return { action: p.action, steps, notes };
+}
+
 export async function makePlan(req: PlanRequest): Promise<Plan> {
   if (!isAddress(req.wallet)) throw new PlanError("wallet must be an address");
   const wallet = getAddress(req.wallet);
@@ -289,7 +339,9 @@ export async function makePlan(req: PlanRequest): Promise<Plan> {
 
     case "buy-basket":
     case "buy-etf": {
-      if (leagueChain() !== "mainnet") throw new PlanError("buying through 0x only works on Robinhood Chain mainnet; on testnet get stock tokens from Robinhood's faucet");
+      const net = leagueChain();
+      if (net === "local") throw new PlanError("there's no swap on the local demo chain: use its faucet");
+      if (net === "testnet" && !testDeskEnabled()) throw new PlanError("the testnet swap desk isn't set up on this deployment; get stock tokens from Robinhood's faucet");
       let tickers: PublicStock[];
       let weights: number[];
       let creator: Address;
@@ -310,6 +362,7 @@ export async function makePlan(req: PlanRequest): Promise<Plan> {
       }
       if (!(req.usdg >= 1 && req.usdg <= 10_000)) throw new PlanError("amount: 1 to 10,000 USDG");
       const usdgIn = BigInt(Math.round(req.usdg * 10 ** USDG_DECIMALS));
+      if (net === "testnet") return planDeskBuy({ action: req.action, wallet, usdg, usdgTotal: usdgIn, picks: tickers, weights, creator, feePct, allowance });
       const plan = await planBasketBuy({ usdg, tokens: tickers.map((t) => t.address), weightsBps: weights, usdgIn, wallet, creator, creatorFeePct: feePct });
       const spenders = [...new Set(plan.legs.map((l) => (l.spender ?? l.tx?.to ?? "").toLowerCase()).filter(Boolean))];
       const allow = new Map<string, bigint>();

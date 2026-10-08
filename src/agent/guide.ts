@@ -44,8 +44,8 @@ them to sign: they paste each step into their wallet, or your platform's wallet 
 their yes. Check the network with \`get_rules\` (\`chainId\`, \`chainName\`, \`explorer\`).
 
 **Funds.**
-- Testnet (chain 46630): free. Testnet ETH and stock tokens (TSLA, AMZN, PLTR, AMD) come from
-  https://faucet.testnet.chain.robinhood.com (once a day). Test USDG for tickets: the "Get test USDG"
+- Testnet (chain 46630): free. Testnet ETH comes from https://faucet.testnet.chain.robinhood.com
+  (once a day); stock tokens too, or buy them with test USDG via \`plan_buy_basket\`. Test USDG for tickets: the "Get test USDG"
   button in the site's wallet chip, or send \`faucet()\` to the ticket token (\`usdg\` in \`get_rules\`).
 - Mainnet (chain 4663): USDG for tickets and buys, plus a little ETH for gas, on Robinhood Chain.
 
@@ -68,9 +68,9 @@ Actions (money moves; always plan, explain, confirm):
   are allowed up to 20% together, on top of at least 3 stocks/funds), weights
   summing to 100 (none above 50), a name (≤ 32 characters), a buy fee 0–2%. Then
   \`plan_create_etf\` {wallet, tickers, weights_pct, name, buy_fee_pct}. It locks the wallet's whole
-  balance of those stocks. On mainnet, \`plan_buy_basket\` {wallet, tickers, weights_pct, usdg} buys
-  them first (spend $12+ so fees can't push the basket under $10). On testnet, use the faucet.
-- **Buy an ETF's stocks** (mainnet) → \`plan_buy_etf\` {wallet, team_key, usdg}
+  balance of those stocks. \`plan_buy_basket\` {wallet, tickers, weights_pct, usdg} buys them first
+  in USDG (spend $12+ so fees can't push the basket under $10): 0x on mainnet, one swap on testnet.
+- **Buy an ETF's stocks** → \`plan_buy_etf\` {wallet, team_key, usdg}
 - **Claim** (after the round is settled or voided) → \`plan_claim\` {wallet, round_id}
 
 REST plans: \`curl -s -X POST ${API}/api/plan -H 'content-type: application/json' -d '<json>'\`.

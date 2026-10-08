@@ -30,6 +30,18 @@ Put `ESCROW_ADDRESS` in `.env.local`, commit `deployments.json` (no secrets in i
 ## 3. BTC and ETH on testnet ✅ done 7 Oct
 tWBTC `0x8B5AfDD4F8d7e2f409985b8AE48103E457B43167` and tWETH `0xc56976424df3B11a1FBcB1F728613998Df79f0d8`, allowlisted (`deployments.json`).
 
+## 3b. Testnet swap desk (one-swap "buy the basket" with test USDG)
+0x doesn't run on testnet, so players had to collect every stock from Robinhood's faucet. The swap desk fixes that:
+players swap test USDG for the whole basket in one transaction, at live Chainlink prices. You set it up once:
+1. With the **deployer** wallet (`0x4799…28aE`), claim TSLA, AMZN, PLTR and AMD at https://faucet.testnet.chain.robinhood.com
+   (5 each a day; claim from more wallets and send them to the deployer for a bigger desk).
+2. `cd contracts && forge build && cd ..`
+3. `LEAGUE_CHAIN=testnet npx pnpm swap-desk` (dry run), then `... swap-desk --broadcast`: deploys the desk
+   (quoter = `KEEPER_ADDRESS`), sends it the deployer's stocks, pulls tWBTC / tWETH from their faucets.
+4. Commit `deployments.json` (it now has `testnet.contracts.swapDesk`) and redeploy Render. The app signs quotes
+   with `KEEPER_PRIVATE_KEY`, which Render already has. "Buy" turns on by itself once the address is there.
+5. Top it up now and then: claim at the faucet, then `npx pnpm swap-desk --broadcast --stock`.
+
 ## 4. Hosting ✅ live on Render + Supabase (7 Oct)
 https://kickoff-stocks.onrender.com runs the app and the keeper (`render.yaml`); data in Supabase (`DATABASE_URL`).
 The keeper runs the league by itself every week: entries close Monday 9:30am New York, the round ends Friday 4pm,

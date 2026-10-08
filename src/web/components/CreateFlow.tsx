@@ -1,7 +1,7 @@
 "use client";
 
 // The create flow, as four numbered panels on one page:
-//   1 pick stocks · 2 set weights · 3 get them (0x on mainnet, Robinhood's faucet on testnet, the local faucet) · 4 name it and lock it.
+//   1 pick stocks · 2 set weights · 3 get them (0x on mainnet, the league's swap desk on testnet, the local faucet) · 4 name it and lock it.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
@@ -306,6 +306,31 @@ export function CreateFlow() {
               <button type="button" disabled={faucet.busy || !weightsOk || !(Number(amount) >= rules.minBasketUsd)} onClick={getTestStocks} className="h-12 w-full btn-3d btn-accent text-[16px] disabled:opacity-40">
                 {faucet.busy ? "Sending…" : "Get test stocks (local demo chain)"}
               </button>
+            ) : cfg?.buyEnabled ? (
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  disabled={buyRunner.busy || !weightsOk || !(Number(amount) >= rules.minBasketUsd)}
+                  onClick={() => buyRunner.run({ action: "buy-basket", tickers: picked, weightsPct: picked.map((t) => weights[t]), usdg: Number(amount) }, { onDone: () => refetchBals() })}
+                  className="h-12 w-full btn-3d btn-accent text-[16px] disabled:opacity-40"
+                >
+                  {buyRunner.busy ? "Working…" : cfg.buyRoute === "test-desk" ? `Swap ${Number(amount).toFixed(2)} USDG for all ${picked.length}` : `Buy for ${Number(amount).toFixed(2)} USDG via 0x`}
+                </button>
+                {cfg.buyRoute === "test-desk" && (
+                  <p className="text-[13px] text-muted">
+                    Testnet: one swap buys every pick at live prices with your test USDG (free in Getting started).
+                    {cfg.stockFaucet && (
+                      <>
+                        {" "}Or get them from{" "}
+                        <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                          Robinhood&rsquo;s faucet ↗
+                        </a>
+                        .
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
             ) : cfg?.stockFaucet ? (
               <div className="space-y-3">
                 <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="grid h-12 w-full place-items-center btn-3d btn-accent text-[16px]">
@@ -316,15 +341,6 @@ export function CreateFlow() {
                   started.
                 </p>
               </div>
-            ) : cfg?.buyEnabled ? (
-              <button
-                type="button"
-                disabled={buyRunner.busy || !weightsOk || !(Number(amount) >= rules.minBasketUsd)}
-                onClick={() => buyRunner.run({ action: "buy-basket", tickers: picked, weightsPct: picked.map((t) => weights[t]), usdg: Number(amount) }, { onDone: () => refetchBals() })}
-                className="h-12 w-full btn-3d btn-accent text-[16px] disabled:opacity-40"
-              >
-                {buyRunner.busy ? "Working…" : `Buy for ${Number(amount).toFixed(2)} USDG via 0x`}
-              </button>
             ) : (
               <p className="text-[13px] text-muted">Buying isn&rsquo;t available on this deployment yet. If you already hold the stocks, go to step 4.</p>
             )}

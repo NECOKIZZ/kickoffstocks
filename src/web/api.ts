@@ -17,6 +17,8 @@ export interface LeagueConfig {
   usdgDecimals: number;
   currentRound: string | null;
   buyEnabled: boolean;
+  /** How buys are filled: 0x (mainnet) or the league's swap desk (testnet). */
+  buyRoute: "0x" | "test-desk" | null;
   faucet: boolean;
   stockFaucet: string | null;
   rules: { minTokens: number; minStocks: number; maxCryptoPct: number; maxTokens: number; maxWeightPct: number; minBasketUsd: number; ticketUsd: number; maxBuyFeePct: number; driftPct: number };

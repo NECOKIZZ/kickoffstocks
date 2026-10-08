@@ -22,7 +22,8 @@
     "deploy:league": "tsx --env-file-if-exists=.env.local scripts/deploy.mts",
     "local-demo": "tsx scripts/local-demo.mts",
     "verify": "tsx --env-file-if-exists=.env.local scripts/verify.mts",
-    "add:crypto": "tsx --env-file-if-exists=.env.local scripts/add-crypto.mts"
+    "add:crypto": "tsx --env-file-if-exists=.env.local scripts/add-crypto.mts",
+    "swap-desk": "tsx --env-file-if-exists=.env.local scripts/swap-desk.mts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",

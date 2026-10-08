@@ -1,7 +1,7 @@
 "use client";
 
 // Gloam-style action panel for an ETF: "Stake $5" (a ticket on the team) and
-// "Buy the ETF" (0x swaps, creator fee). Runs the plan from the wallet. A
+// "Buy the ETF" (0x swaps on mainnet, the swap desk on testnet; creator fee). Runs the plan from the wallet. A
 // banner on top says plainly whether staking is open or locked right now.
 
 import { useEffect, useState } from "react";
@@ -91,13 +91,13 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
           </label>
           <dl className="mt-4 space-y-2 text-[14px]">
             <Row k="Creator fee" v={`${fee}% to the creator`} />
-            <Row k="Route" v="0x (RFQ market makers + Uniswap)" />
+            <Row k="Route" v={cfg?.buyRoute === "test-desk" ? "testnet swap desk, live prices, one swap" : "0x (RFQ market makers + Uniswap)"} />
             <Row k="Slippage" v="auto" />
           </dl>
           <div className="mt-5">
             {!cfg?.buyEnabled ? (
               <p className="rounded-[16px] bg-bg p-4 text-[13px] text-muted">
-                Buying runs through 0x on Robinhood Chain mainnet. It isn&rsquo;t available on {cfg?.chain === "local" ? "the local demo chain" : cfg?.chain === "testnet" ? "testnet: get the stocks from Robinhood's faucet" : "this deployment yet"}.
+                Buying isn&rsquo;t available on {cfg?.chain === "local" ? "the local demo chain" : cfg?.chain === "testnet" ? "this testnet deployment yet: get the stocks from Robinhood's faucet" : "this deployment yet"}.
               </p>
             ) : !isConnected ? (
               <ConnectButton size="md" />
