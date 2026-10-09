@@ -8,7 +8,8 @@
     "contracts": {
       "LeagueEscrow": "0xcd17bd5ac4d7c709bbf92399a4d2af34d2b3a8cf",
       "ticketToken": "0x0c088073879fd42d6402467313c7b46675aa2e96",
-      "savingsVault": "0x355c0913920dc663a408d15abb41737910c0b08d"
+      "savingsVault": "0x355c0913920dc663a408d15abb41737910c0b08d",
+      "swapDesk": "0x18BC29f0cb6d61a979FCAe0C7ca4BB156DD4D59b"
     },
     "allowlisted": [
       "0xC9f9c86933092BbbfFF3CCb4b105A4A94bf3Bd4E",

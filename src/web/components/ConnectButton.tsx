@@ -7,7 +7,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { STOCKS } from "../../ui/data/stocks";
 import { erc20Abi, formatUnits, parseAbi } from "viem";
 import { useConnection, useDisconnect, useReadContract, useSwitchChain, useWriteContract } from "wagmi";
 import { useQueryClient } from "@tanstack/react-query";
@@ -102,20 +101,6 @@ export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "
   const unit = cfg?.chain === "mainnet" ? "USDG" : "tUSDG";
   const low = tickets !== null && tickets < 10;
   const canFaucet = cfg?.chain === "testnet" && !!cfg.usdg;
-  // Testnet crypto slice: our own tWBTC / tWETH faucet tokens (deployments.json).
-  const testCrypto = cfg?.chain === "testnet" ? STOCKS.filter((s) => s.kind === "crypto" && s.testnet) : [];
-
-  async function claimCrypto() {
-    setNote(null);
-    try {
-      for (const s of testCrypto) await writeContractAsync({ address: s.testnet!, abi: faucetAbi, functionName: "faucet", chainId: cfg!.chainId as never });
-      setNote("Sent: test BTC + ETH on the way");
-      setTimeout(() => qc.invalidateQueries(), 4000);
-    } catch (e) {
-      setNote(walletErrorMessage(e));
-    }
-  }
-
   async function topUp() {
     setNote(null);
     try {
@@ -181,13 +166,8 @@ export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "
           </button>
           {cfg?.stockFaucet && (
             <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="block rounded-[10px] px-3 py-2 text-[14px] hover:bg-surface">
-              Testnet ETH + stocks ↗
+              Testnet ETH for gas ↗
             </a>
-          )}
-          {testCrypto.length > 0 && (
-            <button type="button" className="block w-full rounded-[10px] px-3 py-2 text-left text-[14px] hover:bg-surface" title="Once an hour: about $80 each of test BTC and ETH" onClick={claimCrypto}>
-              Get test BTC + ETH
-            </button>
           )}
           <button
             type="button"

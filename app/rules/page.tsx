@@ -47,7 +47,7 @@ export default function Rules() {
             <H>Backers</H>
             <ul>
               <li><b>Back the team:</b> a $5 ticket on someone&rsquo;s ETF. It wins or loses with that ETF. The creator keeps 10% of what their backers win.</li>
-              <li><b>Buy the ETF:</b> buy the same basket through 0x, straight into your wallet. The creator earns the buy fee they set (0&ndash;2%), paid by the swap. Nothing is locked; it&rsquo;s your portfolio.</li>
+              <li><b>Buy the ETF:</b> buy the same basket with USDG, straight into your wallet (0x on mainnet; on testnet, the league&rsquo;s swap desk at live prices). The creator earns the buy fee they set (0&ndash;2%), paid by the swap. Nothing is locked; it&rsquo;s your portfolio.</li>
               <li>Do either, or both. One entry per wallet per round.</li>
             </ul>
 

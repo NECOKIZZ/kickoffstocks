@@ -13,7 +13,7 @@ const TOOLS: [string, string][] = [
   ["get_rules", "chain, contracts, ticket size, basket limits"],
   ["plan_create_etf", "approvals + lock a basket with a $5 ticket"],
   ["plan_back_team", "a $5 ticket on an ETF"],
-  ["plan_buy_basket · plan_buy_etf", "mainnet: buy stocks through 0x (creator earns their fee)"],
+  ["plan_buy_basket · plan_buy_etf", "buy stocks with USDG: 0x on mainnet, one swap on testnet (creator earns their fee)"],
   ["plan_claim", "payout or refund, and the creator's basket back"],
 ];
 
@@ -70,7 +70,7 @@ export default function Agents() {
             <ul className="mt-4 space-y-3 text-[15px] text-ink/80">
               <li>· Your agent shows you every transaction and waits for your yes. Nothing moves without your wallet&rsquo;s signature.</li>
               <li>· Your keys stay in your wallet. The agent and this site never see them.</li>
-              <li>· Testnet is free: testnet ETH and stocks from Robinhood&rsquo;s faucet, test USDG from the wallet chip.</li>
+              <li>· Testnet is free: testnet ETH for gas from Robinhood&rsquo;s faucet, test USDG from the wallet chip, and the stocks bought with it in one swap.</li>
               <li>· We don&rsquo;t give tips: your agent reads the same public data you see here.</li>
             </ul>
           </aside>
