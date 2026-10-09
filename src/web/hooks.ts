@@ -6,7 +6,8 @@
 import { walletErrorMessage } from "./components/ConnectModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
-import { useConnection, usePublicClient, useSendTransaction, useSwitchChain } from "wagmi";
+import { useConfig as useWagmiConfig, useConnection, usePublicClient, useSendTransaction, useSwitchChain } from "wagmi";
+import { getCapabilities, sendCalls, waitForCallsStatus } from "wagmi/actions";
 import { fetchConfig, fetchMe, fetchPlan, fetchRound, fetchStocks, type PlanResponse, type TxStep } from "./api";
 import type { StockInfo } from "../ui/data/stocks";
 import { STOCKS } from "../ui/data/stocks";
@@ -42,12 +43,23 @@ export function useStockCards() {
 
 export type StepState = "waiting" | "signing" | "confirming" | "done" | "failed";
 
-/** Fetch a plan, then send its steps one by one from the connected wallet. */
+/** The user said no in their wallet (as opposed to the wallet not supporting a request). */
+const isRejection = (e: unknown) => {
+  const x = e as { code?: number; name?: string; cause?: { code?: number; name?: string } };
+  return x?.code === 4001 || x?.cause?.code === 4001 || x?.name === "UserRejectedRequestError" || x?.cause?.name === "UserRejectedRequestError";
+};
+
+/**
+ * Fetch a plan, then send its steps from the connected wallet: all at once,
+ * one confirmation, when the wallet can batch them atomically (EIP-5792);
+ * otherwise one by one.
+ */
 export function usePlanRunner() {
   const { address, chainId } = useConnection();
   const { data: cfg } = useConfig();
   const pub = usePublicClient({ chainId: cfg?.chainId as never });
   const { sendTransactionAsync } = useSendTransaction();
+  const wagmiConfig = useWagmiConfig();
   const { switchChainAsync } = useSwitchChain();
   const qc = useQueryClient();
   const [plan, setPlan] = useState<PlanResponse | null>(null);
@@ -74,7 +86,35 @@ export function usePlanRunner() {
         setStates(p.steps.map(() => "waiting"));
         setHashes(p.steps.map(() => null));
         if (chainId !== cfg.chainId) await switchChainAsync({ chainId: cfg.chainId as never });
-        for (const [i, s] of p.steps.entries()) {
+        const all = (st: StepState) => setStates(p.steps.map(() => st));
+        let batched = false;
+        if (p.steps.length > 1) {
+          const atomic = await getCapabilities(wagmiConfig, { account: address, chainId: cfg.chainId as never })
+            .then((c) => (c as { atomic?: { status?: string } })?.atomic?.status)
+            .catch(() => undefined);
+          if (atomic === "supported" || atomic === "ready") {
+            try {
+              all("signing");
+              const { id } = await sendCalls(wagmiConfig, {
+                chainId: cfg.chainId as never,
+                forceAtomic: true,
+                calls: p.steps.map((s) => ({ to: s.to, data: s.data, value: BigInt(s.value) })),
+              });
+              batched = true;
+              all("confirming");
+              const res = await waitForCallsStatus(wagmiConfig, { id, timeout: 180_000 });
+              const hash = res.receipts?.at(-1)?.transactionHash ?? null;
+              setHashes(p.steps.map(() => hash));
+              if (res.status !== "success") throw new Error("the batched transaction reverted");
+              all("done");
+            } catch (e) {
+              // A wallet that turned the batch down for technical reasons gets the steps one by one.
+              if (batched || isRejection(e)) throw e;
+              all("waiting");
+            }
+          }
+        }
+        if (!batched) for (const [i, s] of p.steps.entries()) {
           setStates((x) => x.map((v, k) => (k === i ? "signing" : v)));
           const hash = await sendTransactionAsync({ to: s.to, data: s.data, value: BigInt(s.value), chainId: cfg.chainId as never });
           setHashes((x) => x.map((v, k) => (k === i ? hash : v)));
@@ -92,7 +132,7 @@ export function usePlanRunner() {
         setBusy(false);
       }
     },
-    [address, cfg, chainId, pub, qc, sendTransactionAsync, switchChainAsync],
+    [address, cfg, chainId, pub, qc, sendTransactionAsync, switchChainAsync, wagmiConfig],
   );
 
   return { run, reset, plan, states, hashes, error, busy };
