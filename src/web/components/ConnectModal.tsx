@@ -21,7 +21,7 @@ export function walletErrorMessage(e: unknown): string {
     return "Your wallet already has a request waiting. Click the wallet icon in your browser's toolbar to open it.";
   if (/ProviderNotFound|ConnectorNotFound|not found|not installed/i.test(text))
     return "We couldn't reach that wallet. It may be switched off or not installed. Pick another one below, or install one.";
-  if (/insufficient funds/i.test(text)) return "Not enough ETH for the network fee. Get free testnet ETH from the faucet in Getting started.";
+  if (/insufficient funds/i.test(text)) return "Not enough gas (testnet ETH) for the network fee. Get it free from the gas link in Getting started.";
   if (/chain|network/i.test(text) && /switch|add|unrecognized/i.test(text))
     return "Your wallet couldn't switch to Robinhood Chain. Open your wallet, add or select Robinhood Chain, then try again.";
   const first = (err?.shortMessage ?? err?.message ?? String(e)).split("\n")[0];

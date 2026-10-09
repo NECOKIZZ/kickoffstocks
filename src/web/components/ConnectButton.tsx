@@ -166,7 +166,7 @@ export function ConnectButton({ size = "sm", dropUp = false }: { size?: "sm" | "
           </button>
           {cfg?.stockFaucet && (
             <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="block rounded-[10px] px-3 py-2 text-[14px] hover:bg-surface">
-              Testnet ETH for gas ↗
+              Gas for network fees ↗
             </a>
           )}
           <button

@@ -111,9 +111,10 @@ export function buildMcpServer(origin: string): McpServer {
         weights_pct: z.array(z.number().positive()).min(3).max(10),
         name: z.string().min(1).max(32),
         buy_fee_pct: z.number().min(0).max(2).optional(),
+        basket_usd: z.number().min(10).optional().describe("Basket size in USD to lock at the declared weights. Default: the largest the wallet can cover; the rest stays in the wallet."),
       },
     },
-    async ({ wallet: w, tickers, weights_pct, name, buy_fee_pct }) => plan({ action: "lock", wallet: w, tickers, weightsPct: weights_pct, name, buyFeePct: buy_fee_pct }),
+    async ({ wallet: w, tickers, weights_pct, name, buy_fee_pct, basket_usd }) => plan({ action: "lock", wallet: w, tickers, weightsPct: weights_pct, name, buyFeePct: buy_fee_pct, basketUsd: basket_usd }),
   );
 
   server.registerTool(
