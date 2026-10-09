@@ -61,7 +61,7 @@ export function EtfPage({ teamKey, roundId }: { teamKey: string; roundId?: strin
               <div>
                 <h1 className="t-heading text-[40px] md:text-[52px]">{teamName(t)}</h1>
                 <p className="mt-2 text-[14px] text-muted">
-                  by <Identity address={t.captain} className="align-middle text-ink" /> · {t.members + 1} {t.members ? "tickets" : "ticket"} · buy fee {t.buyFeeBps / 100}%
+                  by <Identity address={t.captain} className="align-middle text-ink" /> · {t.members} {t.members === 1 ? "ticket" : "tickets"} · buy fee {t.buyFeeBps / 100}%
                 </p>
                 <div className="mt-7 flex flex-wrap items-end gap-x-12 gap-y-4">
                   {scoring ? (

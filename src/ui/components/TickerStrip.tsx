@@ -3,7 +3,7 @@
 import type { StockInfo } from "../data/stocks";
 import { Change } from "./Pills";
 
-export function TickerStrip({ stocks, changes, source }: { stocks: StockInfo[]; changes: Record<string, number>; source: string }) {
+export function TickerStrip({ stocks, changes, source }: { stocks: StockInfo[]; changes: Record<string, number | undefined>; source: string }) {
   const row = (key: string) => (
     <div key={key} className="flex shrink-0 items-center gap-7 pr-7" aria-hidden={key === "b"}>
       {stocks.map((s) => (
@@ -18,7 +18,7 @@ export function TickerStrip({ stocks, changes, source }: { stocks: StockInfo[]; 
           )}
           <span className="font-semibold">{s.ticker}</span>
           <span className="t-num">{s.price.toFixed(2)}</span>
-          <Change pct={changes[s.ticker] ?? 0} className="text-[12px]" />
+          {changes[s.ticker] !== undefined && <Change pct={changes[s.ticker]!} className="text-[12px]" />}
         </span>
       ))}
     </div>

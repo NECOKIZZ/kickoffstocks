@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { useConnection } from "wagmi";
 import type { RoundView, TeamView } from "../api";
-import { useConfig, usePlanRunner } from "../hooks";
+import { useConfig, useMe, usePlanRunner } from "../hooks";
 import { ConnectButton } from "./ConnectButton";
 import { TxSteps } from "./TxSteps";
 import { teamName, usdg } from "./league";
@@ -18,6 +18,9 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
   const { isConnected } = useConnection();
   const { data: cfg } = useConfig();
   const runner = usePlanRunner();
+  const { data: me } = useMe();
+  // One entry per wallet per round: a creator (or a backer) of this round can't back again.
+  const myEntry = me?.entries.find((e) => e.roundId === r.id);
   const open = r.phase === "entries-open";
   const fee = t.buyFeeBps / 100;
   const pay = BigInt(t.payoutPerTicketNow);
@@ -58,17 +61,22 @@ export function ActionPanel({ r, t }: { r: RoundView; t: TeamView }) {
             <Row k="Creator's cut of your winnings" v="10%" />
             {!open && <Row k="Round ends" v={`${nyTime(r.end * 1000)} ET`} />}
           </dl>
+          {isConnected && myEntry && open && (
+            <p className="mt-4 rounded-[16px] bg-bg p-4 text-[13px] text-muted">
+              This wallet already {myEntry.role === "creator" ? `created "${myEntry.teamName}"` : `backed "${myEntry.teamName}"`} this round. It&rsquo;s one entry per wallet per round: back with another wallet.
+            </p>
+          )}
           <div className="mt-5">
             {!isConnected ? (
               <ConnectButton size="md" />
             ) : (
               <button
                 type="button"
-                disabled={!open || runner.busy}
+                disabled={!open || runner.busy || !!myEntry}
                 onClick={() => runner.run({ action: "back", teamKey: t.teamKey, roundId: r.id })}
                 className="h-12 w-full btn-3d btn-accent text-[16px] transition hover:opacity-90 disabled:opacity-40"
               >
-                {!open ? "Staking is locked" : runner.busy ? "Working…" : `Stake $${usdg(r.stake, 0)} on ${teamName(t)}`}
+                {!open ? "Staking is locked" : runner.busy ? "Working…" : myEntry ? "You're already in this round" : `Stake $${usdg(r.stake, 0)} on ${teamName(t)}`}
               </button>
             )}
           </div>
