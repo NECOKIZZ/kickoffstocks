@@ -10,6 +10,7 @@ import { livePrices, loadRoundView } from "./live";
 import { leagueStore } from "./store";
 import { DEFAULT_RULES, DRIFT_BPS } from "./settlement";
 import { basketWeightsBps } from "../engine/league";
+import { fitBasket } from "./basket";
 import { approveStep, planBack, planClaim, planClaimBasket, planLock, buyPlanSteps, normaliseWeights, swapStep, type TxStep } from "./actions";
 import { planBasketBuy } from "../rh/zeroEx";
 import { priceDeskBuy, QUOTE_TTL_S, randomNonce, signDeskBuy, testDeskAbi, testDeskAddress, testDeskEnabled } from "../rh/testDesk";
@@ -173,7 +174,7 @@ export async function loadMe(wallet: Address, lastRounds = 6) {
 
 export type PlanRequest =
   | { action: "back"; wallet: string; teamKey: string; roundId?: string }
-  | { action: "lock"; wallet: string; tickers: string[]; weightsPct: number[]; name: string; buyFeePct?: number; roundId?: string; amounts?: string[] }
+  | { action: "lock"; wallet: string; tickers: string[]; weightsPct: number[]; name: string; buyFeePct?: number; roundId?: string; amounts?: string[]; basketUsd?: number }
   | { action: "buy-basket"; wallet: string; tickers: string[]; weightsPct: number[]; usdg: number; creator?: string; feePct?: number }
   | { action: "buy-etf"; wallet: string; teamKey: string; usdg: number; roundId?: string }
   | { action: "claim"; wallet: string; roundId: string }
@@ -268,7 +269,7 @@ async function planDeskBuy(p: {
   steps.push(swapStep({ to: desk, data }, `Buy ${priced.legs.map((l) => sym(l.token)).join(", ")} with ${usdgAmt(p.usdgTotal).toFixed(2)} USDG, in one swap`));
   const notes = [
     `${usdgAmt(p.usdgTotal)} USDG split across ${priced.legs.length} stocks by weight, at live prices: ${priced.legs.map((l) => `${sym(l.token)} $${usdgAmt(l.amountIn).toFixed(2)}`).join(" · ")}.`,
-    `Testnet: the league's swap desk fills it (0x only runs on mainnet). The quote is good for ${QUOTE_TTL_S / 60} minutes.`,
+    `This price is held for ${QUOTE_TTL_S / 60} minutes.`,
   ];
   if (priced.fee > 0n) notes.push(`${p.feePct}% creator fee (${usdgAmt(priced.fee).toFixed(2)} USDG) goes to ${p.creator}.`);
   return { action: p.action, steps, notes };
@@ -321,11 +322,17 @@ export async function makePlan(req: PlanRequest): Promise<Plan> {
       const cryptoBps = weights.reduce((s, w, i) => s + (picks[i].kind === "crypto" ? w : 0), 0);
       if (cryptoBps > DEFAULT_RULES.maxCryptoBps!) throw new PlanError(`crypto is ${cryptoBps / 100}% of the basket; the cap is ${DEFAULT_RULES.maxCryptoBps! / 100}%`);
       const tokens = picks.map((p) => p.address);
-      // Lock what the wallet holds (or the amounts given).
-      const amounts = req.amounts?.length
-        ? req.amounts.map((a) => BigInt(a))
-        : await Promise.all(tokens.map((t) => pub.readContract({ address: t, abi: erc20Abi, functionName: "balanceOf", args: [wallet] })));
-      if (amounts.some((a) => a === 0n)) throw new PlanError(`the wallet holds none of: ${picks.filter((_, i) => amounts[i] === 0n).map((p) => p.ticker).join(", ")}`);
+      // Lock the amounts given, or the basket at exactly the declared weights
+      // (up to basketUsd) that the wallet can cover. The rest stays in the wallet.
+      let amounts: bigint[];
+      if (req.amounts?.length) amounts = req.amounts.map((a) => BigInt(a));
+      else {
+        const bals = await Promise.all(tokens.map((t) => pub.readContract({ address: t, abi: erc20Abi, functionName: "balanceOf", args: [wallet] })));
+        const none = picks.filter((_, i) => bals[i] === 0n).map((p) => p.ticker);
+        if (none.length) throw new PlanError(`the wallet holds none of: ${none.join(", ")}`);
+        amounts = fitBasket(picks.map((p, i) => ({ raw: bals[i], decimals: p.decimals, price: p.price, weightBps: weights[i] })), req.basketUsd).amounts;
+      }
+      if (amounts.some((a) => a === 0n)) throw new PlanError(`the wallet holds too little of: ${picks.filter((_, i) => amounts[i] === 0n).map((p) => p.ticker).join(", ")}`);
       // USD values with 18 decimals, whatever the token's own decimals.
       const values = amounts.map((a, i) => (a * 10n ** BigInt(18 - picks[i].decimals) * BigInt(Math.round(picks[i].price * 1e6))) / 10n ** 6n);
       const total = values.reduce((s, v) => s + v, 0n);

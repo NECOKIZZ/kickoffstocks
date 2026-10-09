@@ -67,8 +67,9 @@ Actions (money moves; always plan, explain, confirm):
 - **Build and enter their own ETF** → first agree: 3–10 assets they hold (or will get; BTC and ETH
   are allowed up to 20% together, on top of at least 3 stocks/funds), weights
   summing to 100 (none above 50), a name (≤ 32 characters), a buy fee 0–2%. Then
-  \`plan_create_etf\` {wallet, tickers, weights_pct, name, buy_fee_pct}. It locks the wallet's whole
-  balance of those stocks. \`plan_buy_basket\` {wallet, tickers, weights_pct, usdg} buys them first
+  \`plan_create_etf\` {wallet, tickers, weights_pct, name, buy_fee_pct, basket_usd}. It locks a basket
+  at exactly those weights (basket_usd, or the largest the wallet covers); the rest stays in the
+  wallet. \`plan_buy_basket\` {wallet, tickers, weights_pct, usdg} buys them first
   in USDG (spend $12+ so fees can't push the basket under $10): 0x on mainnet, one swap on testnet.
 - **Buy an ETF's stocks** → \`plan_buy_etf\` {wallet, team_key, usdg}
 - **Claim** (after the round is settled or voided) → \`plan_claim\` {wallet, round_id}

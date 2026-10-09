@@ -14,6 +14,7 @@ import { WeightBar } from "../../ui/components/WeightBar";
 import { useConfig, usePlanRunner, useRound, useStocks } from "../hooks";
 import { fetchRound, post } from "../api";
 import { equalWeights } from "../weights";
+import { fitBasket } from "../../league/basket";
 import { ConnectButton, useTicketBalance } from "./ConnectButton";
 import { TxSteps } from "./TxSteps";
 
@@ -113,7 +114,20 @@ export function CreateFlow() {
   });
   const heldUsd = held.reduce((s, h) => s + h.usd, 0);
   const holdsAll = picked.length > 0 && held.every((h) => h.raw > 0n);
-  const basketOk = holdsAll && heldUsd >= rules.minBasketUsd;
+  // What step 4 locks: the basket at exactly these weights, up to the amount in
+  // step 3, that the wallet can cover. Anything else stays in the wallet.
+  const target = Number(amount) > 0 ? Number(amount) : undefined;
+  const fit = weightsOk
+    ? fitBasket(
+        held.map((h) => ({ raw: h.raw, decimals: live.get(h.t)?.decimals ?? stock(h.t).decimals, price: live.get(h.t)?.price ?? stock(h.t).price, weightBps: (weights[h.t] ?? 0) * 100 })),
+        target,
+      )
+    : { amounts: [] as bigint[], usd: 0, maxUsd: 0 };
+  const basketUsd = holdsAll ? fit.usd : 0;
+  const basketOk = holdsAll && basketUsd >= rules.minBasketUsd;
+  const legUsd = (i: number) => (fit.amounts[i] !== undefined ? (Number(fit.amounts[i]) / 10 ** (live.get(held[i].t)?.decimals ?? stock(held[i].t).decimals)) * (live.get(held[i].t)?.price ?? stock(held[i].t).price) : 0);
+  // The pick that limits the basket (it would need topping up for a bigger one).
+  const limiting = holdsAll && fit.maxUsd < (target ?? 0) ? held.reduce((a, h) => (h.usd / (weights[h.t] || 1) < a.usd / (weights[a.t] || 1) ? h : a)).t : null;
   const open = round?.phase === "entries-open";
   const nameOk = name.trim().length > 0 && new TextEncoder().encode(name.trim()).length <= 32;
   const { data: ticketBal } = useTicketBalance(address);
@@ -122,6 +136,7 @@ export function CreateFlow() {
   const canSwap = !!cfg?.buyEnabled && cfg.chain !== "local";
   const usdgHave = ticketBal !== undefined ? Number(formatUnits(ticketBal, cfg?.usdgDecimals ?? 6)) : 0;
   const usdgLow = ticketBal !== undefined && usdgHave < Number(amount) + rules.ticketUsd;
+  const extraHeld = holdsAll && heldUsd - basketUsd > 1;
 
   // What each step still needs, in plain words.
   const needStocks = Math.max(0, rules.minStocks - stockCount);
@@ -141,7 +156,7 @@ export function CreateFlow() {
   const lockProblems = [
     !open && "Entries for this week are closed. The next week opens right after Friday's close.",
     !nameOk && "Give your ETF a name (up to 32 characters).",
-    isConnected && ticketBal !== undefined && !hasTicket && `You need $${rules.ticketUsd} in USDG for the ticket. Claim free test USDG from Getting started in the sidebar.`,
+    isConnected && ticketBal !== undefined && !hasTicket && `You need $${rules.ticketUsd} in USDG for the ticket. Claim 50 free test USDG in Getting started (sidebar).`,
   ].filter(Boolean) as string[];
 
   async function getTestStocks() {
@@ -279,15 +294,15 @@ export function CreateFlow() {
           ) : (
             <>
               <StepNote ok>Weights add up to 100%.</StepNote>
-              <NextButton to={3}>Next: get the stocks ↓</NextButton>
+              <NextButton to={3}>{canSwap ? "Next: swap for the stocks ↓" : "Next: get the stocks ↓"}</NextButton>
             </>
           )}
         </Panel>
 
         {/* 3. Buy */}
-        <Panel n="3" title={canSwap ? "Swap USDG for the stocks" : "Buy the stocks"} done={basketOk || !!entered} hint={holdsAll ? `you hold $${heldUsd.toFixed(2)} of them` : `at least $${rules.minBasketUsd}`} blocked={block3}>
+        <Panel n="3" title={canSwap ? "Swap USDG for the stocks" : "Buy the stocks"} done={basketOk || !!entered} hint={basketOk ? `$${basketUsd.toFixed(2)} basket ready` : `at least $${rules.minBasketUsd}`} blocked={block3}>
           <label className="block rounded-[20px] bg-surface p-5">
-            <span className="text-[13px] text-muted">Spend</span>
+            <span className="text-[13px] text-muted">Basket size</span>
             <span className="mt-1 flex items-baseline gap-2">
               <input
                 inputMode="decimal"
@@ -303,7 +318,7 @@ export function CreateFlow() {
             </span>
           </label>
           <p className="mt-3 text-[13px] text-muted">
-            Tip: spend a little over ${rules.minBasketUsd} (e.g. $12). Swap fees and price moves can push an exact ${rules.minBasketUsd} basket under the minimum.
+            The minimum is ${rules.minBasketUsd}. Go a little over (e.g. $12) so price moves can&rsquo;t push it under.
           </p>
           <div className="mt-4">
             {!isConnected ? (
@@ -323,7 +338,7 @@ export function CreateFlow() {
                   {buyRunner.busy ? "Working…" : cfg.buyRoute === "test-desk" ? `Swap ${Number(amount).toFixed(2)} USDG for all ${picked.length}` : `Buy for ${Number(amount).toFixed(2)} USDG via 0x`}
                 </button>
                 {cfg.buyRoute === "test-desk" && (
-                  <p className="text-[13px] text-muted">One swap buys every pick, BTC and ETH included, at live prices with your test USDG. No stock faucet needed: claim free test USDG in Getting started.</p>
+                  <p className="text-[13px] text-muted">One swap with test USDG gets you every pick at live prices. Out of test USDG? Claim 50 free in Getting started.</p>
                 )}
               </div>
             ) : cfg?.chain === "testnet" && cfg.stockFaucet ? (
@@ -343,9 +358,9 @@ export function CreateFlow() {
             <TxSteps plan={buyRunner.plan} states={buyRunner.states} hashes={buyRunner.hashes} error={buyRunner.error} />
           </div>
           {!block3 && !isConnected && <p className="mt-4 text-[15px] text-muted">Connect your wallet to swap and to see which of these you already hold.</p>}
-          {!block3 && isConnected && canSwap && usdgLow && !holdsAll && (
+          {!block3 && isConnected && canSwap && usdgLow && !basketOk && (
             <StepNote>
-              You have {usdgHave.toFixed(2)} USDG. The swap plus the ${rules.ticketUsd} ticket needs {(Number(amount) + rules.ticketUsd).toFixed(2)}: claim 50 free test USDG in Getting started.
+              You have {usdgHave.toFixed(2)} test USDG. This swap plus the ${rules.ticketUsd} ticket needs {(Number(amount) + rules.ticketUsd).toFixed(2)}: claim 50 free in Getting started.
             </StepNote>
           )}
           {!block3 && isConnected && bals && (
@@ -354,32 +369,38 @@ export function CreateFlow() {
                 missing.length === picked.length ? (
                   <StepNote>Tap the swap button: one swap puts all {picked.length} picks in your wallet.</StepNote>
                 ) : (
-                  <StepNote>Still missing {missing.join(", ")}. Swap again and the whole basket gets topped up.</StepNote>
+                  <StepNote>Still missing {missing.join(", ")}. Swap again: it buys the whole basket.</StepNote>
                 )
               ) : (
                 <StepNote>You don&rsquo;t hold any {missing.join(", ")} yet. Get {missing.length === 1 ? "it" : "them"} first: every pick must be in your wallet.</StepNote>
               )
-            ) : heldUsd < rules.minBasketUsd ? (
+            ) : !basketOk ? (
               <StepNote>
-                Your basket is worth ${heldUsd.toFixed(2)}. It needs to be worth at least ${rules.minBasketUsd}
-                {canSwap ? `: swap about $${Math.ceil(rules.minBasketUsd - heldUsd + 1)} more.` : "."}
+                At your weights you have a ${basketUsd.toFixed(2)} basket{limiting ? ` (${limiting} is the short one)` : ""}. It needs at least ${rules.minBasketUsd}
+                {canSwap ? `: swap about $${Math.ceil(rules.minBasketUsd - basketUsd + 1)} more.` : "."}
               </StepNote>
             ) : (
               <>
-                <StepNote ok>You hold all of them: ${heldUsd.toFixed(2)} in total.</StepNote>
+                <StepNote ok>
+                  Basket ready: ${basketUsd.toFixed(2)} at your weights.
+                  {limiting && Number(amount) - basketUsd > 0.5 ? ` ${limiting} only covers that much; swap again for the full $${Number(amount).toFixed(2)}.` : ""}
+                </StepNote>
                 <NextButton to={4}>Next: name it and lock it ↓</NextButton>
               </>
             )
           )}
-          {isConnected && picked.length > 0 && (
-            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {held.map((h) => (
-                <div key={h.t} className="flex items-center justify-between rounded-[14px] bg-surface px-3 py-2 text-[13px]">
-                  <span className="font-semibold">{h.t}</span>
-                  <span className={`t-num ${h.raw > 0n ? "" : "text-muted"}`}>${h.usd.toFixed(2)}</span>
-                </div>
-              ))}
-            </div>
+          {isConnected && holdsAll && weightsOk && (
+            <>
+              <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {held.map((h, i) => (
+                  <div key={h.t} className="flex items-center justify-between rounded-[14px] bg-surface px-3 py-2 text-[13px]">
+                    <span className="font-semibold">{h.t}</span>
+                    <span className="t-num">${legUsd(i).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              {extraHeld && <p className="mt-3 text-[13px] text-muted">Only this basket gets locked. The rest of your {picked.join(", ")} stays in your wallet.</p>}
+            </>
           )}
         </Panel>
 
@@ -402,7 +423,7 @@ export function CreateFlow() {
             </label>
           </div>
           <ul className="mt-5 space-y-1.5 text-[14px] text-muted">
-            <li>· Your whole balance of these {picked.length} assets (${heldUsd.toFixed(2)}) is locked until the round ends, then returned.</li>
+            <li>· Your ${basketUsd.toFixed(2)} basket is locked until the round ends, then comes back to you. Anything else in your wallet stays there.</li>
             <li>· Plus a ${rules.ticketUsd} USDG ticket. Beat MEDIAN (the middle ETF) and you win a share of the tickets below it. Tie MEDIAN and your ticket comes back.</li>
             <li>· Same stocks and weights as an existing ETF? You join that team instead.</li>
             <li>· If prices move your weights more than {rules.driftPct} points away before the round starts, the entry is refunded.</li>
@@ -420,13 +441,13 @@ export function CreateFlow() {
                 disabled={!open || !nameOk || !basketOk || lockRunner.busy || (ticketBal !== undefined && !hasTicket)}
                 onClick={() =>
                   lockRunner.run(
-                    { action: "lock", tickers: picked, weightsPct: picked.map((t) => weights[t]), name: name.trim(), buyFeePct: fee },
+                    { action: "lock", tickers: picked, weightsPct: picked.map((t) => weights[t]), name: name.trim(), buyFeePct: fee, basketUsd: target },
                     { onDone: (p) => setEntered(p.teamKey ?? null) },
                   )
                 }
                 className="h-12 w-full btn-3d btn-accent text-[16px] disabled:opacity-40"
               >
-                {lockRunner.busy ? "Working…" : !open ? "Entries are closed" : `Lock and enter · $${heldUsd.toFixed(2)} + $${rules.ticketUsd} ticket`}
+                {lockRunner.busy ? "Working…" : !open ? "Entries are closed" : `Lock and enter · $${basketUsd.toFixed(2)} + $${rules.ticketUsd} ticket`}
               </button>
             )}
             {!entered && isConnected && !lockRunner.busy && lockProblems.map((m) => <StepNote key={m}>{m}</StepNote>)}
@@ -445,7 +466,7 @@ export function CreateFlow() {
           </div>
           <dl className="mt-6 space-y-2 text-[14px]">
             <div className="flex justify-between"><dt className="text-white/55">Assets</dt><dd className="t-num">{stockCount}</dd></div>
-            <div className="flex justify-between"><dt className="text-white/55">Basket</dt><dd className="t-num">${(holdsAll ? heldUsd : Number(amount) || 0).toFixed(2)}</dd></div>
+            <div className="flex justify-between"><dt className="text-white/55">Basket</dt><dd className="t-num">${(basketOk ? basketUsd : Number(amount) || 0).toFixed(2)}</dd></div>
             <div className="flex justify-between"><dt className="text-white/55">Ticket</dt><dd className="t-num">${rules.ticketUsd}</dd></div>
             <div className="flex justify-between"><dt className="text-white/55">Buy fee</dt><dd className="t-num">{fee.toFixed(1)}%</dd></div>
             <div className="flex justify-between"><dt className="text-white/55">Round</dt><dd className="t-num">{round ? `#${round.id} · ${round.teams.length} ETFs` : "…"}</dd></div>

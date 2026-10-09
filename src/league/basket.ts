@@ -68,3 +68,36 @@ export function clampCreatorFee(pct: number | undefined): number {
   if (pct === undefined || !Number.isFinite(pct)) return DEFAULT_CREATOR_BUY_FEE_PCT;
   return Math.min(MAX_CREATOR_BUY_FEE_PCT, Math.max(0, Math.round(pct * 100) / 100));
 }
+
+export interface FitLeg {
+  /** Wallet balance, token base units. */
+  raw: bigint;
+  decimals: number;
+  /** USD per whole token. */
+  price: number;
+  weightBps: number;
+}
+
+/**
+ * The basket to lock: the largest one at exactly the declared weights that
+ * the wallet's balances can cover, capped at `targetUsd` if given. Whatever
+ * the wallet holds beyond that stays in the wallet. Returns per-leg amounts
+ * (base units) and the basket's USD value at these prices.
+ */
+export function fitBasket(legs: FitLeg[], targetUsd?: number): { amounts: bigint[]; usd: number; maxUsd: number } {
+  if (legs.length === 0) return { amounts: [], usd: 0, maxUsd: 0 };
+  const E6 = 1_000_000n;
+  const priceE6 = legs.map((l) => BigInt(Math.max(1, Math.round(l.price * 1e6))));
+  const valueE6 = legs.map((l, i) => (l.raw * priceE6[i]) / 10n ** BigInt(l.decimals));
+  // Each leg caps the basket at its value / its weight.
+  const caps = legs.map((l, i) => (l.weightBps > 0 ? (valueE6[i] * 10_000n) / BigInt(l.weightBps) : 0n));
+  const maxE6 = caps.reduce((m, c) => (c < m ? c : m));
+  const target = targetUsd !== undefined && targetUsd > 0 ? BigInt(Math.round(targetUsd * 1e6)) : maxE6;
+  const basketE6 = target < maxE6 ? target : maxE6;
+  const amounts = legs.map((l, i) => {
+    const a = (basketE6 * BigInt(l.weightBps) * 10n ** BigInt(l.decimals)) / (10_000n * priceE6[i]);
+    return a > l.raw ? l.raw : a;
+  });
+  const usd = amounts.reduce((s, a, i) => s + (a * priceE6[i]) / 10n ** BigInt(legs[i].decimals), 0n);
+  return { amounts, usd: Number(usd) / Number(E6), maxUsd: Number(maxE6) / Number(E6) };
+}
