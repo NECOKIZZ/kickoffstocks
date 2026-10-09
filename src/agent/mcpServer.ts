@@ -103,7 +103,7 @@ export function buildMcpServer(origin: string): McpServer {
     {
       title: "Plan: create and enter an ETF",
       description:
-        "Approvals + the entry that locks the user's basket and a $5 ticket. The wallet must already hold the stocks (plan_buy_basket first, or testnet: Robinhood's faucet). " +
+        "Approvals + the entry that locks the user's basket and a $5 ticket. The wallet must already hold the stocks (plan_buy_basket first). " +
         "3–10 tickers (at least 3 stocks/funds; BTC and ETH may add up to 20% together), weights in percent summing to 100, none above 50, name ≤ 32 bytes, buy fee 0–2%.",
       inputSchema: {
         wallet,

@@ -110,7 +110,7 @@ export async function publicConfig() {
     buyRoute: c === "mainnet" ? "0x" : c === "testnet" && testDeskEnabled() ? "test-desk" : null,
     /** Test USDG from the league's faucet (testnet and the local demo). */
     faucet: c !== "mainnet",
-    /** Robinhood's faucet for testnet ETH and stock tokens. */
+    /** Robinhood's faucet: testnet ETH for gas. */
     stockFaucet: c === "testnet" ? "https://faucet.testnet.chain.robinhood.com" : null,
     rules: {
       minTokens: DEFAULT_RULES.minTokens,
@@ -250,7 +250,7 @@ async function planDeskBuy(p: {
   }
   if (short.length)
     throw new PlanError(
-      `the testnet swap desk is out of ${short.join(", ")} right now; try a smaller amount${short.some((t) => t === "BTC" || t === "ETH") ? ", try again in an hour, or claim test BTC + ETH from the wallet menu" : ", or get them from Robinhood's faucet"}`,
+      `the testnet swap desk is out of ${short.join(", ")} right now; try a smaller amount${short.some((t) => t === "BTC" || t === "ETH") ? " or try again in an hour" : " or try again later"}`,
     );
   const now = Number((await pub.getBlock()).timestamp);
   const { data } = await signDeskBuy(chain.id, desk, {

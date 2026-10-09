@@ -317,21 +317,10 @@ export function CreateFlow() {
                   {buyRunner.busy ? "Working…" : cfg.buyRoute === "test-desk" ? `Swap ${Number(amount).toFixed(2)} USDG for all ${picked.length}` : `Buy for ${Number(amount).toFixed(2)} USDG via 0x`}
                 </button>
                 {cfg.buyRoute === "test-desk" && (
-                  <p className="text-[13px] text-muted">
-                    Testnet: one swap buys every pick at live prices with your test USDG (free in Getting started).
-                    {cfg.stockFaucet && (
-                      <>
-                        {" "}Or get them from{" "}
-                        <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="underline underline-offset-2">
-                          Robinhood&rsquo;s faucet ↗
-                        </a>
-                        .
-                      </>
-                    )}
-                  </p>
+                  <p className="text-[13px] text-muted">One swap buys every pick, BTC and ETH included, at live prices with your test USDG. No stock faucet needed: claim free test USDG in Getting started.</p>
                 )}
               </div>
-            ) : cfg?.stockFaucet ? (
+            ) : cfg?.chain === "testnet" && cfg.stockFaucet ? (
               <div className="space-y-3">
                 <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="grid h-12 w-full place-items-center btn-3d btn-accent text-[16px]">
                   Get test stocks from Robinhood&rsquo;s faucet ↗

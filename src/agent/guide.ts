@@ -44,8 +44,8 @@ them to sign: they paste each step into their wallet, or your platform's wallet 
 their yes. Check the network with \`get_rules\` (\`chainId\`, \`chainName\`, \`explorer\`).
 
 **Funds.**
-- Testnet (chain 46630): free. Testnet ETH comes from https://faucet.testnet.chain.robinhood.com
-  (once a day); stock tokens too, or buy them with test USDG via \`plan_buy_basket\`. Test USDG for tickets: the "Get test USDG"
+- Testnet (chain 46630): free. Testnet ETH for gas comes from https://faucet.testnet.chain.robinhood.com
+  (once a day). The stocks, BTC and ETH: buy them with test USDG via \`plan_buy_basket\` (one swap). Test USDG for tickets: the "Get test USDG"
   button in the site's wallet chip, or send \`faucet()\` to the ticket token (\`usdg\` in \`get_rules\`).
 - Mainnet (chain 4663): USDG for tickets and buys, plus a little ETH for gas, on Robinhood Chain.
 

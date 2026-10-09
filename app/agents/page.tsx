@@ -70,7 +70,7 @@ export default function Agents() {
             <ul className="mt-4 space-y-3 text-[15px] text-ink/80">
               <li>· Your agent shows you every transaction and waits for your yes. Nothing moves without your wallet&rsquo;s signature.</li>
               <li>· Your keys stay in your wallet. The agent and this site never see them.</li>
-              <li>· Testnet is free: testnet ETH from Robinhood&rsquo;s faucet, test USDG from the wallet chip, and stocks bought with it in one swap.</li>
+              <li>· Testnet is free: testnet ETH for gas from Robinhood&rsquo;s faucet, test USDG from the wallet chip, and the stocks bought with it in one swap.</li>
               <li>· We don&rsquo;t give tips: your agent reads the same public data you see here.</li>
             </ul>
           </aside>

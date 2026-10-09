@@ -93,11 +93,8 @@ export function GettingStarted() {
   const steps: { title: string; body: string; action?: React.ReactNode }[] = [
     { title: "Connect a wallet", body: "MetaMask, Rabby or Robinhood Wallet, on Robinhood Chain. You sign everything yourself.", action: <ConnectButton /> },
     {
-      title: testnet ? (cfg?.buyRoute === "test-desk" ? "Get testnet ETH" : "Get testnet ETH and stocks") : "Get ETH for gas",
-      body: testnet
-        ? cfg?.buyRoute === "test-desk"
-          ? "Robinhood's faucet gives free ETH for gas, once a day. The stocks you buy with test USDG, in one swap, when you build an ETF."
-          : "Robinhood's faucet gives free ETH for gas and TSLA, AMZN, PLTR and AMD tokens, once a day." : "A little ETH on Robinhood Chain pays for transactions.",
+      title: testnet ? "Get testnet ETH for gas" : "Get ETH for gas",
+      body: testnet ? "Robinhood's faucet gives free ETH to pay for transactions, once a day. That's all you need from it." : "A little ETH on Robinhood Chain pays for transactions.",
       action: cfg?.stockFaucet ? (
         <a href={cfg.stockFaucet} target="_blank" rel="noreferrer" className="btn-3d btn-ghost inline-flex h-9 items-center px-4 text-[0.8rem]">
           Open faucet ↗
@@ -106,7 +103,9 @@ export function GettingStarted() {
     },
     {
       title: testnet ? "Claim test USDG" : "Have $5 USDG",
-      body: testnet ? "Tickets are $5 in USDG. The test faucet gives 50 once an hour. BTC and ETH test tokens are in the wallet menu." : "Tickets are $5 in USDG.",
+      body: testnet
+        ? "50 free test USDG, once an hour. It pays your $5 ticket and buys your stocks: you swap it for your whole basket, BTC and ETH included, in one go when you build."
+        : "Tickets are $5 in USDG.",
       action: testnet && cfg?.faucet ? (
         <button type="button" disabled={isPending || !done[0]} onClick={claimUsdg} className="btn-3d btn-ghost inline-flex h-9 items-center px-4 text-[0.8rem]">
           {isPending ? "Claiming…" : "Claim 50"}
