@@ -118,6 +118,10 @@ export function CreateFlow() {
   const nameOk = name.trim().length > 0 && new TextEncoder().encode(name.trim()).length <= 32;
   const { data: ticketBal } = useTicketBalance(address);
   const hasTicket = ticketBal !== undefined && Number(formatUnits(ticketBal, cfg?.usdgDecimals ?? 6)) >= rules.ticketUsd;
+  // Buying is a swap here (0x on mainnet, the league's desk on testnet): USDG in, the whole basket out.
+  const canSwap = !!cfg?.buyEnabled && cfg.chain !== "local";
+  const usdgHave = ticketBal !== undefined ? Number(formatUnits(ticketBal, cfg?.usdgDecimals ?? 6)) : 0;
+  const usdgLow = ticketBal !== undefined && usdgHave < Number(amount) + rules.ticketUsd;
 
   // What each step still needs, in plain words.
   const needStocks = Math.max(0, rules.minStocks - stockCount);
@@ -131,7 +135,9 @@ export function CreateFlow() {
   const block2 = enoughStocks ? null : `Finish step 1 first: pick at least ${rules.minStocks} stocks or funds (you have ${stockCount}).`;
   const block3 = block2 ? "Finish steps 1 and 2 first." : weightsOk ? null : "Finish step 2 first: fix the weights.";
   const block4 =
-    block3 ?? (entered || basketOk || lockRunner.busy ? null : !isConnected ? "Connect your wallet in step 3 first." : `Finish step 3 first: you need some of every pick, worth at least $${rules.minBasketUsd} in total.`);
+    block3 ?? (entered || basketOk || lockRunner.busy ? null : !isConnected ? "Connect your wallet in step 3 first." : canSwap
+          ? `Finish step 3 first: swap USDG for your basket (at least $${rules.minBasketUsd}).`
+          : `Finish step 3 first: you need some of every pick, worth at least $${rules.minBasketUsd} in total.`);
   const lockProblems = [
     !open && "Entries for this week are closed. The next week opens right after Friday's close.",
     !nameOk && "Give your ETF a name (up to 32 characters).",
@@ -279,7 +285,7 @@ export function CreateFlow() {
         </Panel>
 
         {/* 3. Buy */}
-        <Panel n="3" title="Buy the stocks" done={basketOk || !!entered} hint={holdsAll ? `you hold $${heldUsd.toFixed(2)} of them` : `at least $${rules.minBasketUsd}`} blocked={block3}>
+        <Panel n="3" title={canSwap ? "Swap USDG for the stocks" : "Buy the stocks"} done={basketOk || !!entered} hint={holdsAll ? `you hold $${heldUsd.toFixed(2)} of them` : `at least $${rules.minBasketUsd}`} blocked={block3}>
           <label className="block rounded-[20px] bg-surface p-5">
             <span className="text-[13px] text-muted">Spend</span>
             <span className="mt-1 flex items-baseline gap-2">
@@ -336,13 +342,27 @@ export function CreateFlow() {
             {faucet.msg && <p className="mt-3 text-[13px] text-muted">{faucet.msg}</p>}
             <TxSteps plan={buyRunner.plan} states={buyRunner.states} hashes={buyRunner.hashes} error={buyRunner.error} />
           </div>
-          {!block3 && !isConnected && <p className="mt-4 text-[15px] text-muted">Connect your wallet to see which of these you already hold.</p>}
+          {!block3 && !isConnected && <p className="mt-4 text-[15px] text-muted">Connect your wallet to swap and to see which of these you already hold.</p>}
+          {!block3 && isConnected && canSwap && usdgLow && !holdsAll && (
+            <StepNote>
+              You have {usdgHave.toFixed(2)} USDG. The swap plus the ${rules.ticketUsd} ticket needs {(Number(amount) + rules.ticketUsd).toFixed(2)}: claim 50 free test USDG in Getting started.
+            </StepNote>
+          )}
           {!block3 && isConnected && bals && (
             missing.length ? (
-              <StepNote>You don&rsquo;t hold any {missing.join(", ")} yet. Get {missing.length === 1 ? "it" : "them"} first: every pick must be in your wallet.</StepNote>
+              canSwap ? (
+                missing.length === picked.length ? (
+                  <StepNote>Tap the swap button: one swap puts all {picked.length} picks in your wallet.</StepNote>
+                ) : (
+                  <StepNote>Still missing {missing.join(", ")}. Swap again and the whole basket gets topped up.</StepNote>
+                )
+              ) : (
+                <StepNote>You don&rsquo;t hold any {missing.join(", ")} yet. Get {missing.length === 1 ? "it" : "them"} first: every pick must be in your wallet.</StepNote>
+              )
             ) : heldUsd < rules.minBasketUsd ? (
               <StepNote>
-                Your basket is worth ${heldUsd.toFixed(2)}. It needs to be worth at least ${rules.minBasketUsd}.
+                Your basket is worth ${heldUsd.toFixed(2)}. It needs to be worth at least ${rules.minBasketUsd}
+                {canSwap ? `: swap about $${Math.ceil(rules.minBasketUsd - heldUsd + 1)} more.` : "."}
               </StepNote>
             ) : (
               <>
