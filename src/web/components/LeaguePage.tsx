@@ -49,14 +49,14 @@ export function LeaguePage() {
                 <li key={t.teamKey}>
                   <Link href={`/etf/${t.teamKey}`} className="flex items-center justify-between gap-3 text-[14px] hover:opacity-70">
                     <span className="truncate">{teamName(t)}</span>
-                    <span className="t-num shrink-0 text-muted">{t.members + 1} tickets</span>
+                    <span className="t-num shrink-0 text-muted">{t.members} {t.members === 1 ? "ticket" : "tickets"}</span>
                   </Link>
                 </li>
               ))}
             </ul>
           </div>
         )}
-        {r && r.teams[0] && (
+        {r && r.teams[0] && r.phase !== "entries-open" && (
           <div className="rounded-[24px] bg-surface p-6">
             <div className="t-label text-muted">Best return so far</div>
             <Link href={`/etf/${r.teams[0].teamKey}`} className="mt-3 block">

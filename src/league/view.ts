@@ -28,6 +28,7 @@ export interface TeamView {
   holdings: HoldingView[];
   /** Live return so far, percent (e.g. 2.147). */
   returnPct: number;
+  /** Tickets on the team, the creator's included. */
   members: number;
   winningNow: boolean;
   /** Tied with MEDIAN right now: the ticket would come back. */

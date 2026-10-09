@@ -20,12 +20,15 @@ export interface LeagueEntry {
   /** Right now: above MEDIAN, tied with it, or below. */
   status?: "win" | "draw" | "lose";
   href?: string;
+  /** False before the round starts (Monday's open): no return or standing yet. */
+  scored?: boolean;
 }
 
 export function LeagueRow({ e, winning }: { e: LeagueEntry; winning: boolean }) {
   const Row = e.href ? Link : "div";
+  const scored = e.scored !== false;
   const status = e.status ?? (winning ? "win" : "lose");
-  const tint = status === "win" ? "bg-up-bg/60" : status === "draw" ? "bg-brand-purple/10" : "";
+  const tint = !scored ? "" : status === "win" ? "bg-up-bg/60" : status === "draw" ? "bg-brand-purple/10" : "";
   return (
     <Row href={e.href ?? ""} className={`card-diagonal-sm grid grid-cols-[28px_auto_1fr_auto] items-center gap-4 px-4 py-3 transition hover:bg-surface-2 md:grid-cols-[32px_auto_1fr_110px_90px_140px_auto] md:gap-6 ${tint}`}>
       <span className="t-num text-[15px] text-muted">{e.rank}</span>
@@ -36,12 +39,20 @@ export function LeagueRow({ e, winning }: { e: LeagueEntry; winning: boolean }) 
           <span className="t-num">{shortAddress(e.creator)}</span>
         </div>
       </div>
-      <Change pct={e.returnPct} className="text-[17px] font-medium md:justify-self-end" />
+      {scored ? (
+        <Change pct={e.returnPct} className="text-[17px] font-medium md:justify-self-end" />
+      ) : (
+        <span className="text-[13px] text-muted md:justify-self-end" title="Returns count from Monday's open, when the round locks">
+          from Mon open
+        </span>
+      )}
       <span className="hidden text-[13px] text-muted md:block">
         <span className="t-num text-ink">{e.team}</span> on team
       </span>
       <span className="hidden text-[13px] text-muted md:block">
-        {e.ifWins !== null ? (
+        {!scored ? (
+          "open to back"
+        ) : e.ifWins !== null ? (
           <>
             ticket now <span className="t-num text-ink">+${e.ifWins.toFixed(2)}</span>
           </>
@@ -58,9 +69,13 @@ export function LeagueRow({ e, winning }: { e: LeagueEntry; winning: boolean }) 
 
 /** `cutAfter`: rows above MEDIAN (default: half); `medianPct`: MEDIAN's return, when known. */
 export function LeagueTable({ entries, cutAfter, medianPct }: { entries: LeagueEntry[]; cutAfter?: number; medianPct?: number | null }) {
-  const cut = cutAfter ?? Math.floor(entries.length / 2);
+  const scored = entries.some((e) => e.scored !== false);
+  const cut = scored ? (cutAfter ?? Math.floor(entries.length / 2)) : -1;
   return (
     <div className="flex flex-col gap-1">
+      {!scored && entries.length > 0 && (
+        <p className="mb-2 px-4 text-[13px] text-muted">Entries are open. Returns, MEDIAN and who&rsquo;s winning start counting at Monday&rsquo;s open, when the round locks.</p>
+      )}
       {entries.map((e, i) => (
         <div key={e.rank}>
           <LeagueRow e={e} winning={i < cut} />
