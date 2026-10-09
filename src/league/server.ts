@@ -12,7 +12,7 @@ import { DEFAULT_RULES, DRIFT_BPS } from "./settlement";
 import { basketWeightsBps } from "../engine/league";
 import { approveStep, planBack, planClaim, planClaimBasket, planLock, buyPlanSteps, normaliseWeights, swapStep, type TxStep } from "./actions";
 import { planBasketBuy } from "../rh/zeroEx";
-import { priceDeskBuy, QUOTE_TTL_S, randomNonce, signDeskBuy, testDeskAddress, testDeskEnabled } from "../rh/testDesk";
+import { priceDeskBuy, QUOTE_TTL_S, randomNonce, signDeskBuy, testDeskAbi, testDeskAddress, testDeskEnabled } from "../rh/testDesk";
 import { USDG_DECIMALS, USDG_MAINNET } from "../rh/chains";
 import { chainStockList } from "./registry";
 
@@ -205,6 +205,17 @@ async function openRound(roundId?: string): Promise<RoundInfo> {
   return info;
 }
 
+/** Pull tWBTC / tWETH into the desk from the token's faucet, with the keeper's gas. False if it's too soon. */
+async function refillDesk(desk: Address, token: Address): Promise<boolean> {
+  try {
+    const { pub, wallet, account, chain } = clientsFromEnv(true);
+    const hash = await wallet!.writeContract({ address: desk, abi: testDeskAbi, functionName: "refill", args: [token], account: account!, chain });
+    return (await pub.waitForTransactionReceipt({ hash })).status === "success";
+  } catch {
+    return false; // the faucet's hourly limit, or no keeper key
+  }
+}
+
 /**
  * Testnet "buy": one signed quote from the league's swap desk for the whole
  * basket, at live prices. Steps: approve test USDG (if needed), then one swap.
@@ -228,9 +239,19 @@ async function planDeskBuy(p: {
     feeBps: p.creator === p.wallet ? 0 : Math.round(p.feePct * 100),
   });
   const sym = (t: Address) => p.picks.find((s) => s.address === t)?.ticker ?? t;
-  const stock = await Promise.all(priced.legs.map((l) => pub.readContract({ address: l.token, abi: erc20Abi, functionName: "balanceOf", args: [desk] })));
-  const short = priced.legs.filter((l, i) => stock[i] < l.amountOut).map((l) => sym(l.token));
-  if (short.length) throw new PlanError(`the testnet swap desk is out of ${short.join(", ")} right now; try a smaller amount, or get them from Robinhood's faucet`);
+  const deskHolds = (t: Address) => pub.readContract({ address: t, abi: erc20Abi, functionName: "balanceOf", args: [desk] });
+  const crypto = new Set(p.picks.filter((s) => s.kind === "crypto").map((s) => s.address));
+  const short: string[] = [];
+  for (const l of priced.legs) {
+    if ((await deskHolds(l.token)) >= l.amountOut) continue;
+    // tWBTC / tWETH: the desk can pull more from their faucets (once an hour each).
+    if (crypto.has(l.token) && (await refillDesk(desk, l.token)) && (await deskHolds(l.token)) >= l.amountOut) continue;
+    short.push(sym(l.token));
+  }
+  if (short.length)
+    throw new PlanError(
+      `the testnet swap desk is out of ${short.join(", ")} right now; try a smaller amount${short.some((t) => t === "BTC" || t === "ETH") ? ", try again in an hour, or claim test BTC + ETH from the wallet menu" : ", or get them from Robinhood's faucet"}`,
+    );
   const now = Number((await pub.getBlock()).timestamp);
   const { data } = await signDeskBuy(chain.id, desk, {
     taker: p.wallet,
